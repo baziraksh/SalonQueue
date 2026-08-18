@@ -3,6 +3,7 @@ import '../../../core/theme/color_schemes.dart';
 import '../../../shared/data/india_locations.dart';
 import '../../../shared/models/salon.dart';
 import '../../auth/services/auth_scope.dart';
+import '../../customer/services/location_suggestion_service.dart';
 import '../data/salon_repository.dart';
 
 /// Screen allowing Salon Owner to manage Salon Location (State, District, City, Address, PIN Code).
@@ -60,16 +61,31 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
           ? widget.salon.ownerId
           : auth.currentUser?.id;
 
+      final city = _cityController.text.trim();
+      final address = _addressController.text.trim();
+      final pincode = _pincodeController.text.trim().isNotEmpty
+          ? _pincodeController.text.trim()
+          : null;
+
+      // Automatically geocode the address to store precise latitude & longitude
+      final coords = await LocationSuggestionService.geocodeAddress(
+        address: address,
+        city: city,
+        district: _selectedDistrict,
+        state: _selectedState,
+        pincode: pincode,
+      );
+
       await _salonRepo.updateSalonLocation(
         salonId: widget.salon.id,
         ownerId: effectiveOwnerId,
         state: _selectedState,
         district: _selectedDistrict,
-        city: _cityController.text.trim(),
-        address: _addressController.text.trim(),
-        pincode: _pincodeController.text.trim().isNotEmpty
-            ? _pincodeController.text.trim()
-            : null,
+        city: city,
+        address: address,
+        pincode: pincode,
+        latitude: coords['latitude'],
+        longitude: coords['longitude'],
       );
 
       if (!mounted) return;

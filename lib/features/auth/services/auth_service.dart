@@ -135,6 +135,7 @@ class AuthService extends ChangeNotifier {
     final activeUser = repo.currentUser ?? user;
     if (activeUser != null) {
       try {
+        await repo.sanitizeUserMetadataIfNeeded(activeUser);
         _currentUser = await repo.buildAppUser(activeUser);
         _status = AuthStatus.authenticated;
         _errorMessage = null;
@@ -173,6 +174,7 @@ class AuthService extends ChangeNotifier {
       final user = session?.user ?? repo.currentUser;
       if (user != null) {
         try {
+          await repo.sanitizeUserMetadataIfNeeded(user);
           _currentUser = await repo.buildAppUser(user);
           _status = AuthStatus.authenticated;
           _errorMessage = null;
@@ -278,7 +280,10 @@ class AuthService extends ChangeNotifier {
     }
 
     try {
-      final user = await repo.signIn(email: email, password: password);
+      final user = await repo.signIn(
+        email: email,
+        password: password,
+      );
 
       // TEMP DEBUG — log the stored role from DB
       _logForDebug('signIn stored role=${user.role}, requested=$requestedRole');

@@ -108,12 +108,33 @@ class SalonRepository {
       final updated = updater(_ownerSalonsCache[ownerId]!);
       _ownerSalonsCache[ownerId] = updated;
       unawaited(_saveSalonToDisk(updated));
+      found = true;
     }
 
-    // 2. Update in fallbackSalons only if it matches the fallback demo ID
-    final idx = fallbackSalons.indexWhere((s) => s.id == salonId);
+    // 2. Update in fallbackSalons if it matches
+    final idx = fallbackSalons.indexWhere((s) => s.id == salonId || (ownerId != null && s.ownerId == ownerId));
     if (idx != -1) {
       fallbackSalons[idx] = updater(fallbackSalons[idx]);
+      found = true;
+    }
+
+    // 3. If brand new, seed in cache
+    if (!found) {
+      final base = Salon(
+        id: salonId,
+        ownerId: ownerId,
+        name: 'My Salon & Spa',
+        address: '',
+        city: '',
+      );
+      final updated = updater(base);
+      if (ownerId != null && ownerId.isNotEmpty) {
+        _ownerSalonsCache[ownerId] = updated;
+      }
+      if (salonId.isNotEmpty) {
+        _ownerSalonsCache[salonId] = updated;
+      }
+      unawaited(_saveSalonToDisk(updated));
     }
   }
 
@@ -479,14 +500,18 @@ class SalonRepository {
   ];
 
   /// Fetches salons filtered by state, district/city, search query, category, or sorted by distance/rush.
+  /// Fetches salons filtered by state, district/city, pincode, search query, category, or proximity (10km nearest).
   Future<List<Salon>> fetchSalons({
     String? state,
     String? city,
+    String? district,
+    String? pincode,
     String? search,
     String? category,
     String sortBy = 'nearest', // 'nearest', 'rush', 'rating'
     double userLat = 18.5204, // Default center
     double userLng = 73.8567,
+    double? maxRadiusKm, // e.g. 10.0
   }) async {
     final client = this.client;
     if (client == null) {
@@ -494,16 +519,21 @@ class SalonRepository {
         fallbackSalons,
         state: state,
         city: city,
+        district: district,
+        pincode: pincode,
         search: search,
         category: category,
         sortBy: sortBy,
         userLat: userLat,
         userLng: userLng,
+        maxRadiusKm: maxRadiusKm,
       );
     }
 
     // Normalize city & state
     String? cleanCity = city?.trim();
+    String? cleanDistrict = district?.trim();
+    String? cleanPincode = pincode?.trim();
     String? cleanState = state?.trim();
 
     if (cleanCity != null && cleanCity.contains(',')) {
@@ -569,8 +599,14 @@ class SalonRepository {
         ));
       }
 
-      // Filter in-memory for state, city/district/address, and search query
+      // Filter in-memory for pincode, city/district, state, and search query
       var filtered = result;
+
+      if (cleanPincode != null && cleanPincode.isNotEmpty) {
+        filtered = filtered.where((s) =>
+            s.pincode == cleanPincode ||
+            s.address.contains(cleanPincode)).toList();
+      }
 
       if (cleanState != null && cleanState.isNotEmpty) {
         final sState = cleanState.toLowerCase();
@@ -581,13 +617,35 @@ class SalonRepository {
             s.address.toLowerCase().contains(sState)).toList();
       }
 
+      if (cleanDistrict != null && cleanDistrict.isNotEmpty) {
+        final d = cleanDistrict.toLowerCase();
+        filtered = filtered.where((s) =>
+            s.district.toLowerCase().contains(d) ||
+            s.city.toLowerCase().contains(d) ||
+            s.address.toLowerCase().contains(d)).toList();
+      }
+
       if (cleanCity != null && cleanCity.isNotEmpty) {
         final c = cleanCity.toLowerCase();
-        filtered = filtered.where((s) =>
+        final cityMatches = filtered.where((s) =>
             s.city.toLowerCase().contains(c) ||
             s.district.toLowerCase().contains(c) ||
             s.address.toLowerCase().contains(c) ||
             s.state.toLowerCase().contains(c)).toList();
+        if (cityMatches.isNotEmpty) {
+          filtered = cityMatches;
+        } else if (maxRadiusKm != null && maxRadiusKm > 0) {
+          filtered = filtered.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
+        } else {
+          filtered = [];
+        }
+      }
+
+      if (maxRadiusKm != null && maxRadiusKm > 0 && (cleanCity == null || cleanCity.isEmpty)) {
+        final radiusMatches = filtered.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
+        if (radiusMatches.isNotEmpty) {
+          filtered = radiusMatches;
+        }
       }
 
       if (search != null && search.trim().isNotEmpty) {
@@ -599,6 +657,7 @@ class SalonRepository {
             s.city.toLowerCase().contains(q) ||
             s.district.toLowerCase().contains(q) ||
             s.state.toLowerCase().contains(q) ||
+            (s.pincode != null && s.pincode!.contains(q)) ||
             (s.description != null && s.description!.toLowerCase().contains(q)) ||
             s.services.any((svc) => svc.name.toLowerCase().contains(q))).toList();
       }
@@ -607,7 +666,19 @@ class SalonRepository {
       return _sortSalons(catFiltered, sortBy);
     } catch (e) {
       debugPrint('[SalonRepository] fetchSalons error: $e');
-      return [];
+      return _filterLocalSalons(
+        fallbackSalons,
+        state: state,
+        city: city,
+        district: district,
+        pincode: pincode,
+        search: search,
+        category: category,
+        sortBy: sortBy,
+        userLat: userLat,
+        userLng: userLng,
+        maxRadiusKm: maxRadiusKm,
+      );
     }
   }
 
@@ -1092,7 +1163,7 @@ class SalonRepository {
     );
   }
 
-  /// Updates only store location (State, District, City, Address, Pincode)
+  /// Updates only store location (State, District, City, Address, Pincode, Coordinates)
   Future<void> updateSalonLocation({
     required String salonId,
     String? ownerId,
@@ -1101,6 +1172,8 @@ class SalonRepository {
     required String city,
     required String address,
     String? pincode,
+    double? latitude,
+    double? longitude,
   }) async {
     _updateOwnerSalonInMemory(
       salonId,
@@ -1110,19 +1183,25 @@ class SalonRepository {
         city: city,
         address: address,
         pincode: pincode,
+        latitude: latitude ?? s.latitude,
+        longitude: longitude ?? s.longitude,
       ),
       ownerId: ownerId,
     );
 
+    final payload = <String, dynamic>{
+      'state': state,
+      'district': district,
+      'city': city,
+      'address': address,
+      'pincode': pincode,
+    };
+    if (latitude != null) payload['latitude'] = latitude;
+    if (longitude != null) payload['longitude'] = longitude;
+
     await _updateSalonInDb(
       salonId,
-      {
-        'state': state,
-        'district': district,
-        'city': city,
-        'address': address,
-        'pincode': pincode,
-      },
+      payload,
       ownerId: ownerId,
     );
   }
@@ -1368,27 +1447,64 @@ class SalonRepository {
     List<Salon> list, {
     String? state,
     String? city,
+    String? district,
+    String? pincode,
     String? search,
     String? category,
     String sortBy = 'nearest',
     double userLat = 18.5204,
     double userLng = 73.8567,
+    double? maxRadiusKm,
   }) {
     var result = list.map((s) {
       final dist = s.calculateDistance(userLat, userLng);
       return s.copyWith(distanceKm: dist);
     }).toList();
 
+    if (pincode != null && pincode.isNotEmpty) {
+      result = result.where((s) =>
+          s.pincode == pincode ||
+          s.address.contains(pincode)).toList();
+    }
+
     if (state != null && state.isNotEmpty && state.toLowerCase() != 'all' && state.toLowerCase() != 'all states') {
-      result = result.where((s) => s.state.toLowerCase() == state.toLowerCase()).toList();
+      final sState = state.toLowerCase();
+      result = result.where((s) =>
+          s.state.toLowerCase().contains(sState) ||
+          s.city.toLowerCase().contains(sState) ||
+          s.district.toLowerCase().contains(sState) ||
+          s.address.toLowerCase().contains(sState)).toList();
+    }
+
+    if (district != null && district.isNotEmpty) {
+      final d = district.toLowerCase();
+      result = result.where((s) =>
+          s.district.toLowerCase().contains(d) ||
+          s.city.toLowerCase().contains(d) ||
+          s.address.toLowerCase().contains(d)).toList();
     }
 
     if (city != null && city.isNotEmpty && city.toLowerCase() != 'all' && city.toLowerCase() != 'all cities' && city.toLowerCase() != 'all india') {
       final c = city.toLowerCase();
-      result = result.where((s) =>
+      final cityMatches = result.where((s) =>
           s.city.toLowerCase().contains(c) ||
           s.district.toLowerCase().contains(c) ||
+          s.address.toLowerCase().contains(c) ||
           s.state.toLowerCase().contains(c)).toList();
+      if (cityMatches.isNotEmpty) {
+        result = cityMatches;
+      } else if (maxRadiusKm != null && maxRadiusKm > 0) {
+        result = result.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
+      } else {
+        result = [];
+      }
+    }
+
+    if (maxRadiusKm != null && maxRadiusKm > 0 && (city == null || city.isEmpty || city.toLowerCase() == 'all india' || city.toLowerCase() == 'all cities')) {
+      final radiusMatches = result.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
+      if (radiusMatches.isNotEmpty) {
+        result = radiusMatches;
+      }
     }
 
     if (search != null && search.trim().isNotEmpty) {
@@ -1400,6 +1516,7 @@ class SalonRepository {
           s.city.toLowerCase().contains(q) ||
           s.district.toLowerCase().contains(q) ||
           s.state.toLowerCase().contains(q) ||
+          (s.pincode != null && s.pincode!.contains(q)) ||
           (s.description != null && s.description!.toLowerCase().contains(q)) ||
           s.services.any((svc) => svc.name.toLowerCase().contains(q))).toList();
     }

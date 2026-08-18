@@ -203,7 +203,14 @@ class QueueRepository {
       return QueueTicket.fromJson(Map<String, dynamic>.from(res));
     } catch (e) {
       debugPrint('[QueueRepository] fetchActiveTicketForCustomer error: $e');
-      return null;
+      try {
+        return _inMemoryTickets.firstWhere(
+          (t) => (t.customerId == customerId || t.customerId == null) &&
+                 (t.status == QueueStatus.waiting || t.status == QueueStatus.inChair),
+        );
+      } catch (_) {
+        return null;
+      }
     }
   }
 

@@ -1,0 +1,12 @@
+{
+  "auto-git-push": {
+    "enabled": true,
+    "Stop": [
+      {
+        "type": "command",
+        "command": "powershell -ExecutionPolicy Bypass -Command \"if (Test-Path scripts/auto-git-push.ps1) { & scripts/auto-git-push.ps1 } elseif (Test-Path ../scripts/auto-git-push.ps1) { & ../scripts/auto-git-push.ps1 }\"",
+        "timeout": 60
+      }
+    ]
+  }
+}

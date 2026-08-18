@@ -24,6 +24,7 @@ import '../../qr/screens/qr_scanner_screen.dart';
 import '../../salon/data/salon_repository.dart';
 import '../../salon/screens/salon_details_screen.dart';
 import '../../support/screens/support_center_screen.dart';
+import '../services/location_suggestion_service.dart';
 
 /// Customer Home & All-India Salon Discovery Dashboard
 /// Redesigned in luxury Navy (#14243A) & Gold (#C9A45C) SalonQueue marketplace aesthetic.
@@ -42,7 +43,13 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   int _currentTabIndex = 0;
 
   String _selectedState = 'All States';
-  String _selectedLocation = 'Pune'; // City/District
+  String _selectedLocation = 'Pune'; // City/District/Area
+  String? _selectedCity;
+  String? _selectedDistrict;
+  String? _selectedPincode;
+  double _userLat = 18.5204;
+  double _userLng = 73.8567;
+  bool _isShowing10KmFallback = false;
   String _selectedCategory = 'All';
   String _sortBy = 'nearest'; // 'nearest', 'rush', 'rating'
   final TextEditingController _searchController = TextEditingController();
@@ -121,17 +128,41 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       _activeTicket = await _queueRepo.fetchActiveTicketForCustomer(userId);
     }
 
+    final isAllIndia = (_selectedLocation == 'All India' || _selectedLocation == 'All Cities');
+    final isAllStates = (_selectedState == 'All States' || _selectedState == 'All');
+
     var list = await _salonRepo.fetchSalons(
-      state: _selectedState == 'All States' ? null : _selectedState,
-      city: (_selectedLocation == 'All Cities' || _selectedLocation == 'All India')
-          ? null
-          : _selectedLocation,
+      state: isAllStates ? null : _selectedState,
+      city: isAllIndia ? null : (_selectedCity ?? _selectedLocation),
+      district: _selectedDistrict,
+      pincode: _selectedPincode,
       search: _searchController.text.trim(),
       category: (_selectedCategory == 'All' || _selectedCategory == 'Favorites')
           ? null
           : _selectedCategory,
       sortBy: _sortBy,
+      userLat: _userLat,
+      userLng: _userLng,
     );
+
+    // If exact city/locality search returned 0 items, fetch nearest salons within 10 km
+    bool is10kmFallback = false;
+    if (list.isEmpty && !isAllIndia) {
+      final proximitySalons = await _salonRepo.fetchSalons(
+        search: _searchController.text.trim(),
+        category: (_selectedCategory == 'All' || _selectedCategory == 'Favorites')
+            ? null
+            : _selectedCategory,
+        sortBy: 'nearest',
+        userLat: _userLat,
+        userLng: _userLng,
+        maxRadiusKm: 10.0,
+      );
+      if (proximitySalons.isNotEmpty) {
+        list = proximitySalons;
+        is10kmFallback = true;
+      }
+    }
 
     if (_isVerifiedOnlyFilter) {
       list = list.where((s) => s.isVerified).toList();
@@ -148,6 +179,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     if (!mounted) return;
     setState(() {
       _salons = list;
+      _isShowing10KmFallback = is10kmFallback;
       _isLoading = false;
     });
   }
@@ -155,7 +187,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   void _showAllIndiaLocationSelector() {
     final locationSearchCtrl = TextEditingController();
     String? modalSelectedState;
-    List<Map<String, String>> searchResults = [];
+    List<LocationSuggestion> searchResults = [];
+    bool isSearching = false;
+    Timer? debounceTimer;
 
     showModalBottomSheet(
       context: context,
@@ -168,8 +202,30 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
         builder: (context, setModalState) {
           final allStates = IndiaLocations.getAllStates();
 
+          void performSearch(String query) {
+            debounceTimer?.cancel();
+            if (query.trim().isEmpty) {
+              setModalState(() {
+                searchResults = [];
+                isSearching = false;
+              });
+              return;
+            }
+
+            setModalState(() => isSearching = true);
+            debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+              final results = await LocationSuggestionService.searchLocationSuggestions(query);
+              if (ctx.mounted) {
+                setModalState(() {
+                  searchResults = results;
+                  isSearching = false;
+                });
+              }
+            });
+          }
+
           return SizedBox(
-            height: MediaQuery.of(ctx).size.height * 0.78,
+            height: MediaQuery.of(ctx).size.height * 0.82,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
               child: Column(
@@ -191,33 +247,45 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(ctx).pop(),
+                        onPressed: () {
+                          debounceTimer?.cancel();
+                          Navigator.of(ctx).pop();
+                        },
                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
 
-                  // Search Location Input
+                  // Search Location Input (Live Maps Suggestions)
                   TextField(
                     controller: locationSearchCtrl,
                     decoration: InputDecoration(
-                      hintText: 'Search city, district, or state...',
+                      hintText: 'Search locality, street, city, or PIN code...',
                       prefixIcon: const Icon(Icons.search, color: AppColorSchemes.navy),
-                      suffixIcon: locationSearchCtrl.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                locationSearchCtrl.clear();
-                                setModalState(() => searchResults = []);
-                              },
+                      suffixIcon: isSearching
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColorSchemes.gold),
+                              ),
                             )
-                          : null,
+                          : (locationSearchCtrl.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    locationSearchCtrl.clear();
+                                    debounceTimer?.cancel();
+                                    setModalState(() {
+                                      searchResults = [];
+                                      isSearching = false;
+                                    });
+                                  },
+                                )
+                              : null),
                     ),
-                    onChanged: (query) {
-                      setModalState(() {
-                        searchResults = IndiaLocations.searchLocations(query);
-                      });
-                    },
+                    onChanged: performSearch,
                   ),
                   const SizedBox(height: 12),
 
@@ -232,9 +300,15 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                           backgroundColor: AppColorSchemes.navy,
                           labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                           onPressed: () {
+                            debounceTimer?.cancel();
                             setState(() {
-                              _selectedLocation = 'Pune';
-                              _selectedState = 'Maharashtra';
+                              _selectedLocation = 'Near Me';
+                              _selectedCity = null;
+                              _selectedDistrict = null;
+                              _selectedState = 'All States';
+                              _selectedPincode = null;
+                              _userLat = 18.5204;
+                              _userLng = 73.8567;
                               _sortBy = 'nearest';
                             });
                             Navigator.of(ctx).pop();
@@ -246,9 +320,13 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                           avatar: const Icon(Icons.public, size: 16, color: AppColorSchemes.navy),
                           label: const Text('All India 🇮🇳'),
                           onPressed: () {
+                            debounceTimer?.cancel();
                             setState(() {
                               _selectedLocation = 'All India';
                               _selectedState = 'All States';
+                              _selectedCity = null;
+                              _selectedDistrict = null;
+                              _selectedPincode = null;
                             });
                             Navigator.of(ctx).pop();
                             _loadData();
@@ -259,40 +337,76 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   ),
                   const Divider(height: 24),
 
-                  // Search Results or State/District Drilldown List
+                  // Search Results (Live Maps Suggestions) or State/District Drilldown
                   Expanded(
                     child: Builder(
                       builder: (context) {
+                        if (isSearching && searchResults.isEmpty) {
+                          return const Center(
+                            child: CircularProgressIndicator(color: AppColorSchemes.gold),
+                          );
+                        }
+
                         if (searchResults.isNotEmpty) {
                           return ListView.builder(
                             itemCount: searchResults.length,
                             itemBuilder: (context, idx) {
                               final item = searchResults[idx];
                               return ListTile(
-                                leading: Icon(
-                                  item['type'] == 'State' ? Icons.map : Icons.location_city,
-                                  color: AppColorSchemes.navy,
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColorSchemes.navy.withValues(alpha: 0.08),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.location_on,
+                                    color: AppColorSchemes.navy,
+                                    size: 20,
+                                  ),
                                 ),
                                 title: Text(
-                                  item['name']!,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  item.title,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                 ),
-                                subtitle: Text('${item['type']} • ${item['state']}'),
+                                subtitle: Text(
+                                  item.subtitle,
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                                 onTap: () {
+                                  debounceTimer?.cancel();
                                   setState(() {
-                                    if (item['type'] == 'State') {
-                                      _selectedState = item['name']!;
-                                      _selectedLocation = 'All Cities';
-                                    } else {
-                                      _selectedLocation = item['name']!;
-                                      _selectedState = item['state']!;
-                                    }
+                                    _selectedLocation = item.title;
+                                    _selectedCity = item.city ?? item.title;
+                                    _selectedDistrict = item.district;
+                                    _selectedState = item.state ?? 'All States';
+                                    _selectedPincode = item.pincode;
+                                    _userLat = item.latitude;
+                                    _userLng = item.longitude;
                                   });
                                   Navigator.of(ctx).pop();
                                   _loadData();
                                 },
                               );
                             },
+                          );
+                        }
+
+                        if (locationSearchCtrl.text.trim().isNotEmpty && !isSearching) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.search_off, size: 48, color: Colors.grey.shade400),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No locations found for "${locationSearchCtrl.text.trim()}"',
+                                  style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
                           );
                         }
 
@@ -340,9 +454,19 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                                 ),
                                 TextButton(
                                   onPressed: () {
+                                    debounceTimer?.cancel();
+                                    final estCoords = LocationSuggestionService.getEstimatedCoordinates(
+                                      modalSelectedState!,
+                                      modalSelectedState!,
+                                    );
                                     setState(() {
                                       _selectedState = modalSelectedState!;
                                       _selectedLocation = 'All Cities';
+                                      _selectedCity = null;
+                                      _selectedDistrict = null;
+                                      _selectedPincode = null;
+                                      _userLat = estCoords.latitude;
+                                      _userLng = estCoords.longitude;
                                     });
                                     Navigator.of(ctx).pop();
                                     _loadData();
@@ -364,9 +488,19 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                                     leading: const Icon(Icons.location_on_outlined, color: AppColorSchemes.navy),
                                     title: Text(district),
                                     onTap: () {
+                                      debounceTimer?.cancel();
+                                      final estCoords = LocationSuggestionService.getEstimatedCoordinates(
+                                        district,
+                                        modalSelectedState!,
+                                      );
                                       setState(() {
                                         _selectedState = modalSelectedState!;
                                         _selectedLocation = district;
+                                        _selectedCity = district;
+                                        _selectedDistrict = district;
+                                        _selectedPincode = null;
+                                        _userLat = estCoords.latitude;
+                                        _userLng = estCoords.longitude;
                                       });
                                       Navigator.of(ctx).pop();
                                       _loadData();
@@ -531,6 +665,53 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               const SizedBox(height: 10),
 
               // ── 7. Salons List ─────────────────────────────────────────
+              if (_isShowing10KmFallback && _salons.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColorSchemes.gold.withValues(alpha: 0.6)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColorSchemes.gold.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.near_me, color: Color(0xFFB8860B), size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Showing Nearest Salons (within 10 km)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade900,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'No direct salon registered in "$_selectedLocation". We found ${_salons.length} nearby verified salons for you.',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               if (_isLoading)
                 const Center(
                   child: Padding(
@@ -883,7 +1064,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                         Text(
                           _selectedLocation == 'All India'
                               ? 'All India 🇮🇳'
-                              : '$_selectedLocation, $_selectedState',
+                              : (_selectedPincode != null && _selectedPincode!.isNotEmpty
+                                  ? '$_selectedLocation, $_selectedState (${_selectedPincode!})'
+                                  : '$_selectedLocation, $_selectedState'),
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,

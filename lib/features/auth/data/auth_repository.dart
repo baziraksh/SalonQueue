@@ -152,6 +152,13 @@ class AuthRepository {
     }
 
     try {
+      // 1. Attempt pre-auth metadata cleanup to prevent oversized GoTrue JWTs
+      try {
+        await activeClient.rpc('clean_user_metadata_for_login', params: {
+          'user_email': email.trim().toLowerCase(),
+        }).timeout(const Duration(seconds: 3));
+      } catch (_) {}
+
       final response = await activeClient.auth.signInWithPassword(
         email: email,
         password: password,
@@ -161,6 +168,9 @@ class AuthRepository {
       if (user == null) {
         throw AuthException('Sign in did not return a user.');
       }
+
+      // Proactively sanitize any bloated metadata to prevent HTTP 431 header overflow
+      await sanitizeUserMetadataIfNeeded(user);
 
       // Backfill a missing profile (e.g., signup with email confirmation).
       final metaRole = user.userMetadata?['role'];
@@ -276,7 +286,7 @@ class AuthRepository {
   /// Builds an [AppUser] from a Supabase [User].
   ///
   /// The role is read from the `profiles.role` column (authoritative),
-  /// with safe fallback to `user.userMetadata['role']` if the database query
+  /// with safe fallback to `user.userMetadata['role']` or [defaultRole] if the database query
   /// fails or is unreachable during cold boot.
   Future<AppUser> buildAppUser(supabase.User user) async {
     debugPrint('[AuthRepository] AUTH USER ID: ${user.id}');
@@ -306,10 +316,11 @@ class AuthRepository {
       }
     }
 
-    if (roleValue != 'CUSTOMER' && roleValue != 'SALON_OWNER') {
-      throw AuthException(
-        'Your account profile is missing a valid role. Please contact support.',
-      );
+    if (roleValue == null ||
+        (roleValue != 'CUSTOMER' && roleValue != 'SALON_OWNER')) {
+      roleValue = 'CUSTOMER';
+      debugPrint('[AuthRepository] Using safe default role: $roleValue');
+      unawaited(_ensureProfile(user.id, role: roleValue));
     }
 
     return AppUser(
@@ -322,6 +333,43 @@ class AuthRepository {
           user.userMetadata?['avatar_url'] as String?,
       role: AppRole.fromDb(roleValue),
     );
+  }
+
+  /// Sanitizes bloated user metadata (such as historical base64 avatar images)
+  /// that would inflate the GoTrue JWT beyond HTTP header size limits (causing PostgREST 431).
+  Future<void> sanitizeUserMetadataIfNeeded(supabase.User user) async {
+    final activeClient = client;
+    if (activeClient == null) return;
+    final metadata = user.userMetadata;
+    if (metadata == null) return;
+
+    bool needsCleanup = false;
+    final cleanedData = Map<String, dynamic>.from(metadata);
+
+    for (final entry in metadata.entries) {
+      final val = entry.value;
+      if (val is String && (val.startsWith('data:image') || val.length > 500)) {
+        cleanedData[entry.key] = null;
+        needsCleanup = true;
+      }
+    }
+
+    if (needsCleanup) {
+      try {
+        debugPrint(
+          '[AuthRepository] Sanitizing bloated userMetadata to prevent HTTP 431 header overflow...',
+        );
+        await activeClient.auth.updateUser(
+          supabase.UserAttributes(data: cleanedData),
+        );
+        await activeClient.auth.refreshSession();
+        debugPrint(
+          '[AuthRepository] Successfully sanitized userMetadata and refreshed session.',
+        );
+      } catch (e) {
+        debugPrint('[AuthRepository] Failed to sanitize userMetadata: $e');
+      }
+    }
   }
 
   /// Fetches the user's profile row, or null if absent / timeout.
@@ -337,6 +385,32 @@ class AuthRepository {
           .maybeSingle()
           .timeout(const Duration(seconds: 15));
       return row;
+    } on supabase.PostgrestException catch (e) {
+      if (e.code == '431' ||
+          e.message.contains('431') ||
+          e.details?.toString().contains('431') == true) {
+        debugPrint(
+          '[AuthRepository] Caught HTTP 431 in _fetchProfile. Sanitizing metadata and retrying...',
+        );
+        final currentUser = activeClient.auth.currentUser;
+        if (currentUser != null) {
+          await sanitizeUserMetadataIfNeeded(currentUser);
+          try {
+            return await activeClient
+                .from('profiles')
+                .select('id, full_name, phone, avatar_url, role')
+                .eq('id', userId)
+                .maybeSingle()
+                .timeout(const Duration(seconds: 15));
+          } catch (retryErr) {
+            debugPrint(
+              '[AuthRepository] Retry after HTTP 431 failed in _fetchProfile: $retryErr',
+            );
+          }
+        }
+      }
+      debugPrint('[AuthRepository] PROFILE QUERY ERROR (user=$userId): $e');
+      return null;
     } on Exception catch (e) {
       debugPrint('[AuthRepository] PROFILE QUERY ERROR (user=$userId): $e');
       return null;
@@ -556,10 +630,17 @@ class AuthRepository {
 
       await activeClient.from('profiles').update(updateData).eq('id', userId);
 
-      // Synchronize into Supabase Auth user metadata
+      // Synchronize into Supabase Auth user metadata ONLY lightweight fields
       final metaUpdates = <String, dynamic>{};
       if (fullName != null) metaUpdates['full_name'] = fullName;
-      if (avatarUrl != null) metaUpdates['avatar_url'] = avatarUrl;
+      if (avatarUrl != null) {
+        if (!avatarUrl.startsWith('data:') && avatarUrl.length < 500) {
+          metaUpdates['avatar_url'] = avatarUrl;
+        } else {
+          // Clear any stored avatar_url in metadata to prevent JWT bloat
+          metaUpdates['avatar_url'] = null;
+        }
+      }
       if (phone != null) metaUpdates['phone'] = phone;
       if (metaUpdates.isNotEmpty) {
         try {
@@ -617,6 +698,41 @@ class AuthRepository {
         }
         await activeClient.from('profiles').insert(insertData);
       }
+    } on supabase.PostgrestException catch (e) {
+      if (e.code == '431' ||
+          e.message.contains('431') ||
+          e.details?.toString().contains('431') == true) {
+        debugPrint(
+          '[AuthRepository] Caught HTTP 431 in _ensureProfile. Sanitizing metadata and retrying...',
+        );
+        final currentUser = activeClient.auth.currentUser;
+        if (currentUser != null) {
+          await sanitizeUserMetadataIfNeeded(currentUser);
+          try {
+            final existing = await activeClient
+                .from('profiles')
+                .select('id')
+                .eq('id', userId)
+                .maybeSingle();
+            if (existing == null) {
+              final insertData = <String, dynamic>{
+                'id': userId,
+                'role': role ?? 'CUSTOMER',
+              };
+              if (fullName != null && fullName.isNotEmpty) {
+                insertData['full_name'] = fullName;
+              }
+              await activeClient.from('profiles').insert(insertData);
+            }
+            return;
+          } catch (retryErr) {
+            debugPrint(
+              '[AuthRepository] Retry after HTTP 431 failed in _ensureProfile: $retryErr',
+            );
+          }
+        }
+      }
+      debugPrint('[AuthRepository] ENSURE PROFILE ERROR (user=$userId): $e');
     } on Exception catch (e) {
       // Profile creation failure is logged but does not block auth.
       debugPrint('[AuthRepository] ENSURE PROFILE ERROR (user=$userId): $e');
