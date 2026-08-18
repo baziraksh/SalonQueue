@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase_flutter;
-
+// UGFUGYUFFYGU
 import 'core/config/supabase_config.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/theme.dart';
