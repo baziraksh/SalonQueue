@@ -1,0 +1,1436 @@
+// ignore_for_file: prefer_initializing_formals
+
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import '../../../shared/models/salon.dart';
+import '../../../shared/models/salon_service.dart';
+
+/// Data repository for discovering salons across all Indian States & Cities,
+/// calculating live distances, rush levels, and owner salon management.
+class SalonRepository {
+  SalonRepository({supabase.SupabaseClient? client}) : _client = client;
+
+  final supabase.SupabaseClient? _client;
+
+  /// Dedicated in-memory owner salon storage isolated strictly per auth.uid()
+  static final Map<String, Salon> _ownerSalonsCache = {};
+
+  /// Clears in-memory salon cache on user logout to prevent cross-account data leakage
+  static void clearCache() {
+    _ownerSalonsCache.clear();
+  }
+
+  /// Controls whether disk persistence is active (can be toggled in test suites)
+  static bool enableDiskPersistence = true;
+
+  static SharedPreferences? _prefsInstance;
+  static final Map<String, String> _diskFallbackStorage = {};
+
+  static Future<SharedPreferences?> _getPrefs() async {
+    if (!enableDiskPersistence) return null;
+    if (_prefsInstance != null) return _prefsInstance;
+    try {
+      _prefsInstance = await SharedPreferences.getInstance();
+      return _prefsInstance;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Saves an owner's salon to persistent disk storage (SharedPreferences)
+  static Future<void> _saveSalonToDisk(Salon salon) async {
+    final ownerId = salon.ownerId ?? salon.id;
+    if (ownerId.isEmpty) return;
+    final jsonStr = jsonEncode(salon.toJson());
+    _diskFallbackStorage['owner_salon_$ownerId'] = jsonStr;
+    if (salon.id.isNotEmpty && salon.id != ownerId) {
+      _diskFallbackStorage['owner_salon_${salon.id}'] = jsonStr;
+    }
+
+    try {
+      final prefs = await _getPrefs();
+      if (prefs == null) return;
+      await prefs.setString('owner_salon_$ownerId', jsonStr);
+      if (salon.id.isNotEmpty && salon.id != ownerId) {
+        await prefs.setString('owner_salon_${salon.id}', jsonStr);
+      }
+    } catch (e) {
+      debugPrint('[SalonRepository] _saveSalonToDisk notice: $e');
+    }
+  }
+
+  /// Loads an owner's salon from persistent disk storage (SharedPreferences)
+  static Future<Salon?> _loadSalonFromDisk(String ownerId) async {
+    if (ownerId.isEmpty) return null;
+    try {
+      final prefs = await _getPrefs();
+      if (prefs != null) {
+        final raw = prefs.getString('owner_salon_$ownerId');
+        if (raw != null && raw.isNotEmpty) {
+          final map = jsonDecode(raw) as Map<String, dynamic>;
+          return Salon.fromJson(map);
+        }
+      }
+    } catch (e) {
+      debugPrint('[SalonRepository] _loadSalonFromDisk notice: $e');
+    }
+
+    if (_diskFallbackStorage.containsKey('owner_salon_$ownerId')) {
+      try {
+        final raw = _diskFallbackStorage['owner_salon_$ownerId']!;
+        final map = jsonDecode(raw) as Map<String, dynamic>;
+        return Salon.fromJson(map);
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  /// Updates an owner's salon in memory without mutating other accounts
+  void _updateOwnerSalonInMemory(String salonId, Salon Function(Salon current) updater, {String? ownerId}) {
+    // 1. Update in owner-isolated cache
+    bool found = false;
+    for (final entry in _ownerSalonsCache.entries) {
+      if (entry.value.id == salonId ||
+          entry.key == salonId ||
+          (ownerId != null && (entry.key == ownerId || entry.value.ownerId == ownerId))) {
+        final updated = updater(entry.value);
+        _ownerSalonsCache[entry.key] = updated;
+        unawaited(_saveSalonToDisk(updated));
+        found = true;
+      }
+    }
+
+    if (!found && ownerId != null && _ownerSalonsCache.containsKey(ownerId)) {
+      final updated = updater(_ownerSalonsCache[ownerId]!);
+      _ownerSalonsCache[ownerId] = updated;
+      unawaited(_saveSalonToDisk(updated));
+    }
+
+    // 2. Update in fallbackSalons only if it matches the fallback demo ID
+    final idx = fallbackSalons.indexWhere((s) => s.id == salonId);
+    if (idx != -1) {
+      fallbackSalons[idx] = updater(fallbackSalons[idx]);
+    }
+  }
+
+  supabase.SupabaseClient? get client {
+    if (_client != null) return _client;
+    try {
+      return supabase.Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Default demo salons across major Indian States, Districts, and Cities
+  static final List<Salon> fallbackSalons = [
+    // Maharashtra - Pune
+    Salon(
+      id: '11111111-1111-1111-1111-111111111111',
+      ownerId: 'owner-demo-1',
+      name: 'Royal Cuts & Grooming Lounge',
+      description: 'Premium men salon with expert stylists, AC ambience & luxury grooming.',
+      address: 'FC Road, Near Deccan Gymkhana',
+      city: 'Pune',
+      district: 'Pune',
+      state: 'Maharashtra',
+      pincode: '411004',
+      latitude: 18.5196,
+      longitude: 73.8413,
+      phone: '+91 98765 43210',
+      rating: 4.9,
+      reviewCount: 142,
+      activeChairs: 4,
+      isQueueOpen: true,
+      isVerified: true,
+      ownerName: 'Rahul Sharma',
+      openingTime: '08:30 AM',
+      closingTime: '09:30 PM',
+      waitingCount: 1,
+      estWaitMinutes: 8,
+      distanceKm: 0.8,
+      galleryImages: [
+        'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800',
+        'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800',
+        'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=800',
+      ],
+      services: [
+        SalonService(id: 's1', salonId: '11111111-1111-1111-1111-111111111111', name: 'Classic Haircut', category: 'Hair', price: 150, durationMinutes: 25),
+        SalonService(id: 's2', salonId: '11111111-1111-1111-1111-111111111111', name: 'Beard Trim & Shape', category: 'Beard', price: 80, durationMinutes: 15),
+        SalonService(id: 's3', salonId: '11111111-1111-1111-1111-111111111111', name: 'Gold Glow Facial', category: 'Facial', price: 450, durationMinutes: 35),
+        SalonService(id: 's4', salonId: '11111111-1111-1111-1111-111111111111', name: 'De-Tan Clean Up', category: 'Facial', price: 250, durationMinutes: 20),
+        SalonService(id: 's5', salonId: '11111111-1111-1111-1111-111111111111', name: 'Head & Shoulder Massage', category: 'Spa', price: 200, durationMinutes: 20),
+        SalonService(id: 's6', salonId: '11111111-1111-1111-1111-111111111111', name: 'Royal Grooming Combo', category: 'Combo', price: 420, durationMinutes: 50),
+      ],
+    ),
+    Salon(
+      id: '22222222-2222-2222-2222-222222222222',
+      name: 'Scissors & Combs Unisex Studio',
+      description: 'Trendy unisex salon offering professional haircuts, facials, keratin & hair spas.',
+      address: 'Koregaon Park, Lane 7',
+      city: 'Pune',
+      district: 'Pune',
+      state: 'Maharashtra',
+      pincode: '411001',
+      latitude: 18.5362,
+      longitude: 73.8940,
+      phone: '+91 98234 56789',
+      rating: 4.7,
+      reviewCount: 98,
+      activeChairs: 3,
+      isQueueOpen: true,
+      openingTime: '09:00 AM',
+      closingTime: '10:00 PM',
+      waitingCount: 3,
+      estWaitMinutes: 25,
+      distanceKm: 2.4,
+      services: [
+        SalonService(id: 's7', salonId: '22222222-2222-2222-2222-222222222222', name: 'Trendy Haircut & Wash', category: 'Hair', price: 200, durationMinutes: 30),
+        SalonService(id: 's8', salonId: '22222222-2222-2222-2222-222222222222', name: 'Beard Styling & Oil Spa', category: 'Beard', price: 120, durationMinutes: 20),
+        SalonService(id: 's9', salonId: '22222222-2222-2222-2222-222222222222', name: 'Fruit Facial & Glow Pack', category: 'Facial', price: 350, durationMinutes: 30),
+        SalonService(id: 's10', salonId: '22222222-2222-2222-2222-222222222222', name: 'Hair Spa & Scalp Therapy', category: 'Spa', price: 500, durationMinutes: 40),
+      ],
+    ),
+
+    // Maharashtra - Mumbai
+    Salon(
+      id: '44444444-4444-4444-4444-444444444444',
+      name: 'The Urban Barber Club',
+      description: 'Classic barber fades, hot towel shaves, beard spas & charcoal treatments.',
+      address: 'Bandra West, Linking Road',
+      city: 'Mumbai',
+      district: 'Mumbai Suburban',
+      state: 'Maharashtra',
+      pincode: '400050',
+      latitude: 19.0596,
+      longitude: 72.8295,
+      phone: '+91 98111 22334',
+      rating: 4.8,
+      reviewCount: 210,
+      activeChairs: 5,
+      isQueueOpen: true,
+      openingTime: '08:00 AM',
+      closingTime: '10:00 PM',
+      waitingCount: 2,
+      estWaitMinutes: 12,
+      distanceKm: 1.5,
+      services: [
+        SalonService(id: 's14', salonId: '44444444-4444-4444-4444-444444444444', name: 'Urban Signature Cut', category: 'Hair', price: 250, durationMinutes: 30),
+        SalonService(id: 's15', salonId: '44444444-4444-4444-4444-444444444444', name: 'Hot Towel Beard Shave', category: 'Beard', price: 150, durationMinutes: 20),
+        SalonService(id: 's16', salonId: '44444444-4444-4444-4444-444444444444', name: 'Charcoal Deep Facial', category: 'Facial', price: 500, durationMinutes: 35),
+      ],
+    ),
+
+    // Delhi
+    Salon(
+      id: '55555555-5555-5555-5555-555555555555',
+      name: 'Style Studio & Spa Lounge',
+      description: 'Luxury hair styling, beard grooming, organic facials & head relaxation therapy.',
+      address: 'Connaught Place, Block B',
+      city: 'New Delhi',
+      district: 'New Delhi',
+      state: 'Delhi',
+      pincode: '110001',
+      latitude: 28.6304,
+      longitude: 77.2177,
+      phone: '+91 99887 76655',
+      rating: 4.6,
+      reviewCount: 175,
+      activeChairs: 4,
+      isQueueOpen: true,
+      openingTime: '09:00 AM',
+      closingTime: '09:00 PM',
+      waitingCount: 4,
+      estWaitMinutes: 30,
+      distanceKm: 3.2,
+      services: [
+        SalonService(id: 's17', salonId: '55555555-5555-5555-5555-555555555555', name: 'Executive Haircut', category: 'Hair', price: 220, durationMinutes: 25),
+        SalonService(id: 's18', salonId: '55555555-5555-5555-5555-555555555555', name: 'Diamond Glow Facial', category: 'Facial', price: 600, durationMinutes: 40),
+      ],
+    ),
+
+    // Karnataka - Bangalore
+    Salon(
+      id: '66666666-6666-6666-6666-666666666666',
+      name: 'Bangalore Fade & Beard Bar',
+      description: 'Specialists in skin fades, beard sculpting & organic scalp treatments.',
+      address: 'Koramangala 5th Block, 80 Feet Road',
+      city: 'Bangalore',
+      district: 'Bangalore Urban',
+      state: 'Karnataka',
+      pincode: '560095',
+      latitude: 12.9352,
+      longitude: 77.6245,
+      phone: '+91 98888 11223',
+      rating: 4.9,
+      reviewCount: 188,
+      activeChairs: 4,
+      isQueueOpen: true,
+      openingTime: '08:30 AM',
+      closingTime: '09:30 PM',
+      waitingCount: 2,
+      estWaitMinutes: 15,
+      distanceKm: 1.1,
+      services: [
+        SalonService(id: 's19', salonId: '66666666-6666-6666-6666-666666666666', name: 'Signature Skin Fade', category: 'Hair', price: 220, durationMinutes: 30),
+        SalonService(id: 's20', salonId: '66666666-6666-6666-6666-666666666666', name: 'Beard Spa & Shape', category: 'Beard', price: 130, durationMinutes: 20),
+      ],
+    ),
+
+    // Telangana - Hyderabad
+    Salon(
+      id: '77777777-7777-7777-7777-777777777777',
+      name: 'Nizami Cuts & Grooming House',
+      description: 'Traditional & modern haircuts, herbal facials and beard styling.',
+      address: 'Jubilee Hills, Road No 36',
+      city: 'Hyderabad',
+      district: 'Hyderabad',
+      state: 'Telangana',
+      pincode: '500033',
+      latitude: 17.4319,
+      longitude: 78.4073,
+      phone: '+91 97777 22334',
+      rating: 4.8,
+      reviewCount: 130,
+      activeChairs: 4,
+      isQueueOpen: true,
+      openingTime: '09:00 AM',
+      closingTime: '10:00 PM',
+      waitingCount: 1,
+      estWaitMinutes: 10,
+      distanceKm: 2.0,
+      services: [
+        SalonService(id: 's21', salonId: '77777777-7777-7777-7777-777777777777', name: 'Royal Nizam Haircut', category: 'Hair', price: 200, durationMinutes: 25),
+        SalonService(id: 's22', salonId: '77777777-7777-7777-7777-777777777777', name: 'Herbal Glow Facial', category: 'Facial', price: 400, durationMinutes: 30),
+      ],
+    ),
+
+    // Gujarat - Ahmedabad
+    Salon(
+      id: '88888888-8888-8888-8888-888888888888',
+      name: 'Apex Men Styling Studio',
+      description: 'Hygienic salon with hair spas, modern cuts & wedding grooming packages.',
+      address: 'SG Highway, Bodakdev',
+      city: 'Ahmedabad',
+      district: 'Ahmedabad',
+      state: 'Gujarat',
+      pincode: '380054',
+      latitude: 23.0338,
+      longitude: 72.5070,
+      phone: '+91 96666 33445',
+      rating: 4.7,
+      reviewCount: 92,
+      activeChairs: 3,
+      isQueueOpen: true,
+      openingTime: '09:00 AM',
+      closingTime: '09:00 PM',
+      waitingCount: 2,
+      estWaitMinutes: 18,
+      distanceKm: 1.8,
+      services: [
+        SalonService(id: 's23', salonId: '88888888-8888-8888-8888-888888888888', name: 'Smart Styling Cut', category: 'Hair', price: 180, durationMinutes: 25),
+        SalonService(id: 's24', salonId: '88888888-8888-8888-8888-888888888888', name: 'De-Tan Facial Pack', category: 'Facial', price: 300, durationMinutes: 25),
+      ],
+    ),
+
+    // Rajasthan - Jaipur
+    Salon(
+      id: '99999999-9999-9999-9999-999999999999',
+      name: 'Pink City Hair & Beard Lounge',
+      description: 'Royal haircuts, mustache styling & head massages.',
+      address: 'C-Scheme, Ashok Nagar',
+      city: 'Jaipur',
+      district: 'Jaipur',
+      state: 'Rajasthan',
+      pincode: '302001',
+      latitude: 26.9124,
+      longitude: 75.7873,
+      phone: '+91 95555 44556',
+      rating: 4.8,
+      reviewCount: 115,
+      activeChairs: 4,
+      isQueueOpen: true,
+      openingTime: '08:30 AM',
+      closingTime: '09:30 PM',
+      waitingCount: 1,
+      estWaitMinutes: 10,
+      distanceKm: 1.2,
+      services: [
+        SalonService(id: 's25', salonId: '99999999-9999-9999-9999-999999999999', name: 'Jaipur Classic Cut', category: 'Hair', price: 150, durationMinutes: 25),
+        SalonService(id: 's26', salonId: '99999999-9999-9999-9999-999999999999', name: 'Moustache & Beard Groom', category: 'Beard', price: 90, durationMinutes: 15),
+      ],
+    ),
+
+    // Uttar Pradesh - Lucknow
+    Salon(
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      name: 'Nawabi Grooming Lounge',
+      description: 'Luxury haircuts, beard spas & herbal cleanups.',
+      address: 'Hazratganj, MG Marg',
+      city: 'Lucknow',
+      district: 'Lucknow',
+      state: 'Uttar Pradesh',
+      pincode: '226001',
+      latitude: 26.8467,
+      longitude: 80.9462,
+      phone: '+91 94444 55667',
+      rating: 4.7,
+      reviewCount: 104,
+      activeChairs: 3,
+      isQueueOpen: true,
+      openingTime: '09:00 AM',
+      closingTime: '09:30 PM',
+      waitingCount: 3,
+      estWaitMinutes: 22,
+      distanceKm: 2.1,
+      services: [
+        SalonService(id: 's27', salonId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', name: 'Nawabi Special Cut', category: 'Hair', price: 180, durationMinutes: 25),
+        SalonService(id: 's28', salonId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', name: 'Pearl Glow Facial', category: 'Facial', price: 400, durationMinutes: 35),
+      ],
+    ),
+
+    // West Bengal - Kolkata
+    Salon(
+      id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      name: 'City of Joy Barber & Spa',
+      description: 'Trendy hairstyles, head relaxation therapy & beard contouring.',
+      address: 'Park Street, Near Metro',
+      city: 'Kolkata',
+      district: 'Kolkata',
+      state: 'West Bengal',
+      pincode: '700016',
+      latitude: 22.5535,
+      longitude: 88.3518,
+      phone: '+91 93333 66778',
+      rating: 4.8,
+      reviewCount: 160,
+      activeChairs: 4,
+      isQueueOpen: true,
+      openingTime: '08:30 AM',
+      closingTime: '09:00 PM',
+      waitingCount: 2,
+      estWaitMinutes: 14,
+      distanceKm: 1.4,
+      services: [
+        SalonService(id: 's29', salonId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', name: 'Metro Style Haircut', category: 'Hair', price: 160, durationMinutes: 25),
+        SalonService(id: 's30', salonId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', name: 'Ayurvedic Head Spa', category: 'Spa', price: 250, durationMinutes: 25),
+      ],
+    ),
+
+    // Odisha - Bhubaneswar
+    Salon(
+      id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+      name: 'Kalinga Cuts & Grooming Studio',
+      description: 'Hygienic family salon with professional hair styling & skin therapy.',
+      address: 'Saheed Nagar, Janpath',
+      city: 'Bhubaneswar',
+      district: 'Bhubaneswar (Khurda)',
+      state: 'Odisha',
+      pincode: '751007',
+      latitude: 20.2961,
+      longitude: 85.8245,
+      phone: '+91 92222 77889',
+      rating: 4.8,
+      reviewCount: 88,
+      activeChairs: 3,
+      isQueueOpen: true,
+      openingTime: '08:30 AM',
+      closingTime: '09:30 PM',
+      waitingCount: 1,
+      estWaitMinutes: 8,
+      distanceKm: 1.0,
+      services: [
+        SalonService(id: 's31', salonId: 'cccccccc-cccc-cccc-cccc-cccccccccccc', name: 'Smart Cut & Wash', category: 'Hair', price: 150, durationMinutes: 20),
+        SalonService(id: 's32', salonId: 'cccccccc-cccc-cccc-cccc-cccccccccccc', name: 'Gold Facial Spa', category: 'Facial', price: 400, durationMinutes: 30),
+      ],
+    ),
+
+    // Bihar - Patna
+    Salon(
+      id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+      name: 'Patliputra Styles & Salon',
+      description: 'Modern men salon for haircuts, beard shaping & charcoal facials.',
+      address: 'Boring Road, Near Crossing',
+      city: 'Patna',
+      district: 'Patna',
+      state: 'Bihar',
+      pincode: '800001',
+      latitude: 25.6186,
+      longitude: 85.1189,
+      phone: '+91 91111 88990',
+      rating: 4.7,
+      reviewCount: 76,
+      activeChairs: 3,
+      isQueueOpen: true,
+      openingTime: '09:00 AM',
+      closingTime: '09:00 PM',
+      waitingCount: 2,
+      estWaitMinutes: 16,
+      distanceKm: 1.7,
+      services: [
+        SalonService(id: 's33', salonId: 'dddddddd-dddd-dddd-dddd-dddddddddddd', name: 'Regular Haircut', category: 'Hair', price: 120, durationMinutes: 20),
+        SalonService(id: 's34', salonId: 'dddddddd-dddd-dddd-dddd-dddddddddddd', name: 'Beard Trimming & Set', category: 'Beard', price: 70, durationMinutes: 15),
+      ],
+    ),
+  ];
+
+  /// Fetches salons filtered by state, district/city, search query, category, or sorted by distance/rush.
+  Future<List<Salon>> fetchSalons({
+    String? state,
+    String? city,
+    String? search,
+    String? category,
+    String sortBy = 'nearest', // 'nearest', 'rush', 'rating'
+    double userLat = 18.5204, // Default center
+    double userLng = 73.8567,
+  }) async {
+    final client = this.client;
+    if (client == null) {
+      return _filterLocalSalons(
+        fallbackSalons,
+        state: state,
+        city: city,
+        search: search,
+        category: category,
+        sortBy: sortBy,
+        userLat: userLat,
+        userLng: userLng,
+      );
+    }
+
+    // Normalize city & state
+    String? cleanCity = city?.trim();
+    String? cleanState = state?.trim();
+
+    if (cleanCity != null && cleanCity.contains(',')) {
+      final parts = cleanCity.split(',');
+      cleanCity = parts[0].trim();
+      if ((cleanState == null ||
+              cleanState.isEmpty ||
+              cleanState.toLowerCase() == 'all' ||
+              cleanState.toLowerCase() == 'all states') &&
+          parts.length > 1 &&
+          parts[1].trim().isNotEmpty) {
+        cleanState = parts[1].trim();
+      }
+    }
+
+    if (cleanCity != null &&
+        (cleanCity.isEmpty ||
+            cleanCity.toLowerCase() == 'all' ||
+            cleanCity.toLowerCase() == 'all cities' ||
+            cleanCity.toLowerCase() == 'all india')) {
+      cleanCity = null;
+    }
+
+    if (cleanState != null &&
+        (cleanState.isEmpty ||
+            cleanState.toLowerCase() == 'all' ||
+            cleanState.toLowerCase() == 'all states')) {
+      cleanState = null;
+    }
+
+    try {
+      final response = await client
+          .from('salons')
+          .select('*, services(*)')
+          .order('created_at', ascending: false);
+
+      final List<Salon> result = [];
+
+      for (final raw in (response as List)) {
+        final Map<String, dynamic> map = Map<String, dynamic>.from(raw as Map);
+        final rawServices = map['services'] as List? ?? [];
+        final services = rawServices
+            .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
+            .toList();
+
+        // Live waiting count from active tickets
+        try {
+          final ticketsCount = await client
+              .from('queue_tickets')
+              .select('id')
+              .eq('salon_id', map['id'])
+              .eq('status', 'WAITING');
+          map['waiting_count'] = (ticketsCount as List).length;
+        } catch (_) {
+          map['waiting_count'] = 0;
+        }
+
+        result.add(Salon.fromJson(
+          map,
+          services: services,
+          userLat: userLat,
+          userLng: userLng,
+        ));
+      }
+
+      // Filter in-memory for state, city/district/address, and search query
+      var filtered = result;
+
+      if (cleanState != null && cleanState.isNotEmpty) {
+        final sState = cleanState.toLowerCase();
+        filtered = filtered.where((s) =>
+            s.state.toLowerCase().contains(sState) ||
+            s.city.toLowerCase().contains(sState) ||
+            s.district.toLowerCase().contains(sState) ||
+            s.address.toLowerCase().contains(sState)).toList();
+      }
+
+      if (cleanCity != null && cleanCity.isNotEmpty) {
+        final c = cleanCity.toLowerCase();
+        filtered = filtered.where((s) =>
+            s.city.toLowerCase().contains(c) ||
+            s.district.toLowerCase().contains(c) ||
+            s.address.toLowerCase().contains(c) ||
+            s.state.toLowerCase().contains(c)).toList();
+      }
+
+      if (search != null && search.trim().isNotEmpty) {
+        final q = search.trim().toLowerCase();
+        filtered = filtered.where((s) =>
+            s.name.toLowerCase().contains(q) ||
+            (s.ownerName != null && s.ownerName!.toLowerCase().contains(q)) ||
+            s.address.toLowerCase().contains(q) ||
+            s.city.toLowerCase().contains(q) ||
+            s.district.toLowerCase().contains(q) ||
+            s.state.toLowerCase().contains(q) ||
+            (s.description != null && s.description!.toLowerCase().contains(q)) ||
+            s.services.any((svc) => svc.name.toLowerCase().contains(q))).toList();
+      }
+
+      final catFiltered = _filterByCategory(filtered, category);
+      return _sortSalons(catFiltered, sortBy);
+    } catch (e) {
+      debugPrint('[SalonRepository] fetchSalons error: $e');
+      return [];
+    }
+  }
+
+  /// Fetches a single salon by ID or Owner ID
+  Future<Salon?> fetchSalonById(String salonId) async {
+    final trimmedId = salonId.trim();
+    if (trimmedId.isEmpty) return null;
+
+    final client = this.client;
+    if (client == null) {
+      final matches = fallbackSalons.where((s) => s.id == trimmedId || s.ownerId == trimmedId);
+      if (matches.isNotEmpty) return matches.first;
+      if (_ownerSalonsCache.containsKey(trimmedId)) return _ownerSalonsCache[trimmedId];
+      final byOwner = _ownerSalonsCache.values.where((s) => s.id == trimmedId || s.ownerId == trimmedId);
+      if (byOwner.isNotEmpty) return byOwner.first;
+      return null;
+    }
+
+    try {
+      final resList = await client
+          .from('salons')
+          .select('*, services(*)')
+          .or('id.eq.$trimmedId,owner_id.eq.$trimmedId')
+          .limit(1);
+
+      if ((resList as List).isNotEmpty) {
+        final map = Map<String, dynamic>.from(resList.first as Map);
+        final rawServices = map['services'] as List? ?? [];
+        final services = rawServices
+            .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
+            .toList();
+
+        try {
+          final tickets = await client
+              .from('queue_tickets')
+              .select('id')
+              .eq('salon_id', map['id'])
+              .eq('status', 'WAITING');
+          map['waiting_count'] = (tickets as List).length;
+        } catch (_) {
+          map['waiting_count'] = 0;
+        }
+
+        final salon = Salon.fromJson(map, services: services);
+        _ownerSalonsCache[salon.ownerId ?? salon.id] = salon;
+        return salon;
+      }
+
+      if (_ownerSalonsCache.containsKey(trimmedId)) return _ownerSalonsCache[trimmedId];
+      final byOwner = _ownerSalonsCache.values.where((s) => s.id == trimmedId || s.ownerId == trimmedId);
+      if (byOwner.isNotEmpty) return byOwner.first;
+
+      final matches = fallbackSalons.where((s) => s.id == trimmedId || s.ownerId == trimmedId);
+      return matches.isNotEmpty ? matches.first : null;
+    } catch (e) {
+      debugPrint('[SalonRepository] fetchSalonById error: $e');
+      if (_ownerSalonsCache.containsKey(trimmedId)) return _ownerSalonsCache[trimmedId];
+      final byOwner = _ownerSalonsCache.values.where((s) => s.id == trimmedId || s.ownerId == trimmedId);
+      if (byOwner.isNotEmpty) return byOwner.first;
+      final matches = fallbackSalons.where((s) => s.id == trimmedId || s.ownerId == trimmedId);
+      return matches.isNotEmpty ? matches.first : null;
+    }
+  }
+
+  /// Fetches the salon owned by the current salon owner with strict per-owner data isolation
+  Future<Salon?> fetchOwnerSalon(String ownerId) async {
+    if (ownerId.isEmpty) return null;
+
+    // 1. In-memory cache check
+    if (_ownerSalonsCache.containsKey(ownerId)) {
+      return _ownerSalonsCache[ownerId];
+    }
+
+    // 2. Local disk persistent cache check (restores immediately even after logout / cold restart)
+    final diskSalon = await _loadSalonFromDisk(ownerId);
+    if (diskSalon != null) {
+      _ownerSalonsCache[ownerId] = diskSalon;
+      _ownerSalonsCache[diskSalon.id] = diskSalon;
+    }
+
+    final client = this.client;
+    if (client != null) {
+      try {
+        final resList = await client
+            .from('salons')
+            .select('*, services(*)')
+            .eq('owner_id', ownerId)
+            .order('updated_at', ascending: false)
+            .limit(1);
+
+        if ((resList as List).isNotEmpty) {
+          final map = Map<String, dynamic>.from(resList.first as Map);
+          final rawServices = map['services'] as List? ?? [];
+          final services = rawServices
+              .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
+              .toList();
+
+          final remoteSalon = Salon.fromJson(map, services: services);
+
+          // Merge disk customizations with remote DB row
+          final finalSalon = diskSalon != null
+              ? diskSalon.copyWith(
+                  id: remoteSalon.id.isNotEmpty ? remoteSalon.id : diskSalon.id,
+                  name: remoteSalon.name.isNotEmpty && remoteSalon.name != 'My Salon & Spa'
+                      ? remoteSalon.name
+                      : diskSalon.name,
+                  description: remoteSalon.description ?? diskSalon.description,
+                  phone: remoteSalon.phone ?? diskSalon.phone,
+                  address: remoteSalon.address.isNotEmpty && remoteSalon.address != 'Main Market Road'
+                      ? remoteSalon.address
+                      : diskSalon.address,
+                  city: remoteSalon.city.isNotEmpty && remoteSalon.city != 'Angul'
+                      ? remoteSalon.city
+                      : diskSalon.city,
+                  district: remoteSalon.district.isNotEmpty ? remoteSalon.district : diskSalon.district,
+                  state: remoteSalon.state.isNotEmpty ? remoteSalon.state : diskSalon.state,
+                  coverImageUrl: remoteSalon.coverImageUrl ?? diskSalon.coverImageUrl,
+                  bannerUrl: remoteSalon.bannerUrl ?? diskSalon.bannerUrl,
+                  ownerAvatarUrl: remoteSalon.ownerAvatarUrl ?? diskSalon.ownerAvatarUrl,
+                  ownerName: remoteSalon.ownerName ?? diskSalon.ownerName,
+                  galleryImages: remoteSalon.galleryImages.isNotEmpty
+                      ? remoteSalon.galleryImages
+                      : diskSalon.galleryImages,
+                  services: services.isNotEmpty ? services : diskSalon.services,
+                )
+              : remoteSalon;
+
+          _ownerSalonsCache[ownerId] = finalSalon;
+          _ownerSalonsCache[finalSalon.id] = finalSalon;
+          unawaited(_saveSalonToDisk(finalSalon));
+          return finalSalon;
+        }
+
+        // If not in DB but exists on local disk, sync local disk up to database
+        if (diskSalon != null) {
+          unawaited(_updateSalonInDb(diskSalon.id, diskSalon.toJson(), ownerId: ownerId));
+          return diskSalon;
+        }
+
+        // Brand new owner without existing salon — provision a dedicated salon row for this auth.uid()
+        try {
+          String initialOwnerName = 'Salon Owner';
+          try {
+            final profile = await client.from('profiles').select('full_name').eq('id', ownerId).maybeSingle();
+            if (profile != null && profile['full_name'] != null && profile['full_name'].toString().isNotEmpty) {
+              initialOwnerName = profile['full_name'].toString();
+            }
+          } catch (_) {}
+
+          final inserted = await client.from('salons').insert({
+            'owner_id': ownerId,
+            'name': 'My Salon & Spa',
+            'owner_name': initialOwnerName,
+            'description': 'Welcome to our premium salon.',
+            'address': 'Main Market Road',
+            'city': 'Angul',
+            'district': 'Angul',
+            'state': 'Odisha',
+            'active_chairs': 3,
+            'is_queue_open': true,
+            'is_verified': true,
+            'is_active': true,
+            'is_published': true,
+            'opening_time': '09:00 AM',
+            'closing_time': '09:00 PM',
+          }).select('*, services(*)').maybeSingle();
+
+          if (inserted != null) {
+            final map = Map<String, dynamic>.from(inserted);
+            final salonId = map['id'] as String;
+
+            try {
+              final defaultServices = [
+                {'salon_id': salonId, 'name': 'Classic Haircut', 'category': 'Hair', 'price': 150.0, 'duration_minutes': 25, 'is_active': true},
+                {'salon_id': salonId, 'name': 'Beard Trim & Styling', 'category': 'Beard', 'price': 80.0, 'duration_minutes': 15, 'is_active': true},
+                {'salon_id': salonId, 'name': 'Hair Spa & Scalp Massage', 'category': 'Spa', 'price': 250.0, 'duration_minutes': 30, 'is_active': true},
+              ];
+              final insertedServices = await client.from('services').insert(defaultServices).select();
+              final services = (insertedServices as List)
+                  .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
+                  .toList();
+              final salon = Salon.fromJson(map, services: services);
+              _ownerSalonsCache[ownerId] = salon;
+              _ownerSalonsCache[salon.id] = salon;
+              unawaited(_saveSalonToDisk(salon));
+              return salon;
+            } catch (_) {}
+
+            final salon = Salon.fromJson(map, services: []);
+            _ownerSalonsCache[ownerId] = salon;
+            _ownerSalonsCache[salon.id] = salon;
+            unawaited(_saveSalonToDisk(salon));
+            return salon;
+          }
+        } catch (insertErr) {
+          debugPrint('[SalonRepository] auto-provision owner salon error: $insertErr');
+        }
+      } catch (e) {
+        debugPrint('[SalonRepository] fetchOwnerSalon error: $e');
+      }
+    }
+
+    // Fallback: Return diskSalon or default isolated salon
+    if (diskSalon != null) {
+      return diskSalon;
+    }
+
+    final isolatedSalon = Salon(
+      id: ownerId,
+      ownerId: ownerId,
+      name: 'My Salon & Spa',
+      description: 'Welcome to our premium salon.',
+      address: 'Main Market Road',
+      city: 'Angul',
+      district: 'Angul',
+      state: 'Odisha',
+      activeChairs: 3,
+      isQueueOpen: true,
+      openingTime: '09:00 AM',
+      closingTime: '09:00 PM',
+      ownerName: 'Salon Owner',
+      ownerAvatarUrl: null,
+      coverImageUrl: null,
+      bannerUrl: null,
+      galleryImages: const [],
+      services: const [],
+    );
+
+    _ownerSalonsCache[ownerId] = isolatedSalon;
+    unawaited(_saveSalonToDisk(isolatedSalon));
+    return isolatedSalon;
+  }
+
+  /// Helper to update a salon row in Supabase, matching by owner_id or id
+  Future<void> _updateSalonInDb(
+    String salonId,
+    Map<String, dynamic> updateData, {
+    String? ownerId,
+  }) async {
+    final activeClient = client;
+    final effectiveOwnerId =
+        ownerId ?? activeClient?.auth.currentUser?.id;
+
+    if (effectiveOwnerId == null || effectiveOwnerId.isEmpty) return;
+
+    // 1. Retrieve current salon from cache or disk to construct a FULL, complete record
+    Salon? existing = _ownerSalonsCache[effectiveOwnerId] ??
+        _ownerSalonsCache.values.cast<Salon?>().firstWhere(
+              (s) => s != null && (s.id == salonId || s.ownerId == effectiveOwnerId),
+              orElse: () => null,
+            );
+
+    existing ??= await _loadSalonFromDisk(effectiveOwnerId);
+
+    // 2. Immediately save local copy to memory and disk
+    final localUpdated = (existing != null)
+        ? existing.copyWith(
+            name: updateData['name'] ?? existing.name,
+            description: updateData['description'] ?? existing.description,
+            phone: updateData.containsKey('phone') ? updateData['phone'] : existing.phone,
+            address: updateData['address'] ?? existing.address,
+            city: updateData['city'] ?? existing.city,
+            district: updateData['district'] ?? existing.district,
+            state: updateData['state'] ?? existing.state,
+            pincode: updateData.containsKey('pincode') ? updateData['pincode'] : existing.pincode,
+            activeChairs: updateData['active_chairs'] ?? existing.activeChairs,
+            isQueueOpen: updateData['is_queue_open'] ?? existing.isQueueOpen,
+            openingTime: updateData['opening_time'] ?? existing.openingTime,
+            closingTime: updateData['closing_time'] ?? existing.closingTime,
+            coverImageUrl: updateData.containsKey('cover_image_url')
+                ? updateData['cover_image_url']
+                : existing.coverImageUrl,
+            bannerUrl: updateData.containsKey('banner_url')
+                ? updateData['banner_url']
+                : existing.bannerUrl,
+            ownerName: updateData['owner_name'] ?? existing.ownerName,
+            ownerAvatarUrl: updateData.containsKey('owner_avatar_url')
+                ? updateData['owner_avatar_url']
+                : existing.ownerAvatarUrl,
+            galleryImages: updateData['gallery_images'] != null
+                ? List<String>.from(updateData['gallery_images'])
+                : existing.galleryImages,
+          )
+        : Salon.fromJson(updateData);
+
+    _ownerSalonsCache[effectiveOwnerId] = localUpdated;
+    if (localUpdated.id.isNotEmpty) {
+      _ownerSalonsCache[localUpdated.id] = localUpdated;
+    }
+    unawaited(_saveSalonToDisk(localUpdated));
+
+    if (activeClient == null) return;
+
+    try {
+      // 3. Build full merged database map from existing + updateData
+      final fullPayload = <String, dynamic>{
+        'owner_id': effectiveOwnerId,
+        'name': updateData['name'] ?? existing?.name ?? 'My Salon & Spa',
+        'description': updateData['description'] ?? existing?.description ?? 'Welcome to our premium salon.',
+        'phone': updateData.containsKey('phone') ? updateData['phone'] : existing?.phone,
+        'address': updateData['address'] ?? existing?.address ?? 'Main Market Road',
+        'city': updateData['city'] ?? existing?.city ?? 'Angul',
+        'district': updateData['district'] ?? existing?.district ?? 'Angul',
+        'state': updateData['state'] ?? existing?.state ?? 'Odisha',
+        'pincode': updateData.containsKey('pincode') ? updateData['pincode'] : existing?.pincode,
+        'active_chairs': updateData['active_chairs'] ?? existing?.activeChairs ?? 3,
+        'is_queue_open': updateData['is_queue_open'] ?? existing?.isQueueOpen ?? true,
+        'is_verified': true,
+        'is_active': true,
+        'is_published': true,
+        'opening_time': updateData['opening_time'] ?? existing?.openingTime ?? '09:00 AM',
+        'closing_time': updateData['closing_time'] ?? existing?.closingTime ?? '09:00 PM',
+        'cover_image_url': updateData.containsKey('cover_image_url')
+            ? updateData['cover_image_url']
+            : existing?.coverImageUrl,
+        'banner_url': updateData.containsKey('banner_url')
+            ? updateData['banner_url']
+            : existing?.bannerUrl,
+        'owner_name': updateData['owner_name'] ?? existing?.ownerName ?? 'Salon Owner',
+        'owner_avatar_url': updateData.containsKey('owner_avatar_url')
+            ? updateData['owner_avatar_url']
+            : existing?.ownerAvatarUrl,
+        'gallery_images': updateData['gallery_images'] ?? existing?.galleryImages ?? [],
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      };
+
+      // 4. Try to update existing salon by owner_id
+      bool updated = false;
+
+      final resOwner = await activeClient
+          .from('salons')
+          .update(fullPayload)
+          .eq('owner_id', effectiveOwnerId)
+          .select('*, services(*)');
+
+      if ((resOwner as List).isNotEmpty) {
+        final map = Map<String, dynamic>.from(resOwner.first as Map);
+        final rawServices = map['services'] as List? ?? [];
+        final services = rawServices
+            .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
+            .toList();
+        final updatedSalon = Salon.fromJson(map, services: services);
+        _ownerSalonsCache[effectiveOwnerId] = updatedSalon;
+        if (updatedSalon.id.isNotEmpty) {
+          _ownerSalonsCache[updatedSalon.id] = updatedSalon;
+        }
+        unawaited(_saveSalonToDisk(updatedSalon));
+        updated = true;
+      }
+
+      // If no row matched owner_id, try update by id
+      if (!updated && salonId.isNotEmpty && salonId.length == 36 && !salonId.startsWith('salon-')) {
+        final resId = await activeClient
+            .from('salons')
+            .update(fullPayload)
+            .eq('id', salonId)
+            .select('*, services(*)');
+
+        if ((resId as List).isNotEmpty) {
+          final map = Map<String, dynamic>.from(resId.first as Map);
+          final rawServices = map['services'] as List? ?? [];
+          final services = rawServices
+              .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
+              .toList();
+          final updatedSalon = Salon.fromJson(map, services: services);
+          _ownerSalonsCache[effectiveOwnerId] = updatedSalon;
+          _ownerSalonsCache[updatedSalon.id] = updatedSalon;
+          unawaited(_saveSalonToDisk(updatedSalon));
+          updated = true;
+        }
+      }
+
+      // If salon does not exist in DB yet, insert the fullPayload
+      if (!updated) {
+        final resInsert = await activeClient
+            .from('salons')
+            .insert(fullPayload)
+            .select('*, services(*)');
+
+        if ((resInsert as List).isNotEmpty) {
+          final map = Map<String, dynamic>.from(resInsert.first as Map);
+          final rawServices = map['services'] as List? ?? [];
+          final services = rawServices
+              .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
+              .toList();
+          final updatedSalon = Salon.fromJson(map, services: services);
+          _ownerSalonsCache[effectiveOwnerId] = updatedSalon;
+          _ownerSalonsCache[updatedSalon.id] = updatedSalon;
+          unawaited(_saveSalonToDisk(updatedSalon));
+        }
+      }
+    } catch (e) {
+      debugPrint('[SalonRepository] _updateSalonInDb error: $e');
+    }
+  }
+
+  /// Updates queue open/closed status for salon owner
+  Future<void> setQueueStatus(String salonId, bool isOpen, {String? ownerId}) async {
+    _updateOwnerSalonInMemory(salonId, (s) => s.copyWith(isQueueOpen: isOpen), ownerId: ownerId);
+    await _updateSalonInDb(salonId, {'is_queue_open': isOpen}, ownerId: ownerId);
+  }
+
+  /// Updates salon profile details, state, district, city, working hours, and chairs
+  Future<void> updateSalonDetails({
+    required String salonId,
+    String? ownerId,
+    required String name,
+    required String description,
+    required String address,
+    required String city,
+    required String district,
+    required String state,
+    String? pincode,
+    required String phone,
+    required int activeChairs,
+    required String openingTime,
+    required String closingTime,
+  }) async {
+    _updateOwnerSalonInMemory(
+      salonId,
+      (s) => s.copyWith(
+        name: name,
+        description: description,
+        address: address,
+        city: city,
+        district: district,
+        state: state,
+        pincode: pincode,
+        phone: phone,
+        activeChairs: activeChairs,
+        openingTime: openingTime,
+        closingTime: closingTime,
+      ),
+      ownerId: ownerId,
+    );
+
+    await _updateSalonInDb(
+      salonId,
+      {
+        'name': name,
+        'description': description,
+        'address': address,
+        'city': city,
+        'district': district,
+        'state': state,
+        'pincode': pincode,
+        'phone': phone,
+        'active_chairs': activeChairs,
+        'opening_time': openingTime,
+        'closing_time': closingTime,
+      },
+      ownerId: ownerId,
+    );
+  }
+
+  /// Updates only store information (Name, Description, Phone)
+  Future<void> updateStoreInfo({
+    required String salonId,
+    String? ownerId,
+    required String name,
+    required String description,
+    required String phone,
+  }) async {
+    _updateOwnerSalonInMemory(
+      salonId,
+      (s) => s.copyWith(
+        name: name,
+        description: description,
+        phone: phone,
+      ),
+      ownerId: ownerId,
+    );
+
+    await _updateSalonInDb(
+      salonId,
+      {
+        'name': name,
+        'description': description,
+        'phone': phone,
+      },
+      ownerId: ownerId,
+    );
+  }
+
+  /// Updates only store location (State, District, City, Address, Pincode)
+  Future<void> updateSalonLocation({
+    required String salonId,
+    String? ownerId,
+    required String state,
+    required String district,
+    required String city,
+    required String address,
+    String? pincode,
+  }) async {
+    _updateOwnerSalonInMemory(
+      salonId,
+      (s) => s.copyWith(
+        state: state,
+        district: district,
+        city: city,
+        address: address,
+        pincode: pincode,
+      ),
+      ownerId: ownerId,
+    );
+
+    await _updateSalonInDb(
+      salonId,
+      {
+        'state': state,
+        'district': district,
+        'city': city,
+        'address': address,
+        'pincode': pincode,
+      },
+      ownerId: ownerId,
+    );
+  }
+
+  /// Updates chairs count and opening/closing hours
+  Future<void> updateChairsTimings({
+    required String salonId,
+    String? ownerId,
+    required int activeChairs,
+    required String openingTime,
+    required String closingTime,
+  }) async {
+    _updateOwnerSalonInMemory(
+      salonId,
+      (s) => s.copyWith(
+        activeChairs: activeChairs,
+        openingTime: openingTime,
+        closingTime: closingTime,
+      ),
+      ownerId: ownerId,
+    );
+
+    await _updateSalonInDb(
+      salonId,
+      {
+        'active_chairs': activeChairs,
+        'opening_time': openingTime,
+        'closing_time': closingTime,
+      },
+      ownerId: ownerId,
+    );
+  }
+
+  /// Updates salon main cover image
+  Future<void> updateCoverImage({
+    required String salonId,
+    String? ownerId,
+    required String? coverImageUrl,
+  }) async {
+    _updateOwnerSalonInMemory(
+      salonId,
+      (s) => s.copyWith(
+        coverImageUrl: coverImageUrl,
+        bannerUrl: coverImageUrl,
+      ),
+      ownerId: ownerId,
+    );
+
+    await _updateSalonInDb(
+      salonId,
+      {
+        'cover_image_url': coverImageUrl,
+        'banner_url': coverImageUrl,
+      },
+      ownerId: ownerId,
+    );
+  }
+
+  /// Updates owner profile information and avatar photo
+  Future<void> updateOwnerProfile({
+    required String salonId,
+    String? ownerId,
+    String? ownerName,
+    String? ownerAvatarUrl,
+    bool clearAvatar = false,
+  }) async {
+    _updateOwnerSalonInMemory(
+      salonId,
+      (s) => s.copyWith(
+        ownerName: ownerName,
+        ownerAvatarUrl: clearAvatar ? null : ownerAvatarUrl,
+        clearOwnerAvatar: clearAvatar,
+      ),
+      ownerId: ownerId,
+    );
+
+    final updateData = <String, dynamic>{};
+    if (ownerName != null) updateData['owner_name'] = ownerName;
+    if (clearAvatar) {
+      updateData['owner_avatar_url'] = null;
+    } else if (ownerAvatarUrl != null) {
+      updateData['owner_avatar_url'] = ownerAvatarUrl;
+    }
+
+    if (updateData.isNotEmpty) {
+      await _updateSalonInDb(salonId, updateData, ownerId: ownerId);
+    }
+  }
+
+  /// Adds a photo to the salon gallery
+  Future<void> addGalleryImage({
+    required String salonId,
+    String? ownerId,
+    required String imageUrl,
+  }) async {
+    List<String> currentGallery = [];
+    _updateOwnerSalonInMemory(
+      salonId,
+      (s) {
+        currentGallery = [...s.galleryImages, imageUrl];
+        return s.copyWith(galleryImages: currentGallery);
+      },
+      ownerId: ownerId,
+    );
+
+    await _updateSalonInDb(
+      salonId,
+      {'gallery_images': currentGallery},
+      ownerId: ownerId,
+    );
+  }
+
+  /// Removes a photo from the salon gallery
+  Future<void> removeGalleryImage({
+    required String salonId,
+    String? ownerId,
+    required String imageUrl,
+  }) async {
+    List<String> updatedGallery = [];
+    _updateOwnerSalonInMemory(
+      salonId,
+      (s) {
+        updatedGallery = s.galleryImages.where((img) => img != imageUrl).toList();
+        return s.copyWith(galleryImages: updatedGallery);
+      },
+      ownerId: ownerId,
+    );
+
+    await _updateSalonInDb(
+      salonId,
+      {'gallery_images': updatedGallery},
+      ownerId: ownerId,
+    );
+  }
+
+  /// Adds a new service
+  Future<SalonService?> addService({
+    required String salonId,
+    required String name,
+    required String category,
+    required double price,
+    required int durationMinutes,
+  }) async {
+    final client = this.client;
+    final newSvc = SalonService(
+      id: 'svc-${DateTime.now().millisecondsSinceEpoch}',
+      salonId: salonId,
+      name: name,
+      category: category,
+      price: price,
+      durationMinutes: durationMinutes,
+      isActive: true,
+    );
+
+    _updateOwnerSalonInMemory(
+      salonId,
+      (s) => s.copyWith(services: [...s.services, newSvc]),
+    );
+
+    if (client == null) {
+      return newSvc;
+    }
+
+    try {
+      final res = await client.from('services').insert({
+        'salon_id': salonId,
+        'name': name,
+        'category': category,
+        'price': price,
+        'duration_minutes': durationMinutes,
+        'is_active': true,
+      }).select().single();
+
+      return SalonService.fromJson(Map<String, dynamic>.from(res));
+    } catch (e) {
+      debugPrint('[SalonRepository] addService error: $e');
+      return newSvc;
+    }
+  }
+
+  /// Updates an existing service
+  Future<void> updateService({
+    required String serviceId,
+    required String name,
+    required String category,
+    required double price,
+    required int durationMinutes,
+    required bool isActive,
+  }) async {
+    for (final entry in _ownerSalonsCache.entries) {
+      final s = entry.value;
+      final svcIdx = s.services.indexWhere((svc) => svc.id == serviceId);
+      if (svcIdx != -1) {
+        final updatedServices = List<SalonService>.from(s.services);
+        updatedServices[svcIdx] = updatedServices[svcIdx].copyWith(
+          name: name,
+          category: category,
+          price: price,
+          durationMinutes: durationMinutes,
+          isActive: isActive,
+        );
+        _ownerSalonsCache[entry.key] = s.copyWith(services: updatedServices);
+      }
+    }
+
+    final client = this.client;
+    if (client == null) return;
+
+    try {
+      await client.from('services').update({
+        'name': name,
+        'category': category,
+        'price': price,
+        'duration_minutes': durationMinutes,
+        'is_active': isActive,
+      }).eq('id', serviceId);
+    } catch (e) {
+      debugPrint('[SalonRepository] updateService error: $e');
+    }
+  }
+
+  /// Deletes a service
+  Future<void> deleteService(String serviceId) async {
+    for (final entry in _ownerSalonsCache.entries) {
+      final s = entry.value;
+      if (s.services.any((svc) => svc.id == serviceId)) {
+        final updatedServices = s.services.where((svc) => svc.id != serviceId).toList();
+        _ownerSalonsCache[entry.key] = s.copyWith(services: updatedServices);
+      }
+    }
+
+    final client = this.client;
+    if (client == null) return;
+
+    try {
+      await client.from('services').delete().eq('id', serviceId);
+    } catch (e) {
+      debugPrint('[SalonRepository] deleteService error: $e');
+    }
+  }
+
+  List<Salon> _filterLocalSalons(
+    List<Salon> list, {
+    String? state,
+    String? city,
+    String? search,
+    String? category,
+    String sortBy = 'nearest',
+    double userLat = 18.5204,
+    double userLng = 73.8567,
+  }) {
+    var result = list.map((s) {
+      final dist = s.calculateDistance(userLat, userLng);
+      return s.copyWith(distanceKm: dist);
+    }).toList();
+
+    if (state != null && state.isNotEmpty && state.toLowerCase() != 'all' && state.toLowerCase() != 'all states') {
+      result = result.where((s) => s.state.toLowerCase() == state.toLowerCase()).toList();
+    }
+
+    if (city != null && city.isNotEmpty && city.toLowerCase() != 'all' && city.toLowerCase() != 'all cities' && city.toLowerCase() != 'all india') {
+      final c = city.toLowerCase();
+      result = result.where((s) =>
+          s.city.toLowerCase().contains(c) ||
+          s.district.toLowerCase().contains(c) ||
+          s.state.toLowerCase().contains(c)).toList();
+    }
+
+    if (search != null && search.trim().isNotEmpty) {
+      final q = search.trim().toLowerCase();
+      result = result.where((s) =>
+          s.name.toLowerCase().contains(q) ||
+          (s.ownerName != null && s.ownerName!.toLowerCase().contains(q)) ||
+          s.address.toLowerCase().contains(q) ||
+          s.city.toLowerCase().contains(q) ||
+          s.district.toLowerCase().contains(q) ||
+          s.state.toLowerCase().contains(q) ||
+          (s.description != null && s.description!.toLowerCase().contains(q)) ||
+          s.services.any((svc) => svc.name.toLowerCase().contains(q))).toList();
+    }
+
+    final catFiltered = _filterByCategory(result, category);
+    return _sortSalons(catFiltered, sortBy);
+  }
+
+  List<Salon> _filterByCategory(List<Salon> list, String? category) {
+    if (category == null || category.isEmpty || category == 'All' || category == 'Favorites') {
+      return list;
+    }
+    return list.where((s) =>
+        s.services.any((svc) => svc.category.toLowerCase() == category.toLowerCase()) ||
+        s.name.toLowerCase().contains(category.toLowerCase())).toList();
+  }
+
+  List<Salon> _sortSalons(List<Salon> list, String sortBy) {
+    final sorted = List<Salon>.from(list);
+    switch (sortBy) {
+      case 'rush':
+        sorted.sort((a, b) => a.waitingCount.compareTo(b.waitingCount));
+        break;
+      case 'rating':
+        sorted.sort((a, b) => b.rating.compareTo(a.rating));
+        break;
+      case 'nearest':
+      default:
+        sorted.sort((a, b) => (a.distanceKm ?? 999).compareTo(b.distanceKm ?? 999));
+        break;
+    }
+    return sorted;
+  }
+}
