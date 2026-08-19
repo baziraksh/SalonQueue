@@ -403,8 +403,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
 
   // ── Edit Owner Profile Name Dialog ───────────────────────────────────────
   void _showEditProfileDialog() {
+    final auth = AuthScope.of(context, listen: false);
     final nameCtrl = TextEditingController(
-      text: _currentSalon.ownerName ?? 'Rahul Sharma',
+      text: _currentSalon.ownerName ?? (auth.currentUser?.fullName ?? ''),
     );
 
     showDialog(
@@ -502,9 +503,10 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = AuthScope.of(context, listen: false);
-    final ownerEmail = auth.currentUser?.email ?? 'owner@salonqueue.app';
-    final ownerDisplayName = _currentSalon.ownerName ??
-        (auth.currentUser?.fullName ?? 'Rahul Sharma');
+    final ownerEmail = auth.currentUser?.email ?? '';
+    final ownerDisplayName = (_currentSalon.ownerName != null && _currentSalon.ownerName!.isNotEmpty)
+        ? _currentSalon.ownerName!
+        : (auth.currentUser?.fullName ?? 'Salon Owner');
 
     return Scaffold(
       backgroundColor: AppColorSchemes.ivory,

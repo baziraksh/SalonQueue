@@ -311,7 +311,9 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                       const Icon(Icons.star, color: Colors.amber, size: 20),
                       const SizedBox(width: 4),
                       Text(
-                        '${widget.salon.rating} (${widget.salon.reviewCount} reviews)',
+                        (widget.salon.rating > 0 && widget.salon.reviewCount > 0)
+                            ? '${widget.salon.rating.toStringAsFixed(1)} (${widget.salon.reviewCount} reviews)'
+                            : 'New Salon',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -802,7 +804,9 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
   }
 
   Widget _buildOwnerCard() {
-    final ownerName = widget.salon.ownerName ?? 'Rahul Sharma';
+    final ownerName = (widget.salon.ownerName != null && widget.salon.ownerName!.isNotEmpty)
+        ? widget.salon.ownerName!
+        : 'Salon Owner';
     final avatar = widget.salon.ownerAvatarUrl;
 
     return Container(

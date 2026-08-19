@@ -34,42 +34,11 @@ class QueueRepository {
 
   /// Clears in-memory ticket cache on user logout
   static void clearLocalCache() {
-    _inMemoryTickets.removeWhere((t) => !t.id.startsWith('t-demo-'));
+    _inMemoryTickets.clear();
   }
 
-  // Local fallback storage for offline testing / demo
-  static final List<QueueTicket> _inMemoryTickets = [
-    QueueTicket(
-      id: 't-demo-1',
-      salonId: '11111111-1111-1111-1111-111111111111',
-      customerName: 'Rahul Sharma',
-      customerPhone: '+91 98765 11223',
-      serviceNames: ['Classic Haircut'],
-      totalPrice: 150,
-      totalDurationMinutes: 25,
-      tokenNumber: 1,
-      status: QueueStatus.inChair,
-      chairNumber: 1,
-      createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
-      startedAt: DateTime.now().subtract(const Duration(minutes: 10)),
-      completedAt: null,
-    ),
-    QueueTicket(
-      id: 't-demo-2',
-      salonId: '11111111-1111-1111-1111-111111111111',
-      customerName: 'Amit Verma',
-      customerPhone: '+91 98222 33445',
-      serviceNames: ['Gold Glow Facial', 'Beard Trim & Shape'],
-      totalPrice: 530,
-      totalDurationMinutes: 50,
-      tokenNumber: 2,
-      status: QueueStatus.waiting,
-      chairNumber: null,
-      createdAt: DateTime.now().subtract(const Duration(minutes: 8)),
-      startedAt: null,
-      completedAt: null,
-    ),
-  ];
+  // Local fallback storage for offline testing
+  static final List<QueueTicket> _inMemoryTickets = [];
 
   /// Customers join live queue and get assigned a digital token
   Future<QueueTicket> joinQueue({

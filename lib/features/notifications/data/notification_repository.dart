@@ -29,38 +29,8 @@ class NotificationRepository {
     // Resets local notification stream and states
   }
 
-  // In-memory demo fallback storage
-  static final List<AppNotification> _inMemoryNotifications = [
-    AppNotification(
-      id: 'notif-demo-1',
-      ownerId: 'demo-owner',
-      title: 'Support Request Resolved',
-      message: 'Your support ticket "Queue Management Inquiry" has been resolved by our technical team.',
-      type: NotificationType.supportResolved,
-      relatedId: 'tick-01',
-      isRead: false,
-      createdAt: DateTime.now().subtract(const Duration(minutes: 25)),
-    ),
-    AppNotification(
-      id: 'notif-demo-2',
-      ownerId: 'demo-owner',
-      title: 'Customer Joined Queue',
-      message: 'Amit Verma joined the waiting queue with 2 services (Classic Haircut + Beard Trim).',
-      type: NotificationType.customerJoined,
-      relatedId: 't-demo-2',
-      isRead: false,
-      createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-    ),
-    AppNotification(
-      id: 'notif-demo-3',
-      ownerId: 'demo-owner',
-      title: 'Peak Rush Hour Alert',
-      message: 'Queue length reached 4 waiting clients. Consider opening an additional chair.',
-      type: NotificationType.queueUpdate,
-      isRead: true,
-      createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-    ),
-  ];
+  // In-memory fallback storage for offline unit tests
+  static final List<AppNotification> _inMemoryNotifications = [];
 
   /// Fetches all notifications for an owner or user ID
   Future<List<AppNotification>> fetchNotifications(String ownerId) async {

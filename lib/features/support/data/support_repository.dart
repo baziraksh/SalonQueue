@@ -22,21 +22,8 @@ class SupportRepository {
     }
   }
 
-  /// In-memory storage for offline / demo mode
-  static final List<SupportTicket> _demoTickets = [
-    SupportTicket(
-      id: 'demo-tick-01',
-      userId: 'customer-user-1',
-      userRole: 'customer',
-      category: 'Joining a Queue',
-      subject: 'Wait time estimated calculation query',
-      description: 'Estimated wait time was showing 15 mins but completed in 10 mins. Very fast service!',
-      status: SupportTicketStatus.resolved,
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-      adminResponse: 'Thank you for your feedback! Stylists work diligently to minimize wait times.',
-    ),
-  ];
+  /// In-memory storage for offline / mock testing
+  static final List<SupportTicket> _demoTickets = [];
 
   /// Fetches tickets for a specific user ID
   Future<List<SupportTicket>> fetchUserTickets(String userId) async {

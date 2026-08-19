@@ -60,6 +60,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   QueueTicket? _latestTicket;
   Salon? _latestTicketSalon;
   bool _isLoading = true;
+  bool _isFindingSalons = false;
   int _unreadNotifsCount = 0;
   StreamSubscription<List<AppNotification>>? _notifSubscription;
   StreamSubscription<List<Salon>>? _salonsSub;
@@ -132,6 +133,29 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     });
   }
 
+  /// Explicit search triggered by user clicking "FIND SALONS"
+  Future<void> _handleFindSalons() async {
+    if (_isFindingSalons) return;
+    setState(() => _isFindingSalons = true);
+    try {
+      FocusScope.of(context).unfocus();
+      await _loadData();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not complete search: $e'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isFindingSalons = false);
+      }
+    }
+  }
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
@@ -148,10 +172,11 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
     final isAllIndia = (_selectedLocation == 'All India' || _selectedLocation == 'All Cities');
     final isAllStates = (_selectedState == 'All States' || _selectedState == 'All');
+    final isNearMe = (_selectedLocation == 'Near Me');
 
     var list = await _salonRepo.fetchSalons(
       state: isAllStates ? null : _selectedState,
-      city: isAllIndia ? null : (_selectedCity ?? _selectedLocation),
+      city: (isAllIndia || isNearMe) ? null : (_selectedCity ?? _selectedLocation),
       district: _selectedDistrict,
       pincode: _selectedPincode,
       search: _searchController.text.trim(),
@@ -161,42 +186,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       sortBy: _sortBy,
       userLat: _userLat,
       userLng: _userLng,
+      maxRadiusKm: isNearMe ? 25.0 : null,
     );
-
-    // If exact city/locality search returned 0 items, expand search to nearby and named matches
-    bool is10kmFallback = false;
-    if (list.isEmpty && !isAllIndia) {
-      final queryText = _searchController.text.trim();
-      final broaderSalons = await _salonRepo.fetchSalons(
-        state: isAllStates ? null : _selectedState,
-        search: queryText,
-        category: (_selectedCategory == 'All' || _selectedCategory == 'Favorites')
-            ? null
-            : _selectedCategory,
-        sortBy: _sortBy,
-        userLat: _userLat,
-        userLng: _userLng,
-        maxRadiusKm: 25.0,
-      );
-      if (broaderSalons.isNotEmpty) {
-        list = broaderSalons;
-        is10kmFallback = true;
-      } else if (queryText.isNotEmpty) {
-        // Match salon name or service globally across all locations
-        final globalMatches = await _salonRepo.fetchSalons(
-          search: queryText,
-          category: (_selectedCategory == 'All' || _selectedCategory == 'Favorites')
-              ? null
-              : _selectedCategory,
-          sortBy: _sortBy,
-          userLat: _userLat,
-          userLng: _userLng,
-        );
-        if (globalMatches.isNotEmpty) {
-          list = globalMatches;
-        }
-      }
-    }
 
     if (_isVerifiedOnlyFilter) {
       list = list.where((s) => s.isVerified).toList();
@@ -213,7 +204,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     if (!mounted) return;
     setState(() {
       _salons = list;
-      _isShowing10KmFallback = is10kmFallback;
+      _isShowing10KmFallback = false;
       _isLoading = false;
     });
   }
@@ -1188,31 +1179,57 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _loadData,
+              onPressed: _isFindingSalons ? null : _handleFindSalons,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorSchemes.gold,
+                disabledBackgroundColor: AppColorSchemes.gold.withValues(alpha: 0.6),
                 foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white70,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
                 elevation: 0,
               ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.search, size: 18),
-                  SizedBox(width: 8),
-                  Text(
-                    'FIND SALONS',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.0,
+              child: _isFindingSalons
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'FINDING SALONS...',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.0,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    )
+                  : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'FIND SALONS',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
         ],
@@ -1680,8 +1697,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     }
 
     if (_latestTicket != null && _latestTicket!.isCompleted) {
-      final salonName = _latestTicketSalon?.name ?? 'Salon Lounge';
-      final salonAddress = _latestTicketSalon?.address ?? 'Main Road';
+      final salonName = (_latestTicketSalon?.name != null && _latestTicketSalon!.name.isNotEmpty)
+          ? _latestTicketSalon!.name
+          : 'Salon';
+      final salonAddress = _latestTicketSalon?.address ?? '';
 
       return SafeArea(
         child: SingleChildScrollView(

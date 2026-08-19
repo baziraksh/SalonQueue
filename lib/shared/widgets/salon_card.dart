@@ -425,7 +425,9 @@ class SalonCard extends StatelessWidget {
                               const Icon(Icons.star, color: Color(0xFFF59E0B), size: 14),
                               const SizedBox(width: 3),
                               Text(
-                                '${salon.rating} (${salon.reviewCount})',
+                                (salon.rating > 0 && salon.reviewCount > 0)
+                                    ? '${salon.rating.toStringAsFixed(1)} (${salon.reviewCount})'
+                                    : 'New',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w800,
                                   fontSize: 11,

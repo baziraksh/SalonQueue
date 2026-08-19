@@ -232,11 +232,14 @@ class SalonRepository {
         final response = await activeClient
             .from('salons')
             .select('*')
+            .not('owner_id', 'is', null)
             .order('created_at', ascending: false);
 
         for (final raw in (response as List)) {
           final map = Map<String, dynamic>.from(raw as Map);
           final salonId = map['id'] as String;
+          final salonName = (map['name'] as String? ?? '').trim();
+          if (salonName.isEmpty) continue;
 
           // Fetch fresh services for this salon
           List<SalonService> services = [];
@@ -390,33 +393,7 @@ class SalonRepository {
             hasService;
       }).toList();
 
-      if (queryMatches.isNotEmpty) {
-        filtered = queryMatches;
-      } else {
-        // Fallback: If strict location narrowed to 0, match search across all salons in DB
-        final globalMatches = evaluated.where((s) {
-          final sName = normalizeLocation(s.name);
-          final sOwner = normalizeLocation(s.ownerName);
-          final sAddr = normalizeLocation(s.address);
-          final sCity = normalizeLocation(s.city);
-          final sDist = normalizeLocation(s.district);
-          final sState = normalizeLocation(s.state);
-          final sPin = normalizeLocation(s.pincode);
-          final sDesc = normalizeLocation(s.description);
-          final hasService = s.services.any((svc) => normalizeLocation(svc.name).contains(normSearch));
-
-          return sName.contains(normSearch) ||
-              sOwner.contains(normSearch) ||
-              sAddr.contains(normSearch) ||
-              sCity.contains(normSearch) ||
-              sDist.contains(normSearch) ||
-              sState.contains(normSearch) ||
-              sPin.contains(normSearch) ||
-              sDesc.contains(normSearch) ||
-              hasService;
-        }).toList();
-        filtered = globalMatches;
-      }
+      filtered = queryMatches;
     }
 
     final catFiltered = _filterByCategory(filtered, category);
@@ -531,18 +508,24 @@ class SalonRepository {
             }
           } catch (_) {}
 
+          final defaultSalonName = (initialOwnerName.isNotEmpty && initialOwnerName != 'Salon Owner')
+              ? "$initialOwnerName's Salon"
+              : 'My Salon';
+
           final inserted = await client.from('salons').insert({
             'owner_id': ownerId,
-            'name': 'My Salon & Spa',
+            'name': defaultSalonName,
             'owner_name': initialOwnerName,
-            'description': 'Welcome to our premium salon.',
-            'address': 'Main Market Road',
-            'city': 'Angul',
-            'district': 'Angul',
-            'state': 'Odisha',
-            'active_chairs': 3,
+            'description': 'Welcome to our salon.',
+            'address': '',
+            'city': '',
+            'district': '',
+            'state': '',
+            'active_chairs': 1,
+            'rating': 0.0,
+            'review_count': 0,
             'is_queue_open': true,
-            'is_verified': true,
+            'is_verified': false,
             'is_active': true,
             'is_published': true,
             'opening_time': '09:00 AM',
@@ -555,9 +538,8 @@ class SalonRepository {
 
             try {
               final defaultServices = [
-                {'salon_id': salonId, 'name': 'Classic Haircut', 'category': 'Hair', 'price': 150.0, 'duration_minutes': 25, 'is_active': true},
-                {'salon_id': salonId, 'name': 'Beard Trim & Styling', 'category': 'Beard', 'price': 80.0, 'duration_minutes': 15, 'is_active': true},
-                {'salon_id': salonId, 'name': 'Hair Spa & Scalp Massage', 'category': 'Spa', 'price': 250.0, 'duration_minutes': 30, 'is_active': true},
+                {'salon_id': salonId, 'name': 'Haircut', 'category': 'Hair', 'price': 150.0, 'duration_minutes': 25, 'is_active': true},
+                {'salon_id': salonId, 'name': 'Beard Grooming', 'category': 'Beard', 'price': 80.0, 'duration_minutes': 15, 'is_active': true},
               ];
               final insertedServices = await client.from('services').insert(defaultServices).select();
               final services = (insertedServices as List)
@@ -598,14 +580,17 @@ class SalonRepository {
     final isolatedSalon = Salon(
       id: ownerId,
       ownerId: ownerId,
-      name: 'My Salon & Spa',
-      description: 'Welcome to our premium salon.',
-      address: 'Main Market Road',
-      city: 'Angul',
-      district: 'Angul',
-      state: 'Odisha',
-      activeChairs: 3,
+      name: 'My Salon',
+      description: 'Welcome to our salon.',
+      address: '',
+      city: '',
+      district: '',
+      state: '',
+      activeChairs: 1,
+      rating: 0.0,
+      reviewCount: 0,
       isQueueOpen: true,
+      isVerified: false,
       openingTime: '09:00 AM',
       closingTime: '09:00 PM',
       ownerName: 'Salon Owner',

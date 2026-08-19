@@ -166,16 +166,16 @@ class Salon {
       name: json['name'] as String? ?? '',
       description: json['description'] as String?,
       address: json['address'] as String? ?? '',
-      city: json['city'] as String? ?? 'Pune',
+      city: json['city'] as String? ?? '',
       district: json['district'] as String? ?? (json['city'] as String? ?? ''),
-      state: json['state'] as String? ?? 'Maharashtra',
+      state: json['state'] as String? ?? '',
       pincode: json['pincode'] as String?,
       latitude: lat,
       longitude: lng,
       phone: json['phone'] as String?,
-      rating: (json['rating'] as num?)?.toDouble() ?? 4.8,
-      reviewCount: json['review_count'] as int? ?? 45,
-      activeChairs: chairs,
+      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount: json['review_count'] as int? ?? 0,
+      activeChairs: chairs > 0 ? chairs : 1,
       isQueueOpen: json['is_queue_open'] as bool? ?? true,
       openingTime: json['opening_time'] as String? ?? '09:00 AM',
       closingTime: json['closing_time'] as String? ?? '09:00 PM',
@@ -192,7 +192,7 @@ class Salon {
               ?.map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
               .toList() ??
           [],
-      isVerified: json['is_verified'] as bool? ?? true,
+      isVerified: json['is_verified'] as bool? ?? false,
     );
   }
 

@@ -396,4 +396,54 @@ void main() {
       expect(resolved.message, contains('Chair configuration query'));
     });
   });
+
+  group('8. FIND SALONS BUTTON & ZERO FAKE SALONS AUDIT TESTS', () {
+    testWidgets('FIND SALONS button renders clearly and has tap feedback', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final auth = await _buildAuthService(
+        const AppUser(id: 'cust-find-1', email: 'cust@example.com', fullName: 'Akash Kumar', role: AppRole.customer),
+      );
+
+      await tester.pumpWidget(
+        AuthScope(
+          service: auth,
+          child: const MaterialApp(home: CustomerEntryScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find Salons button is present
+      final findButton = find.widgetWithText(ElevatedButton, 'FIND SALONS');
+      expect(findButton, findsOneWidget);
+
+      // Tapping it triggers search
+      await tester.tap(findButton);
+      await tester.pump();
+
+      // Pump to settle
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(ElevatedButton, 'FIND SALONS'), findsOneWidget);
+    });
+
+    test('Salon.fromJson does not fabricate fake ratings, reviews or cities', () {
+      final json = {
+        'id': 'real-salon-uuid-1',
+        'owner_id': 'real-owner-uuid-1',
+        'name': 'Actual Barbershop',
+      };
+
+      final salon = Salon.fromJson(json);
+      expect(salon.id, equals('real-salon-uuid-1'));
+      expect(salon.ownerId, equals('real-owner-uuid-1'));
+      expect(salon.name, equals('Actual Barbershop'));
+      expect(salon.city, equals(''));
+      expect(salon.state, equals(''));
+      expect(salon.rating, equals(0.0));
+      expect(salon.reviewCount, equals(0));
+      expect(salon.isVerified, isFalse);
+    });
+  });
 }
