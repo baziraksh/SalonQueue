@@ -442,7 +442,14 @@ class SalonRepository {
     }
 
     final catFiltered = _filterByCategory(filtered, category);
-    return _sortSalons(catFiltered, sortBy);
+    final sorted = _sortSalons(catFiltered, sortBy);
+
+    debugPrint(
+      '[SalonSearch] state=$cleanState, district=$cleanDistrict, city=$cleanCity, '
+      'search="$search" | Total in DB: ${result.length}, Results: ${sorted.length}',
+    );
+
+    return sorted;
   }
 
   /// Fetches a single salon by ID or Owner ID
@@ -736,48 +743,18 @@ class SalonRepository {
     if (activeClient == null) return;
 
     try {
-      // 3. Build full merged database map from existing + updateData
-      final fullPayload = <String, dynamic>{
-        'owner_id': effectiveOwnerId,
-        'name': updateData['name'] ?? existing?.name ?? 'My Salon & Spa',
-        'description': updateData['description'] ?? existing?.description ?? 'Welcome to our premium salon.',
-        'phone': updateData.containsKey('phone') ? updateData['phone'] : existing?.phone,
-        'address': updateData['address'] ?? existing?.address ?? 'Main Market Road',
-        'city': updateData['city'] ?? existing?.city ?? 'Angul',
-        'district': updateData['district'] ?? existing?.district ?? 'Angul',
-        'state': updateData['state'] ?? existing?.state ?? 'Odisha',
-        'pincode': updateData.containsKey('pincode') ? updateData['pincode'] : existing?.pincode,
-        'active_chairs': updateData['active_chairs'] ?? existing?.activeChairs ?? 3,
-        'is_queue_open': updateData['is_queue_open'] ?? existing?.isQueueOpen ?? true,
-        'is_verified': true,
-        'is_active': true,
-        'is_published': true,
-        'opening_time': updateData['opening_time'] ?? existing?.openingTime ?? '09:00 AM',
-        'closing_time': updateData['closing_time'] ?? existing?.closingTime ?? '09:00 PM',
-        'cover_image_url': updateData.containsKey('cover_image_url')
-            ? updateData['cover_image_url']
-            : existing?.coverImageUrl,
-        'banner_url': updateData.containsKey('banner_url')
-            ? updateData['banner_url']
-            : existing?.bannerUrl,
-        'owner_name': updateData['owner_name'] ?? existing?.ownerName ?? 'Salon Owner',
-        'owner_avatar_url': updateData.containsKey('owner_avatar_url')
-            ? updateData['owner_avatar_url']
-            : existing?.ownerAvatarUrl,
-        'gallery_images': updateData['gallery_images'] ?? existing?.galleryImages ?? [],
-        if (updateData['latitude'] != null || existing?.latitude != null)
-          'latitude': updateData['latitude'] ?? existing?.latitude,
-        if (updateData['longitude'] != null || existing?.longitude != null)
-          'longitude': updateData['longitude'] ?? existing?.longitude,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      };
+      debugPrint('[SalonSave] ownerId = $effectiveOwnerId, updateData = $updateData');
 
-      // 4. Try to update existing salon by owner_id
+      // 3. Prepare partial payload with only non-null updated fields
+      final partialPayload = Map<String, dynamic>.from(updateData);
+      partialPayload['updated_at'] = DateTime.now().toUtc().toIso8601String();
+
+      // 4. Try partial update by owner_id
       bool updated = false;
 
       final resOwner = await activeClient
           .from('salons')
-          .update(fullPayload)
+          .update(partialPayload)
           .eq('owner_id', effectiveOwnerId)
           .select('*, services(*)');
 
@@ -794,13 +771,14 @@ class SalonRepository {
         }
         unawaited(_saveSalonToDisk(updatedSalon));
         updated = true;
+        debugPrint('[SalonSave] Updated existing salon by owner_id: ${updatedSalon.id} (${updatedSalon.name}) at ${updatedSalon.city}, ${updatedSalon.district}, ${updatedSalon.state}');
       }
 
       // If no row matched owner_id, try update by id
       if (!updated && salonId.isNotEmpty && salonId.length == 36 && !salonId.startsWith('salon-')) {
         final resId = await activeClient
             .from('salons')
-            .update(fullPayload)
+            .update(partialPayload)
             .eq('id', salonId)
             .select('*, services(*)');
 
@@ -815,11 +793,47 @@ class SalonRepository {
           _ownerSalonsCache[updatedSalon.id] = updatedSalon;
           unawaited(_saveSalonToDisk(updatedSalon));
           updated = true;
+          debugPrint('[SalonSave] Updated existing salon by id: ${updatedSalon.id} (${updatedSalon.name})');
         }
       }
 
       // If salon does not exist in DB yet, insert the fullPayload
       if (!updated) {
+        final fullPayload = <String, dynamic>{
+          'owner_id': effectiveOwnerId,
+          'name': updateData['name'] ?? existing?.name ?? 'My Salon & Spa',
+          'description': updateData['description'] ?? existing?.description ?? 'Welcome to our premium salon.',
+          'phone': updateData.containsKey('phone') ? updateData['phone'] : existing?.phone,
+          'address': updateData['address'] ?? existing?.address ?? 'Main Market Road',
+          'city': updateData['city'] ?? existing?.city ?? 'Angul',
+          'district': updateData['district'] ?? existing?.district ?? 'Angul',
+          'state': updateData['state'] ?? existing?.state ?? 'Odisha',
+          'pincode': updateData.containsKey('pincode') ? updateData['pincode'] : existing?.pincode,
+          'active_chairs': updateData['active_chairs'] ?? existing?.activeChairs ?? 3,
+          'is_queue_open': updateData['is_queue_open'] ?? existing?.isQueueOpen ?? true,
+          'is_verified': true,
+          'is_active': true,
+          'is_published': true,
+          'opening_time': updateData['opening_time'] ?? existing?.openingTime ?? '09:00 AM',
+          'closing_time': updateData['closing_time'] ?? existing?.closingTime ?? '09:00 PM',
+          'cover_image_url': updateData.containsKey('cover_image_url')
+              ? updateData['cover_image_url']
+              : existing?.coverImageUrl,
+          'banner_url': updateData.containsKey('banner_url')
+              ? updateData['banner_url']
+              : existing?.bannerUrl,
+          'owner_name': updateData['owner_name'] ?? existing?.ownerName ?? 'Salon Owner',
+          'owner_avatar_url': updateData.containsKey('owner_avatar_url')
+              ? updateData['owner_avatar_url']
+              : existing?.ownerAvatarUrl,
+          'gallery_images': updateData['gallery_images'] ?? existing?.galleryImages ?? [],
+          if (updateData['latitude'] != null || existing?.latitude != null)
+            'latitude': updateData['latitude'] ?? existing?.latitude,
+          if (updateData['longitude'] != null || existing?.longitude != null)
+            'longitude': updateData['longitude'] ?? existing?.longitude,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        };
+
         final resInsert = await activeClient
             .from('salons')
             .insert(fullPayload)
@@ -835,6 +849,7 @@ class SalonRepository {
           _ownerSalonsCache[effectiveOwnerId] = updatedSalon;
           _ownerSalonsCache[updatedSalon.id] = updatedSalon;
           unawaited(_saveSalonToDisk(updatedSalon));
+          debugPrint('[SalonSave] Inserted brand new salon in DB: ${updatedSalon.id} (${updatedSalon.name})');
         }
       }
     } catch (e) {
