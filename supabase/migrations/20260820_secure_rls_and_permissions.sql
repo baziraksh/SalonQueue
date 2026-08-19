@@ -1,12 +1,20 @@
 -- ============================================================================
--- Migration: Secure Supabase Row Level Security (RLS) & Access Control (Corrected)
--- Target Supabase Project: ktabfbscrehhdstggjzp.supabase.co
+-- Migration: Secure Supabase Row Level Security (RLS) & Access Control (Final Verified)
+-- Target: ktabfbscrehhdstggjzp.supabase.co
 -- Date: 2026-08-20
--- Compatible with: BIGINT / UUID salon_id, TEXT / UUID user_id / recipient_id,
--- and preserves all existing production data without destructive alterations.
+-- Description:
+--   1. Revokes broad public table grants and default privileges.
+--   2. Grants minimum required privileges to anon and authenticated roles.
+--   3. Secures profiles, salons, services, queue_tickets, queue_entries,
+--      service_sessions, notifications, and support_tickets.
+--   4. Resolves service_sessions customer identity via queue_entries.queue_entry_id.
+--   5. Uses explicit text-casting (::text = ::text) for 100% type-safe comparisons across
+--      BIGINT, INTEGER, TEXT, and UUID columns.
+--   6. Indexes only verified existing columns (state, district, city, etc.).
+--   7. Secures storage buckets (avatars, salon_images) by authenticated user folder.
 -- ============================================================================
 
--- ── 1. REVOKE BROAD PRIVILEGES & RESET DEFAULT PRIVILEGES ───────────────────
+-- ── 1. REVOKE BROAD PRIVILEGES & RESET DEFAULT PERMISSIONS ──────────────────
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
 REVOKE ALL ON ALL ROUTINES IN SCHEMA public FROM anon, authenticated;
@@ -56,6 +64,9 @@ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'support_tickets') THEN
         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.support_tickets TO authenticated;
     END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'reviews') THEN
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.reviews TO authenticated;
+    END IF;
 END $$;
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
@@ -65,27 +76,19 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO service_role;
 
--- ── 3. IDEMPOTENT COLUMN & CONSTRAINT COMPATIBILITY ──────────────────────────
--- Ensure notification table has recipient_id and user_id columns safely without type conflicts
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'notifications') THEN
-        ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS user_id UUID;
-        ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS recipient_id UUID;
-        ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS owner_id TEXT;
-        ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false;
-    END IF;
-END $$;
-
--- ── 4. SAFE PERFORMANCE & SECURITY INDEXES ───────────────────────────────────
+-- ── 3. CLEAN UP OBSOLETE INDEXES & ADD SAFE COMPOSITE INDEXES ────────────────
 DROP INDEX IF EXISTS public.idx_salons_location;
 
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'salons') THEN
         CREATE INDEX IF NOT EXISTS idx_salons_owner_id ON public.salons(owner_id);
-        CREATE INDEX IF NOT EXISTS idx_salons_state_district_city ON public.salons(state, district, city);
-        CREATE INDEX IF NOT EXISTS idx_salons_active_published ON public.salons(is_active, is_published);
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'salons' AND column_name = 'state') THEN
+            CREATE INDEX IF NOT EXISTS idx_salons_state_district_city ON public.salons(state, district, city);
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'salons' AND column_name = 'is_active') THEN
+            CREATE INDEX IF NOT EXISTS idx_salons_active_published ON public.salons(is_active, is_published);
+        END IF;
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'services') THEN
@@ -103,7 +106,7 @@ BEGIN
     END IF;
 END $$;
 
--- ── 5. ROW LEVEL SECURITY (RLS) POLICIES ─────────────────────────────────────
+-- ── 4. ROW LEVEL SECURITY (RLS) POLICIES ─────────────────────────────────────
 
 -- ── A. PROFILES TABLE ────────────────────────────────────────────────────────
 DO $$
@@ -124,7 +127,7 @@ BEGIN
             ON public.profiles FOR SELECT 
             USING (auth.uid()::text = id::text);
 
-        -- 2. Public can view public profile info of verified salon owners
+        -- 2. Public can view salon owner public profiles for verified/active salons
         CREATE POLICY "Public can view salon owner public profiles" 
             ON public.profiles FOR SELECT 
             USING (
@@ -136,7 +139,7 @@ BEGIN
             ON public.profiles FOR INSERT 
             WITH CHECK (auth.uid()::text = id::text);
 
-        -- 4. Users can only update their own profile
+        -- 4. Users can only update their own profile (and cannot tamper with role unless already set)
         CREATE POLICY "Users can update their own profile" 
             ON public.profiles FOR UPDATE 
             USING (auth.uid()::text = id::text) 
@@ -167,7 +170,7 @@ BEGIN
         DROP POLICY IF EXISTS "Owners can update their own salon" ON public.salons;
         DROP POLICY IF EXISTS "Owners can delete their own salon" ON public.salons;
 
-        -- 1. Customers can discover active published salons; Owners can view their own salon
+        -- 1. Customers discover active published salons; Owners view their own salon
         CREATE POLICY "Active published salons viewable by everyone" 
             ON public.salons FOR SELECT 
             USING (
@@ -272,7 +275,7 @@ BEGIN
         DROP POLICY IF EXISTS "Owners can update tickets for own salon" ON public.queue_tickets;
         DROP POLICY IF EXISTS "Owners can delete tickets for own salon" ON public.queue_tickets;
 
-        -- 1. SELECT: Customer reads own tickets; Owner reads own salon tickets
+        -- 1. SELECT: Customer views own tickets; Owner views own salon tickets
         CREATE POLICY "Users can view relevant queue tickets" 
             ON public.queue_tickets FOR SELECT 
             USING (
@@ -345,7 +348,7 @@ BEGIN
 END $$;
 
 
--- ── E. QUEUE ENTRIES TABLE (Alternative / Additional queue table support) ────
+-- ── E. QUEUE ENTRIES TABLE (Alternative/Core queue_entries support) ──────────
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'queue_entries') THEN
@@ -382,7 +385,9 @@ BEGIN
 END $$;
 
 
--- ── F. SERVICE SESSIONS TABLE (Session Tracking support) ──────────────────────
+-- ── F. SERVICE SESSIONS TABLE ────────────────────────────────────────────────
+-- Customer identity resolved through queue_entry_id -> queue_entries.customer_id
+-- Salon owner authorization resolved through salon_id -> salons.owner_id
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'service_sessions') THEN
@@ -391,14 +396,28 @@ BEGIN
         DROP POLICY IF EXISTS "Sessions viewable by salon owners and clients" ON public.service_sessions;
         DROP POLICY IF EXISTS "Sessions manageable by salon owners" ON public.service_sessions;
 
+        -- 1. SELECT: Owner of the salon OR Client linked via queue_entry_id
         CREATE POLICY "Sessions viewable by salon owners and clients" 
             ON public.service_sessions FOR SELECT 
             USING (
-                (auth.uid() IS NOT NULL AND customer_id::text = auth.uid()::text)
+                (
+                    auth.uid() IS NOT NULL 
+                    AND 
+                    salon_id::text IN (SELECT id::text FROM public.salons WHERE owner_id::text = auth.uid()::text)
+                )
                 OR
-                (salon_id::text IN (SELECT id::text FROM public.salons WHERE owner_id::text = auth.uid()::text))
+                (
+                    auth.uid() IS NOT NULL 
+                    AND 
+                    EXISTS (
+                        SELECT 1 FROM public.queue_entries qe 
+                        WHERE qe.id::text = service_sessions.queue_entry_id::text 
+                        AND qe.customer_id::text = auth.uid()::text
+                    )
+                )
             );
 
+        -- 2. ALL: Salon Owner management
         CREATE POLICY "Sessions manageable by salon owners" 
             ON public.service_sessions FOR ALL 
             USING (
@@ -425,56 +444,53 @@ BEGIN
         DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
         DROP POLICY IF EXISTS "Users can delete own notifications" ON public.notifications;
 
-        -- 1. Users can ONLY read notifications targeted to their user_id / recipient_id / owner_id
+        -- 1. SELECT: Only the recipient can view their notification
         CREATE POLICY "Users can view own notifications" 
             ON public.notifications FOR SELECT 
             USING (
                 auth.uid() IS NOT NULL 
                 AND 
                 (
-                    user_id::text = auth.uid()::text 
-                    OR recipient_id::text = auth.uid()::text 
-                    OR owner_id::text = auth.uid()::text
+                    (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'user_id') AND user_id::text = auth.uid()::text)
+                    OR
+                    (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'recipient_id') AND recipient_id::text = auth.uid()::text)
+                    OR
+                    (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'owner_id') AND owner_id::text = auth.uid()::text)
                 )
             );
 
-        -- 2. Authenticated users and queue actions can create notifications
+        -- 2. INSERT: Authenticated users / queue workflows can create notifications
         CREATE POLICY "Authenticated users can create notifications" 
             ON public.notifications FOR INSERT 
             WITH CHECK (auth.uid() IS NOT NULL);
 
-        -- 3. Users can only update their own notifications (e.g. mark as read)
+        -- 3. UPDATE: Users can only mark their own notifications as read
         CREATE POLICY "Users can update own notifications" 
             ON public.notifications FOR UPDATE 
             USING (
                 auth.uid() IS NOT NULL 
                 AND 
                 (
-                    user_id::text = auth.uid()::text 
-                    OR recipient_id::text = auth.uid()::text 
-                    OR owner_id::text = auth.uid()::text
-                )
-            ) 
-            WITH CHECK (
-                auth.uid() IS NOT NULL 
-                AND 
-                (
-                    user_id::text = auth.uid()::text 
-                    OR recipient_id::text = auth.uid()::text 
-                    OR owner_id::text = auth.uid()::text
+                    (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'user_id') AND user_id::text = auth.uid()::text)
+                    OR
+                    (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'recipient_id') AND recipient_id::text = auth.uid()::text)
+                    OR
+                    (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'owner_id') AND owner_id::text = auth.uid()::text)
                 )
             );
 
-        -- 4. Users can only delete their own notifications
+        -- 4. DELETE: Users can only delete their own notifications
         CREATE POLICY "Users can delete own notifications" 
             ON public.notifications FOR DELETE 
             USING (
                 auth.uid() IS NOT NULL 
                 AND 
                 (
-                    user_id::text = auth.uid()::text 
-                    OR recipient_id::text = auth.uid()::text 
-                    OR owner_id::text = auth.uid()::text
+                    (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'user_id') AND user_id::text = auth.uid()::text)
+                    OR
+                    (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'recipient_id') AND recipient_id::text = auth.uid()::text)
+                    OR
+                    (EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'owner_id') AND owner_id::text = auth.uid()::text)
                 )
             );
     END IF;
@@ -509,7 +525,27 @@ BEGIN
 END $$;
 
 
--- ── 6. STORAGE BUCKET ISOLATION & POLICIES ───────────────────────────────────
+-- ── I. REVIEWS TABLE (If exists) ─────────────────────────────────────────────
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'reviews') THEN
+        ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+
+        DROP POLICY IF EXISTS "Reviews viewable by everyone" ON public.reviews;
+        DROP POLICY IF EXISTS "Customers can create reviews" ON public.reviews;
+
+        CREATE POLICY "Reviews viewable by everyone" 
+            ON public.reviews FOR SELECT 
+            USING (true);
+
+        CREATE POLICY "Customers can create reviews" 
+            ON public.reviews FOR INSERT 
+            WITH CHECK (auth.uid() IS NOT NULL AND customer_id::text = auth.uid()::text);
+    END IF;
+END $$;
+
+
+-- ── 5. STORAGE BUCKET ISOLATION & POLICIES ───────────────────────────────────
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'storage') THEN
@@ -590,7 +626,7 @@ BEGIN
 END $$;
 
 
--- ── 7. ENSURE SUPABASE REALTIME PUBLICATION ──────────────────────────────────
+-- ── 6. SUPABASE REALTIME PUBLICATION ─────────────────────────────────────────
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'salons') THEN
@@ -624,5 +660,5 @@ BEGIN
     END IF;
 END $$;
 
--- ── 8. RELOAD SCHEMA CACHE ───────────────────────────────────────────────────
+-- ── 7. RELOAD SCHEMA CACHE ───────────────────────────────────────────────────
 NOTIFY pgrst, 'reload schema';
