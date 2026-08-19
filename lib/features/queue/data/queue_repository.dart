@@ -17,7 +17,7 @@ class QueueRepository {
   final NotificationRepository _notifRepo = NotificationRepository();
   static final HttpClient _directHttpClient = HttpClient()
     ..connectionTimeout = const Duration(seconds: 5)
-    ..badCertificateCallback = ((_, __, ___) => true);
+    ..badCertificateCallback = ((cert, host, port) => true);
 
   supabase.SupabaseClient? get client {
     if (_client != null) return _client;
@@ -148,37 +148,8 @@ class QueueRepository {
 
       return ticket;
     } catch (e) {
-      debugPrint('[QueueRepository] joinQueue error: $e. Using local storage.');
-      final nextToken = _inMemoryTickets.where((t) => t.salonId == salonId).length + 1;
-      final ticket = QueueTicket(
-        id: 't-local-${DateTime.now().millisecondsSinceEpoch}',
-        salonId: salonId,
-        customerId: customerId,
-        customerName: customerName,
-        customerPhone: customerPhone,
-        serviceNames: serviceNames,
-        totalPrice: totalPrice,
-        totalDurationMinutes: totalDuration > 0 ? totalDuration : 20,
-        tokenNumber: nextToken,
-        status: QueueStatus.waiting,
-        notes: notes,
-        createdAt: DateTime.now(),
-        startedAt: null,
-        completedAt: null,
-      );
-      _inMemoryTickets.add(ticket);
-      _notifyLocalStream(salonId);
-
-      if (customerId != null && customerId.isNotEmpty) {
-        _notifRepo.notifyCustomerQueueJoined(
-          customerId: customerId,
-          salonName: 'SalonQueue Salon',
-          tokenNumber: ticket.tokenNumber,
-          estWaitMinutes: ticket.totalDurationMinutes,
-        );
-      }
-
-      return ticket;
+      debugPrint('[QueueRepository] joinQueue DB ERROR: $e');
+      rethrow;
     }
   }
 
@@ -404,8 +375,10 @@ class QueueRepository {
       };
 
       await client.from('queue_tickets').update(updateData).eq('id', ticketId);
+      debugPrint('[QueueRepository] updateTicketStatus SUCCESS: ticketId=$ticketId, status=${status.dbName}');
     } catch (e) {
-      debugPrint('[QueueRepository] updateTicketStatus error: $e');
+      debugPrint('[QueueRepository] updateTicketStatus DB ERROR: $e');
+      rethrow;
     }
   }
 

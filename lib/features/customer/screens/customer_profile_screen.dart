@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/color_schemes.dart';
@@ -201,7 +200,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         width: 80,
         height: 80,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 48, color: Color(0xFFC9A45C)),
+        errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 48, color: Color(0xFFC9A45C)),
       );
     } else if (trimmed.startsWith('data:image')) {
       try {

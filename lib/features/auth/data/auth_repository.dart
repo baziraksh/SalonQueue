@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -18,7 +20,6 @@ import '../models/app_user.dart';
 /// database. The selected login type in the UI is only a requested mode; the
 /// database role decides which dashboard the user may access.
 class AuthRepository {
-  // ignore: prefer_initializing_formals
   AuthRepository({
     supabase.SupabaseClient? client,
     this.useSingletonFallback = true,

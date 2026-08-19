@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:salon_queue/core/routing/app_router.dart';
 import 'package:salon_queue/features/auth/data/auth_repository.dart';
 import 'package:salon_queue/features/auth/models/app_user.dart';
 import 'package:salon_queue/features/auth/services/auth_scope.dart';

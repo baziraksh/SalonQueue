@@ -16,7 +16,7 @@ void main() {
 
       final isReachable = await SupabaseConfig.checkConnectivity();
       // Should return a boolean result without throwing an unhandled exception
-      expect(isReachable is bool, isTrue);
+      expect(isReachable, isA<bool>());
     });
 
     test('AuthRepository translates network and DNS host lookup errors to user friendly messages', () {

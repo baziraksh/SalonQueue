@@ -8,6 +8,7 @@ import '../../../shared/models/salon_service.dart';
 import '../../auth/services/auth_scope.dart';
 import '../../queue/data/queue_repository.dart';
 import '../../queue/screens/customer_queue_screen.dart';
+import '../data/salon_repository.dart';
 
 /// Screen displaying salon details, complete service menu with price/time, and queue join action.
 class SalonDetailsScreen extends StatefulWidget {
@@ -24,11 +25,14 @@ class SalonDetailsScreen extends StatefulWidget {
 
 class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
   final QueueRepository _queueRepo = QueueRepository();
+  final SalonRepository _salonRepo = SalonRepository();
   final Set<String> _selectedServiceIds = {};
   String _selectedCategory = '';
   bool _isJoining = false;
 
   StreamSubscription<List<QueueTicket>>? _queueSubscription;
+  StreamSubscription<List<SalonService>>? _servicesSubscription;
+  List<SalonService> _liveServices = [];
   int _liveWaitingCount = 0;
   int _liveServingCount = 0;
   String _liveServingTokens = '';
@@ -39,6 +43,7 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
     super.initState();
     _liveWaitingCount = widget.salon.waitingCount;
     _liveEstWaitMinutes = widget.salon.estWaitMinutes;
+    _liveServices = widget.salon.services.where((s) => s.isActive).toList();
 
     final cats = _categories;
     if (cats.isNotEmpty) {
@@ -46,6 +51,42 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
     }
 
     _subscribeToLiveQueue();
+    _subscribeToServices();
+    _fetchInitialServices();
+  }
+
+  Future<void> _fetchInitialServices() async {
+    try {
+      final services = await _salonRepo.fetchServices(widget.salon.id, onlyActive: true);
+      if (!mounted || services.isEmpty) return;
+      setState(() {
+        _liveServices = services;
+        _pruneSelectedServices();
+      });
+    } catch (_) {}
+  }
+
+  void _subscribeToServices() {
+    _servicesSubscription?.cancel();
+    _servicesSubscription = _salonRepo
+        .streamServices(widget.salon.id, onlyActive: true)
+        .listen(
+      (services) {
+        if (!mounted) return;
+        setState(() {
+          _liveServices = services;
+          _pruneSelectedServices();
+        });
+      },
+      onError: (err) {
+        debugPrint('[SalonDetailsScreen] streamServices error: $err');
+      },
+    );
+  }
+
+  void _pruneSelectedServices() {
+    final activeIds = _liveServices.map((s) => s.id).toSet();
+    _selectedServiceIds.removeWhere((id) => !activeIds.contains(id));
   }
 
   void _subscribeToLiveQueue() {
@@ -76,6 +117,7 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
   @override
   void dispose() {
     _queueSubscription?.cancel();
+    _servicesSubscription?.cancel();
     super.dispose();
   }
 
@@ -92,8 +134,9 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
   /// Dynamically extracts all distinct service categories from the salon's actual services,
   /// always starting with 'All' so all categories are accessible horizontally.
   List<String> get _categories {
+    final source = _liveServices.isNotEmpty ? _liveServices : widget.salon.services;
     final categoriesSet = <String>{};
-    for (final s in widget.salon.services) {
+    for (final s in source) {
       final cat = s.category.trim();
       if (cat.isNotEmpty) {
         categoriesSet.add(cat);
@@ -119,20 +162,22 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
   }
 
   List<SalonService> get _filteredServices {
+    final source = _liveServices.isNotEmpty ? _liveServices : widget.salon.services;
     final currentCat = _effectiveSelectedCategory;
     if (currentCat == 'All') {
-      return widget.salon.services;
+      return source;
     }
-    final matched = widget.salon.services
+    final matched = source
         .where((s) =>
             s.category.trim().toLowerCase() == currentCat.trim().toLowerCase())
         .toList();
-    if (matched.isEmpty) return widget.salon.services;
+    if (matched.isEmpty) return source;
     return matched;
   }
 
   List<SalonService> get _selectedServicesList {
-    return widget.salon.services
+    final source = _liveServices.isNotEmpty ? _liveServices : widget.salon.services;
+    return source
         .where((s) => _selectedServiceIds.contains(s.id))
         .toList();
   }

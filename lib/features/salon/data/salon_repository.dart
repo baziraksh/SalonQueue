@@ -10,9 +10,9 @@ import '../../../shared/models/salon.dart';
 import '../../../shared/models/salon_service.dart';
 
 /// Data repository for discovering salons across all Indian States & Cities,
-/// calculating live distances, rush levels, and owner salon management.
+/// calculating live distances, rush levels, and owner salon & service management.
 ///
-/// SUPABASE IS THE SINGLE SOURCE OF TRUTH FOR ALL SALON DATA.
+/// SUPABASE IS THE SINGLE SOURCE OF TRUTH FOR ALL SALON & SERVICE DATA.
 class SalonRepository {
   SalonRepository({supabase.SupabaseClient? client}) : _client = client;
 
@@ -21,9 +21,13 @@ class SalonRepository {
   /// Dedicated in-memory owner salon storage isolated strictly per auth.uid() (UI performance only)
   static final Map<String, Salon> _ownerSalonsCache = {};
 
+  /// Dedicated in-memory services cache for offline test and rapid lookup
+  static final Map<String, List<SalonService>> _inMemoryServicesCache = {};
+
   /// Clears in-memory salon cache on user logout to prevent cross-account data leakage
   static void clearCache() {
     _ownerSalonsCache.clear();
+    _inMemoryServicesCache.clear();
   }
 
   /// Controls whether disk persistence is active (can be toggled in test suites)
@@ -232,8 +236,24 @@ class SalonRepository {
 
         for (final raw in (response as List)) {
           final map = Map<String, dynamic>.from(raw as Map);
+          final salonId = map['id'] as String;
+
+          // Fetch fresh services for this salon
+          List<SalonService> services = [];
+          try {
+            final svcRows = await activeClient
+                .from('services')
+                .select('*')
+                .eq('salon_id', salonId)
+                .order('name', ascending: true);
+            services = (svcRows as List)
+                .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
+                .toList();
+          } catch (_) {}
+
           final salon = Salon.fromJson(
             map,
+            services: services,
             userLat: userLat,
             userLng: userLng,
           );
@@ -411,7 +431,7 @@ class SalonRepository {
     return sorted;
   }
 
-  /// Fetches a single salon by ID or Owner ID
+  /// Fetches a single salon by ID or Owner ID directly from Supabase, including fresh services
   Future<Salon?> fetchSalonById(String salonId) async {
     final trimmedId = salonId.trim();
     if (trimmedId.isEmpty) return null;
@@ -429,22 +449,22 @@ class SalonRepository {
     try {
       final resList = await client
           .from('salons')
-          .select('*, services(*)')
+          .select('*')
           .or('id.eq.$trimmedId,owner_id.eq.$trimmedId')
           .limit(1);
 
       if ((resList as List).isNotEmpty) {
         final map = Map<String, dynamic>.from(resList.first as Map);
-        final rawServices = map['services'] as List? ?? [];
-        final services = rawServices
-            .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
-            .toList();
+        final realSalonId = map['id'] as String;
+
+        // Fetch live services from public.services
+        final services = await fetchServices(realSalonId);
 
         try {
           final tickets = await client
               .from('queue_tickets')
               .select('id')
-              .eq('salon_id', map['id'])
+              .eq('salon_id', realSalonId)
               .eq('status', 'WAITING');
           map['waiting_count'] = (tickets as List).length;
         } catch (_) {
@@ -453,6 +473,7 @@ class SalonRepository {
 
         final salon = Salon.fromJson(map, services: services);
         _ownerSalonsCache[salon.ownerId ?? salon.id] = salon;
+        _ownerSalonsCache[salon.id] = salon;
         return salon;
       }
 
@@ -482,16 +503,16 @@ class SalonRepository {
       try {
         final resList = await client
             .from('salons')
-            .select('*, services(*)')
+            .select('*')
             .eq('owner_id', ownerId)
             .limit(1);
 
         if ((resList as List).isNotEmpty) {
           final map = Map<String, dynamic>.from(resList.first as Map);
-          final rawServices = map['services'] as List? ?? [];
-          final services = rawServices
-              .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
-              .toList();
+          final realSalonId = map['id'] as String;
+
+          // Fetch fresh services
+          final services = await fetchServices(realSalonId);
 
           final remoteSalon = Salon.fromJson(map, services: services);
           _ownerSalonsCache[ownerId] = remoteSalon;
@@ -998,109 +1019,300 @@ class SalonRepository {
     );
   }
 
-  /// Adds a new service
-  Future<SalonService?> addService({
+  /// Fetches real services for a salon directly from Supabase public.services.
+  Future<List<SalonService>> fetchServices(String salonId, {bool onlyActive = false}) async {
+    if (salonId.isEmpty) return [];
+    final activeClient = client;
+
+    if (activeClient == null) {
+      final fromMem = _inMemoryServicesCache[salonId];
+      if (fromMem != null && fromMem.isNotEmpty) {
+        return onlyActive ? fromMem.where((s) => s.isActive).toList() : List.from(fromMem);
+      }
+      final fromCache = _ownerSalonsCache[salonId]?.services ??
+          fallbackSalons.cast<Salon?>().firstWhere((s) => s?.id == salonId, orElse: () => null)?.services ??
+          [];
+      return onlyActive ? fromCache.where((s) => s.isActive).toList() : fromCache;
+    }
+
+    try {
+      var query = activeClient
+          .from('services')
+          .select('*')
+          .eq('salon_id', salonId);
+
+      if (onlyActive) {
+        query = query.eq('is_active', true);
+      }
+
+      final res = await query.order('name', ascending: true);
+      final list = (res as List)
+          .map((r) => SalonService.fromJson(Map<String, dynamic>.from(r as Map)))
+          .toList();
+
+      // Synchronize in-memory cache
+      _inMemoryServicesCache[salonId] = list;
+      for (final entry in _ownerSalonsCache.entries) {
+        if (entry.value.id == salonId) {
+          _ownerSalonsCache[entry.key] = entry.value.copyWith(services: list);
+        }
+      }
+
+      return list;
+    } catch (e) {
+      debugPrint('[SalonRepository] fetchServices error: $e');
+      final fromMem = _inMemoryServicesCache[salonId];
+      if (fromMem != null) {
+        return onlyActive ? fromMem.where((s) => s.isActive).toList() : List.from(fromMem);
+      }
+      final fromCache = _ownerSalonsCache[salonId]?.services ?? [];
+      return onlyActive ? fromCache.where((s) => s.isActive).toList() : fromCache;
+    }
+  }
+
+  /// Real-time stream of services for a salon
+  Stream<List<SalonService>> streamServices(String salonId, {bool onlyActive = false}) {
+    if (salonId.isEmpty) return Stream.value([]);
+    final activeClient = client;
+
+    if (activeClient == null) {
+      final fromMem = _inMemoryServicesCache[salonId];
+      if (fromMem != null && fromMem.isNotEmpty) {
+        return Stream.value(onlyActive ? fromMem.where((s) => s.isActive).toList() : fromMem);
+      }
+      final fromCache = _ownerSalonsCache[salonId]?.services ?? [];
+      return Stream.value(onlyActive ? fromCache.where((s) => s.isActive).toList() : fromCache);
+    }
+
+    try {
+      return activeClient
+          .from('services')
+          .stream(primaryKey: ['id'])
+          .eq('salon_id', salonId)
+          .map((rows) {
+            var list = rows
+                .map((r) => SalonService.fromJson(Map<String, dynamic>.from(r)))
+                .toList();
+            if (onlyActive) {
+              list = list.where((s) => s.isActive).toList();
+            }
+            list.sort((a, b) => a.name.compareTo(b.name));
+            return list;
+          });
+    } catch (e) {
+      debugPrint('[SalonRepository] streamServices fallback to polling: $e');
+      return Stream.periodic(const Duration(seconds: 3))
+          .asyncMap((_) => fetchServices(salonId, onlyActive: onlyActive));
+    }
+  }
+
+  /// Adds a new service directly to Supabase public.services.
+  /// Returns the actual database-generated SalonService row.
+  Future<SalonService> addService({
     required String salonId,
     required String name,
     required String category,
     required double price,
     required int durationMinutes,
+    bool isActive = true,
   }) async {
-    final client = this.client;
-    final newSvc = SalonService(
-      id: 'svc-${DateTime.now().millisecondsSinceEpoch}',
-      salonId: salonId,
-      name: name,
-      category: category,
-      price: price,
-      durationMinutes: durationMinutes,
-      isActive: true,
-    );
+    final activeClient = client;
 
-    _updateOwnerSalonInMemory(
-      salonId,
-      (s) => s.copyWith(services: [...s.services, newSvc]),
-    );
-
-    if (client == null) {
+    if (activeClient == null) {
+      final newSvc = SalonService(
+        id: 'svc-${DateTime.now().millisecondsSinceEpoch}',
+        salonId: salonId,
+        name: name,
+        category: category,
+        price: price,
+        durationMinutes: durationMinutes,
+        isActive: isActive,
+      );
+      _inMemoryServicesCache.putIfAbsent(salonId, () => []);
+      _inMemoryServicesCache[salonId]!.removeWhere((s) => s.id == newSvc.id);
+      _inMemoryServicesCache[salonId]!.add(newSvc);
+      _updateOwnerSalonInMemory(
+        salonId,
+        (s) => s.copyWith(services: [...s.services, newSvc]),
+      );
       return newSvc;
     }
 
     try {
-      final res = await client.from('services').insert({
+      final res = await activeClient.from('services').insert({
         'salon_id': salonId,
         'name': name,
         'category': category,
         'price': price,
         'duration_minutes': durationMinutes,
-        'is_active': true,
+        'is_active': isActive,
       }).select().single();
 
-      return SalonService.fromJson(Map<String, dynamic>.from(res));
+      final createdSvc = SalonService.fromJson(Map<String, dynamic>.from(res));
+
+      _inMemoryServicesCache.putIfAbsent(salonId, () => []);
+      _inMemoryServicesCache[salonId]!.removeWhere((s) => s.id == createdSvc.id);
+      _inMemoryServicesCache[salonId]!.add(createdSvc);
+
+      _updateOwnerSalonInMemory(
+        salonId,
+        (s) => s.copyWith(
+          services: [...s.services.where((svc) => svc.id != createdSvc.id), createdSvc],
+        ),
+      );
+
+      debugPrint('[SalonRepository] addService SUCCESS: ${createdSvc.id} (${createdSvc.name})');
+      return createdSvc;
     } catch (e) {
-      debugPrint('[SalonRepository] addService error: $e');
-      return newSvc;
+      debugPrint('[SalonRepository] addService DB ERROR: $e');
+      rethrow;
     }
   }
 
-  /// Updates an existing service
-  Future<void> updateService({
+  /// Updates an existing service in Supabase public.services.
+  Future<SalonService> updateService({
     required String serviceId,
     required String name,
     required String category,
     required double price,
     required int durationMinutes,
     required bool isActive,
+    String? salonId,
   }) async {
-    for (final entry in _ownerSalonsCache.entries) {
-      final s = entry.value;
-      final svcIdx = s.services.indexWhere((svc) => svc.id == serviceId);
-      if (svcIdx != -1) {
-        final updatedServices = List<SalonService>.from(s.services);
-        updatedServices[svcIdx] = updatedServices[svcIdx].copyWith(
-          name: name,
-          category: category,
-          price: price,
-          durationMinutes: durationMinutes,
-          isActive: isActive,
-        );
-        _ownerSalonsCache[entry.key] = s.copyWith(services: updatedServices);
+    final activeClient = client;
+
+    if (activeClient == null) {
+      SalonService? updatedSvc;
+      if (salonId != null && _inMemoryServicesCache.containsKey(salonId)) {
+        final idx = _inMemoryServicesCache[salonId]!.indexWhere((s) => s.id == serviceId);
+        if (idx != -1) {
+          updatedSvc = _inMemoryServicesCache[salonId]![idx].copyWith(
+            name: name,
+            category: category,
+            price: price,
+            durationMinutes: durationMinutes,
+            isActive: isActive,
+          );
+          _inMemoryServicesCache[salonId]![idx] = updatedSvc;
+        }
       }
+      for (final list in _inMemoryServicesCache.values) {
+        final idx = list.indexWhere((s) => s.id == serviceId);
+        if (idx != -1) {
+          updatedSvc = list[idx].copyWith(
+            name: name,
+            category: category,
+            price: price,
+            durationMinutes: durationMinutes,
+            isActive: isActive,
+          );
+          list[idx] = updatedSvc;
+        }
+      }
+      for (final entry in _ownerSalonsCache.entries) {
+        final s = entry.value;
+        final svcIdx = s.services.indexWhere((svc) => svc.id == serviceId);
+        if (svcIdx != -1) {
+          final updatedServices = List<SalonService>.from(s.services);
+          updatedSvc = updatedServices[svcIdx].copyWith(
+            name: name,
+            category: category,
+            price: price,
+            durationMinutes: durationMinutes,
+            isActive: isActive,
+          );
+          updatedServices[svcIdx] = updatedSvc;
+          _ownerSalonsCache[entry.key] = s.copyWith(services: updatedServices);
+        }
+      }
+      return updatedSvc ?? SalonService(
+        id: serviceId,
+        salonId: salonId ?? '',
+        name: name,
+        category: category,
+        price: price,
+        durationMinutes: durationMinutes,
+        isActive: isActive,
+      );
     }
 
-    final client = this.client;
-    if (client == null) return;
-
     try {
-      await client.from('services').update({
+      final res = await activeClient.from('services').update({
         'name': name,
         'category': category,
         'price': price,
         'duration_minutes': durationMinutes,
         'is_active': isActive,
-      }).eq('id', serviceId);
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', serviceId).select().single();
+
+      final updatedSvc = SalonService.fromJson(Map<String, dynamic>.from(res));
+
+      for (final list in _inMemoryServicesCache.values) {
+        final idx = list.indexWhere((s) => s.id == serviceId);
+        if (idx != -1) {
+          list[idx] = updatedSvc;
+        }
+      }
+
+      for (final entry in _ownerSalonsCache.entries) {
+        final s = entry.value;
+        final svcIdx = s.services.indexWhere((svc) => svc.id == serviceId);
+        if (svcIdx != -1) {
+          final updatedServices = List<SalonService>.from(s.services);
+          updatedServices[svcIdx] = updatedSvc;
+          _ownerSalonsCache[entry.key] = s.copyWith(services: updatedServices);
+        }
+      }
+
+      debugPrint('[SalonRepository] updateService SUCCESS: ${updatedSvc.id} (${updatedSvc.name})');
+      return updatedSvc;
     } catch (e) {
-      debugPrint('[SalonRepository] updateService error: $e');
+      debugPrint('[SalonRepository] updateService DB ERROR: $e');
+      rethrow;
     }
   }
 
-  /// Deletes a service
-  Future<void> deleteService(String serviceId) async {
-    for (final entry in _ownerSalonsCache.entries) {
-      final s = entry.value;
-      if (s.services.any((svc) => svc.id == serviceId)) {
-        final updatedServices = s.services.where((svc) => svc.id != serviceId).toList();
-        _ownerSalonsCache[entry.key] = s.copyWith(services: updatedServices);
+  /// Deletes a service from Supabase public.services.
+  Future<void> deleteService(String serviceId, {String? salonId}) async {
+    final activeClient = client;
+
+    if (activeClient == null) {
+      if (salonId != null && _inMemoryServicesCache.containsKey(salonId)) {
+        _inMemoryServicesCache[salonId]!.removeWhere((s) => s.id == serviceId);
       }
+      for (final list in _inMemoryServicesCache.values) {
+        list.removeWhere((s) => s.id == serviceId);
+      }
+      for (final entry in _ownerSalonsCache.entries) {
+        final s = entry.value;
+        if (s.services.any((svc) => svc.id == serviceId)) {
+          final updatedServices = s.services.where((svc) => svc.id != serviceId).toList();
+          _ownerSalonsCache[entry.key] = s.copyWith(services: updatedServices);
+        }
+      }
+      return;
     }
 
-    final client = this.client;
-    if (client == null) return;
-
     try {
-      await client.from('services').delete().eq('id', serviceId);
+      await activeClient.from('services').delete().eq('id', serviceId);
+
+      for (final list in _inMemoryServicesCache.values) {
+        list.removeWhere((s) => s.id == serviceId);
+      }
+
+      for (final entry in _ownerSalonsCache.entries) {
+        final s = entry.value;
+        if (s.services.any((svc) => svc.id == serviceId)) {
+          final updatedServices = s.services.where((svc) => svc.id != serviceId).toList();
+          _ownerSalonsCache[entry.key] = s.copyWith(services: updatedServices);
+        }
+      }
+
+      debugPrint('[SalonRepository] deleteService SUCCESS: $serviceId');
     } catch (e) {
-      debugPrint('[SalonRepository] deleteService error: $e');
+      debugPrint('[SalonRepository] deleteService DB ERROR: $e');
+      rethrow;
     }
   }
 

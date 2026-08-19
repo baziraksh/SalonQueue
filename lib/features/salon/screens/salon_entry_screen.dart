@@ -648,6 +648,20 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                       }
                     },
                   ),
+                  ListTile(
+                    leading: const Icon(Icons.content_cut_rounded, color: AppColorSchemes.navy),
+                    title: const Text('Services & Pricing', style: TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: const Text('Add, edit prices & manage rate card', style: TextStyle(fontSize: 11)),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () {
+                      Navigator.pop(context);
+                      if (_salon != null) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => ManageServicesScreen(salon: _salon!)),
+                        ).then((_) => _loadSalonAndQueue());
+                      }
+                    },
+                  ),
 
                   const Divider(height: 16),
                   _buildDrawerSectionLabel('SUPPORT & ALERTS'),

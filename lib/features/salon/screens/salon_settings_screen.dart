@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/color_schemes.dart';
 import '../../../shared/data/india_locations.dart';
 import '../../../shared/models/salon.dart';
+import '../../auth/services/auth_scope.dart';
 import '../../support/screens/support_center_screen.dart';
 import '../data/salon_repository.dart';
 

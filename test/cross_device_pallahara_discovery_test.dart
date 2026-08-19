@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:salon_queue/features/salon/data/salon_repository.dart';
 import 'package:salon_queue/shared/data/india_locations.dart';
-import 'package:salon_queue/shared/models/salon.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
