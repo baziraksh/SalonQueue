@@ -26,7 +26,7 @@ class NotificationRepository {
 
   /// Clears in-memory notifications cache on user logout
   static void clearCache() {
-    // Resets local notification stream and states
+    _inMemoryNotifications.clear();
   }
 
   // In-memory fallback storage for offline unit tests
@@ -54,7 +54,7 @@ class NotificationRepository {
 
     // Fallback to in-memory list for test environments when client is null
     return _inMemoryNotifications
-        .where((n) => n.ownerId == ownerId || n.ownerId == 'demo-owner' || ownerId.isEmpty)
+        .where((n) => ownerId.isEmpty || n.ownerId == ownerId)
         .toList();
   }
 
@@ -120,7 +120,7 @@ class NotificationRepository {
     }
   }
 
-  /// Marks all notifications for an owner as read
+  /// Marks all notifications for a user/owner as read
   Future<void> markAllAsRead(String ownerId) async {
     for (int i = 0; i < _inMemoryNotifications.length; i++) {
       if (_inMemoryNotifications[i].ownerId == ownerId || ownerId.isEmpty) {
@@ -136,7 +136,7 @@ class NotificationRepository {
           await activeClient
               .from('notifications')
               .update({'is_read': true})
-              .eq('owner_id', ownerId)
+              .eq('user_id', ownerId)
               .eq('is_read', false);
         } else {
           await activeClient
@@ -182,6 +182,7 @@ class NotificationRepository {
     if (activeClient != null && ownerId.isNotEmpty) {
       try {
         final res = await activeClient.from('notifications').insert({
+          'user_id': ownerId,
           'owner_id': ownerId,
           'title': title,
           'message': message,
