@@ -350,4 +350,76 @@ class IndiaLocations {
 
     return results;
   }
+
+  /// Resolves the parent district for a city, village, or town within a state
+  static String? resolveDistrictForCity(String cityOrLocality, String state) {
+    final cleanCity = cityOrLocality.trim().toLowerCase();
+    final cleanState = state.trim().toLowerCase();
+
+    // Map known towns/villages to their canonical district
+    const Map<String, Map<String, String>> townToDistrict = {
+      'odisha': {
+        'pallahara': 'Angul',
+        'palalahara': 'Angul',
+        'talcher': 'Angul',
+        'banarpal': 'Angul',
+        'kaniha': 'Angul',
+        'chendipada': 'Angul',
+        'athamallik': 'Angul',
+        'boinda': 'Angul',
+        'kishore nagar': 'Angul',
+        'jarapada': 'Angul',
+        'turanga': 'Angul',
+        'hakimpara': 'Angul',
+        'amalapada': 'Angul',
+        'similipada': 'Angul',
+        'mishrapada': 'Angul',
+        'khamar': 'Angul',
+        'bhubaneswar': 'Khurda',
+        'jatni': 'Khurda',
+        'patia': 'Khurda',
+        'saheed nagar': 'Khurda',
+        'nayapalli': 'Khurda',
+        'chandrasekharpur': 'Khurda',
+        'khandagiri': 'Khurda',
+        'choudwar': 'Cuttack',
+        'athagarh': 'Cuttack',
+        'banki': 'Cuttack',
+        'salipur': 'Cuttack',
+        'badambadi': 'Cuttack',
+        'rourkela': 'Sundargarh',
+        'rajgangpur': 'Sundargarh',
+        'berhampur': 'Ganjam',
+        'chhatrapur': 'Ganjam',
+        'hinjilicut': 'Ganjam',
+        'bhanjanagar': 'Ganjam',
+        'aska': 'Ganjam',
+        'burla': 'Sambalpur',
+        'hirakud': 'Sambalpur',
+        'konark': 'Puri',
+        'pipili': 'Puri',
+        'nimapada': 'Puri',
+        'soro': 'Balasore',
+        'jaleswar': 'Balasore',
+      },
+    };
+
+    if (townToDistrict.containsKey(cleanState)) {
+      final district = townToDistrict[cleanState]![cleanCity];
+      if (district != null) return district;
+    }
+
+    final stateList = stateDistricts.entries.firstWhere(
+      (e) => e.key.toLowerCase() == cleanState,
+      orElse: () => const MapEntry('', []),
+    ).value;
+
+    for (final item in stateList) {
+      if (item.toLowerCase() == cleanCity || item.toLowerCase().startsWith('$cleanCity ')) {
+        return item.contains('(') ? item.split('(').first.trim() : item;
+      }
+    }
+
+    return null;
+  }
 }

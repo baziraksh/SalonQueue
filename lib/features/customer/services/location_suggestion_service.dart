@@ -94,17 +94,20 @@ class LocationSuggestion {
   }) {
     // Known approximate coordinates for Indian State/City centers
     final coords = LocationSuggestionService.getEstimatedCoordinates(name, state);
+    final resolvedDistrict = IndiaLocations.resolveDistrictForCity(name, state) ?? name;
 
     return LocationSuggestion(
       title: name,
-      subtitle: '$state • India ${pincode != null ? "($pincode)" : ""}',
+      subtitle: resolvedDistrict.toLowerCase() != name.toLowerCase()
+          ? '$name, $resolvedDistrict, $state • India'
+          : '$state • India ${pincode != null ? "($pincode)" : ""}',
       city: name,
-      district: name,
+      district: resolvedDistrict,
       state: state,
       pincode: pincode,
       latitude: coords.latitude,
       longitude: coords.longitude,
-      rawAddress: '$name, $state, India',
+      rawAddress: '$name, $resolvedDistrict, $state, India',
     );
   }
 }

@@ -2,7 +2,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
@@ -12,15 +11,14 @@ import '../../../shared/models/salon_service.dart';
 
 /// Data repository for discovering salons across all Indian States & Cities,
 /// calculating live distances, rush levels, and owner salon management.
+///
+/// SUPABASE IS THE SINGLE SOURCE OF TRUTH FOR ALL SALON DATA.
 class SalonRepository {
   SalonRepository({supabase.SupabaseClient? client}) : _client = client;
 
   final supabase.SupabaseClient? _client;
-  static final HttpClient _directHttpClient = HttpClient()
-    ..connectionTimeout = const Duration(seconds: 5)
-    ..badCertificateCallback = ((_, __, ___) => true);
 
-  /// Dedicated in-memory owner salon storage isolated strictly per auth.uid()
+  /// Dedicated in-memory owner salon storage isolated strictly per auth.uid() (UI performance only)
   static final Map<String, Salon> _ownerSalonsCache = {};
 
   /// Clears in-memory salon cache on user logout to prevent cross-account data leakage
@@ -43,6 +41,12 @@ class SalonRepository {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Canonical location normalization helper: trims, lowercases, and collapses repeated whitespace.
+  static String normalizeLocation(String? value) {
+    if (value == null) return '';
+    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
   }
 
   /// Saves an owner's salon to persistent disk storage (SharedPreferences)
@@ -96,7 +100,6 @@ class SalonRepository {
 
   /// Updates an owner's salon in memory without mutating other accounts
   void _updateOwnerSalonInMemory(String salonId, Salon Function(Salon current) updater, {String? ownerId}) {
-    // 1. Update in owner-isolated cache
     bool found = false;
     for (final entry in _ownerSalonsCache.entries) {
       if (entry.value.id == salonId ||
@@ -116,30 +119,10 @@ class SalonRepository {
       found = true;
     }
 
-    // 2. Update in fallbackSalons if it matches
     final idx = fallbackSalons.indexWhere((s) => s.id == salonId || (ownerId != null && s.ownerId == ownerId));
     if (idx != -1) {
       fallbackSalons[idx] = updater(fallbackSalons[idx]);
       found = true;
-    }
-
-    // 3. If brand new, seed in cache
-    if (!found) {
-      final base = Salon(
-        id: salonId,
-        ownerId: ownerId,
-        name: 'My Salon & Spa',
-        address: '',
-        city: '',
-      );
-      final updated = updater(base);
-      if (ownerId != null && ownerId.isNotEmpty) {
-        _ownerSalonsCache[ownerId] = updated;
-      }
-      if (salonId.isNotEmpty) {
-        _ownerSalonsCache[salonId] = updated;
-      }
-      unawaited(_saveSalonToDisk(updated));
     }
   }
 
@@ -152,7 +135,7 @@ class SalonRepository {
     }
   }
 
-  /// Real registered salons cache only (No demo fake profiles)
+  /// In-memory test fixture salons (strictly used in offline widget/unit tests when client is null)
   static final List<Salon> fallbackSalons = [];
 
   /// Real-time live stream of salons auto-fetching from Supabase database
@@ -169,7 +152,20 @@ class SalonRepository {
   }) {
     final activeClient = client;
     if (activeClient == null) {
-      return Stream.value(_ownerSalonsCache.values.toList());
+      return Stream.value(
+        _filterLocalSalons(
+          fallbackSalons.isNotEmpty ? fallbackSalons : _ownerSalonsCache.values.toList(),
+          state: state,
+          city: city,
+          district: district,
+          pincode: pincode,
+          search: search,
+          category: category,
+          sortBy: sortBy,
+          userLat: userLat,
+          userLng: userLng,
+        ),
+      );
     }
 
     try {
@@ -190,7 +186,8 @@ class SalonRepository {
               userLng: userLng,
             );
           });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[SalonRepository] streamSalons fallback to polling: $e');
       return Stream.periodic(const Duration(seconds: 4))
           .asyncMap((_) => fetchSalons(
                 state: state,
@@ -206,31 +203,8 @@ class SalonRepository {
     }
   }
 
-  Future<List<dynamic>?> _fetchSalonsViaDirectHttp() async {
-    if (!AppConfig.isSupabaseConfigured) return null;
-    try {
-      final uri = Uri.parse('${AppConfig.supabaseUrl}/rest/v1/salons?select=*&order=created_at.desc');
-      final req = await _directHttpClient.getUrl(uri).timeout(const Duration(seconds: 5));
-      req.headers.set('apikey', AppConfig.supabaseAnonKey);
-      req.headers.set('Authorization', 'Bearer ${AppConfig.supabaseAnonKey}');
-      req.headers.set('Accept', 'application/json');
-      final res = await req.close().timeout(const Duration(seconds: 5));
-      if (res.statusCode == 200) {
-        final body = await res.transform(utf8.decoder).join();
-        final list = jsonDecode(body) as List<dynamic>;
-        debugPrint('[SalonRepository] _fetchSalonsViaDirectHttp SUCCESS: loaded ${list.length} salons directly from database');
-        return list;
-      } else {
-        final err = await res.transform(utf8.decoder).join();
-        debugPrint('[SalonRepository] _fetchSalonsViaDirectHttp status ${res.statusCode}: $err');
-      }
-    } catch (e) {
-      debugPrint('[SalonRepository] _fetchSalonsViaDirectHttp error: $e');
-    }
-    return null;
-  }
-
-  /// Fetches real registered salons from database filtered by state, district, city/village/area, pincode, or search query.
+  /// Fetches real registered salons from database.
+  /// SUPABASE DATABASE IS THE SINGLE SOURCE OF TRUTH FOR CUSTOMER DISCOVERY.
   Future<List<Salon>> fetchSalons({
     String? state,
     String? city,
@@ -243,205 +217,184 @@ class SalonRepository {
     double userLng = 73.8567,
     double? maxRadiusKm,
   }) async {
-    final client = this.client;
-    List<Salon> result = [];
+    final activeClient = client;
+    debugPrint('[Supabase] host = ${AppConfig.supabaseHostname}');
 
-    if (client != null) {
+    List<Salon> dbSalons = [];
+    String? databaseError;
+
+    if (activeClient != null) {
       try {
-        final response = await client
+        final response = await activeClient
             .from('salons')
-            .select('*, services(*)')
+            .select('*')
             .order('created_at', ascending: false);
 
         for (final raw in (response as List)) {
-          final Map<String, dynamic> map = Map<String, dynamic>.from(raw as Map);
-          final rawServices = map['services'] as List? ?? [];
-          final services = rawServices
-              .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
-              .toList();
-
-          // Live waiting count from active tickets in DB
-          try {
-            final ticketsCount = await client
-                .from('queue_tickets')
-                .select('id')
-                .eq('salon_id', map['id'])
-                .eq('status', 'WAITING');
-            map['waiting_count'] = (ticketsCount as List).length;
-          } catch (_) {
-            map['waiting_count'] = 0;
-          }
-
+          final map = Map<String, dynamic>.from(raw as Map);
           final salon = Salon.fromJson(
             map,
-            services: services,
             userLat: userLat,
             userLng: userLng,
           );
-
-          result.add(salon);
-          _ownerSalonsCache[salon.ownerId ?? salon.id] = salon;
-          _ownerSalonsCache[salon.id] = salon;
+          dbSalons.add(salon);
         }
-      } on supabase.PostgrestException catch (pe) {
-        if (pe.code == '431' || pe.message.contains('431') || pe.details?.toString().contains('431') == true) {
-          debugPrint('[SalonRepository] Caught HTTP 431. Clearing bloated session to unblock DB...');
+      } catch (e) {
+        databaseError = e.toString();
+        debugPrint('[SalonRepository] fetchSalons database query error: $e');
+        if (databaseError.contains('431') || databaseError.contains('Too Large')) {
           try {
-            await client.auth.signOut();
+            await activeClient.auth.signOut();
           } catch (_) {}
         }
-      } catch (e) {
-        debugPrint('[SalonRepository] fetchSalons DB query notice: $e');
       }
+    } else {
+      // Offline/unit-test mock mode when client is null
+      dbSalons = fallbackSalons.isNotEmpty
+          ? List<Salon>.from(fallbackSalons)
+          : _ownerSalonsCache.values.toList();
     }
 
-    // Direct clean REST query fallback if SDK query returned 0 salons (guarantees cross-device live fetching)
-    if (result.isEmpty && AppConfig.isSupabaseConfigured) {
-      try {
-        final directList = await _fetchSalonsViaDirectHttp();
-        if (directList != null && directList.isNotEmpty) {
-          for (final raw in directList) {
-            final Map<String, dynamic> map = Map<String, dynamic>.from(raw as Map);
-            final rawServices = map['services'] as List? ?? [];
-            final services = rawServices
-                .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
-                .toList();
+    // 1. Calculate distances for all candidate salons
+    var evaluated = dbSalons.map((s) {
+      final dist = s.calculateDistance(userLat, userLng);
+      return s.copyWith(distanceKm: dist);
+    }).toList();
 
-            final salon = Salon.fromJson(
-              map,
-              services: services,
-              userLat: userLat,
-              userLng: userLng,
-            );
+    // 2. Canonical normalization of filter parameters
+    final normState = normalizeLocation(state);
+    final normDistrict = normalizeLocation(district);
+    final normCity = normalizeLocation(city);
+    final normPincode = normalizeLocation(pincode);
+    final normSearch = normalizeLocation(search);
 
-            result.add(salon);
-            _ownerSalonsCache[salon.ownerId ?? salon.id] = salon;
-            _ownerSalonsCache[salon.id] = salon;
-          }
-        }
-      } catch (e) {
-        debugPrint('[SalonRepository] Direct HTTP query notice: $e');
-      }
+    final isAllStates = normState.isEmpty || normState == 'all' || normState == 'all states';
+    final isAllCities = normCity.isEmpty ||
+        normCity == 'all' ||
+        normCity == 'all cities' ||
+        normCity == 'all india' ||
+        normCity == 'all locations';
+    final isAllDistricts = normDistrict.isEmpty || normDistrict == 'all' || normDistrict == 'all districts';
+
+    var filtered = evaluated;
+
+    // 3. Filter by State
+    if (!isAllStates) {
+      filtered = filtered.where((s) {
+        final sState = normalizeLocation(s.state);
+        final sAddr = normalizeLocation(s.address);
+        final sCity = normalizeLocation(s.city);
+        final sDist = normalizeLocation(s.district);
+        return sState.contains(normState) ||
+            normState.contains(sState) ||
+            sAddr.contains(normState) ||
+            sCity.contains(normState) ||
+            sDist.contains(normState);
+      }).toList();
     }
 
-    // Merge in any locally registered owner salons that were provisioned
-    for (final s in _ownerSalonsCache.values) {
-      if (!result.any((existing) => existing.id == s.id || (s.ownerId != null && existing.ownerId == s.ownerId))) {
-        final dist = s.calculateDistance(userLat, userLng);
-        result.add(s.copyWith(distanceKm: dist));
-      }
+    // 4. Filter by District
+    if (!isAllDistricts) {
+      filtered = filtered.where((s) {
+        final sDist = normalizeLocation(s.district);
+        final sCity = normalizeLocation(s.city);
+        final sAddr = normalizeLocation(s.address);
+        final sState = normalizeLocation(s.state);
+        return sDist.contains(normDistrict) ||
+            normDistrict.contains(sDist) ||
+            sCity.contains(normDistrict) ||
+            normDistrict.contains(sCity) ||
+            sAddr.contains(normDistrict) ||
+            sState.contains(normDistrict);
+      }).toList();
     }
 
-    // Normalize search terms
-    String? cleanCity = city?.trim();
-    String? cleanDistrict = district?.trim();
-    String? cleanPincode = pincode?.trim();
-    String? cleanState = state?.trim();
-
-    if (cleanCity != null &&
-        (cleanCity.isEmpty ||
-            cleanCity.toLowerCase() == 'all' ||
-            cleanCity.toLowerCase() == 'all cities' ||
-            cleanCity.toLowerCase() == 'all india' ||
-            cleanCity.toLowerCase() == 'all locations')) {
-      cleanCity = null;
-    }
-
-    if (cleanState != null &&
-        (cleanState.isEmpty ||
-            cleanState.toLowerCase() == 'all' ||
-            cleanState.toLowerCase() == 'all states')) {
-      cleanState = null;
-    }
-
-    var filtered = result;
-
-    // 1. Filter by State
-    if (cleanState != null && cleanState.isNotEmpty) {
-      final sState = cleanState.toLowerCase();
-      filtered = filtered.where((s) =>
-          s.state.toLowerCase().contains(sState) ||
-          s.city.toLowerCase().contains(sState) ||
-          s.district.toLowerCase().contains(sState) ||
-          s.address.toLowerCase().contains(sState)).toList();
-    }
-
-    // 2. Filter by District
-    if (cleanDistrict != null && cleanDistrict.isNotEmpty) {
-      final d = cleanDistrict.toLowerCase();
-      filtered = filtered.where((s) =>
-          s.district.toLowerCase().contains(d) ||
-          s.city.toLowerCase().contains(d) ||
-          s.address.toLowerCase().contains(d) ||
-          s.state.toLowerCase().contains(d)).toList();
-    }
-
-    // 3. Filter by City / Village / Area / Locality
-    if (cleanCity != null && cleanCity.isNotEmpty) {
-      final c = cleanCity.toLowerCase();
-      final cityMatches = filtered.where((s) =>
-          s.city.toLowerCase().contains(c) ||
-          c.contains(s.city.toLowerCase()) ||
-          s.district.toLowerCase().contains(c) ||
-          c.contains(s.district.toLowerCase()) ||
-          s.address.toLowerCase().contains(c) ||
-          c.contains(s.address.toLowerCase()) ||
-          s.name.toLowerCase().contains(c) ||
-          c.contains(s.name.toLowerCase()) ||
-          s.state.toLowerCase().contains(c)).toList();
+    // 5. Filter by City / Village / Locality
+    if (!isAllCities) {
+      final cityMatches = filtered.where((s) {
+        final sCity = normalizeLocation(s.city);
+        final sDist = normalizeLocation(s.district);
+        final sAddr = normalizeLocation(s.address);
+        final sName = normalizeLocation(s.name);
+        final sState = normalizeLocation(s.state);
+        return sCity.contains(normCity) ||
+            normCity.contains(sCity) ||
+            sDist.contains(normCity) ||
+            normDistrict.contains(sCity) ||
+            sAddr.contains(normCity) ||
+            normCity.contains(sAddr) ||
+            sName.contains(normCity) ||
+            normCity.contains(sName) ||
+            sState.contains(normCity);
+      }).toList();
 
       if (cityMatches.isNotEmpty) {
         filtered = cityMatches;
       } else if (maxRadiusKm != null && maxRadiusKm > 0) {
-        filtered = filtered.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
+        filtered = evaluated.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
       } else {
         filtered = [];
       }
     }
 
-    // 4. Filter by Pincode
-    if (cleanPincode != null && cleanPincode.isNotEmpty) {
-      filtered = filtered.where((s) =>
-          (s.pincode != null && s.pincode!.contains(cleanPincode)) ||
-          s.address.contains(cleanPincode)).toList();
+    // 6. Filter by Pincode
+    if (normPincode.isNotEmpty) {
+      filtered = filtered.where((s) {
+        final sPin = normalizeLocation(s.pincode);
+        final sAddr = normalizeLocation(s.address);
+        return sPin.contains(normPincode) || sAddr.contains(normPincode);
+      }).toList();
     }
 
-    // 5. Filter by Proximity Radius if specified
-    if (maxRadiusKm != null && maxRadiusKm > 0 && (cleanCity == null || cleanCity.isEmpty)) {
-      final radiusMatches = filtered.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
-      if (radiusMatches.isNotEmpty) {
-        filtered = radiusMatches;
-      }
-    }
+    // 7. Filter by Search Query (Case-Insensitive)
+    if (normSearch.isNotEmpty) {
+      final queryMatches = filtered.where((s) {
+        final sName = normalizeLocation(s.name);
+        final sOwner = normalizeLocation(s.ownerName);
+        final sAddr = normalizeLocation(s.address);
+        final sCity = normalizeLocation(s.city);
+        final sDist = normalizeLocation(s.district);
+        final sState = normalizeLocation(s.state);
+        final sPin = normalizeLocation(s.pincode);
+        final sDesc = normalizeLocation(s.description);
+        final hasService = s.services.any((svc) => normalizeLocation(svc.name).contains(normSearch));
 
-    // 6. Filter by Search Query (searches village, area, salon name, owner, services, etc.)
-    if (search != null && search.trim().isNotEmpty) {
-      final q = search.trim().toLowerCase();
-      final queryMatches = filtered.where((s) =>
-          s.name.toLowerCase().contains(q) ||
-          (s.ownerName != null && s.ownerName!.toLowerCase().contains(q)) ||
-          s.address.toLowerCase().contains(q) ||
-          s.city.toLowerCase().contains(q) ||
-          s.district.toLowerCase().contains(q) ||
-          s.state.toLowerCase().contains(q) ||
-          (s.pincode != null && s.pincode!.contains(q)) ||
-          (s.description != null && s.description!.toLowerCase().contains(q)) ||
-          s.services.any((svc) => svc.name.toLowerCase().contains(q))).toList();
+        return sName.contains(normSearch) ||
+            sOwner.contains(normSearch) ||
+            sAddr.contains(normSearch) ||
+            sCity.contains(normSearch) ||
+            sDist.contains(normSearch) ||
+            sState.contains(normSearch) ||
+            sPin.contains(normSearch) ||
+            sDesc.contains(normSearch) ||
+            hasService;
+      }).toList();
 
       if (queryMatches.isNotEmpty) {
         filtered = queryMatches;
       } else {
         // Fallback: If strict location narrowed to 0, match search across all salons in DB
-        final globalMatches = result.where((s) =>
-            s.name.toLowerCase().contains(q) ||
-            (s.ownerName != null && s.ownerName!.toLowerCase().contains(q)) ||
-            s.address.toLowerCase().contains(q) ||
-            s.city.toLowerCase().contains(q) ||
-            s.district.toLowerCase().contains(q) ||
-            s.state.toLowerCase().contains(q) ||
-            (s.pincode != null && s.pincode!.contains(q)) ||
-            (s.description != null && s.description!.toLowerCase().contains(q)) ||
-            s.services.any((svc) => svc.name.toLowerCase().contains(q))).toList();
+        final globalMatches = evaluated.where((s) {
+          final sName = normalizeLocation(s.name);
+          final sOwner = normalizeLocation(s.ownerName);
+          final sAddr = normalizeLocation(s.address);
+          final sCity = normalizeLocation(s.city);
+          final sDist = normalizeLocation(s.district);
+          final sState = normalizeLocation(s.state);
+          final sPin = normalizeLocation(s.pincode);
+          final sDesc = normalizeLocation(s.description);
+          final hasService = s.services.any((svc) => normalizeLocation(svc.name).contains(normSearch));
+
+          return sName.contains(normSearch) ||
+              sOwner.contains(normSearch) ||
+              sAddr.contains(normSearch) ||
+              sCity.contains(normSearch) ||
+              sDist.contains(normSearch) ||
+              sState.contains(normSearch) ||
+              sPin.contains(normSearch) ||
+              sDesc.contains(normSearch) ||
+              hasService;
+        }).toList();
         filtered = globalMatches;
       }
     }
@@ -450,8 +403,9 @@ class SalonRepository {
     final sorted = _sortSalons(catFiltered, sortBy);
 
     debugPrint(
-      '[SalonSearch] state=$cleanState, district=$cleanDistrict, city=$cleanCity, '
-      'search="$search" | Total in DB: ${result.length}, Results: ${sorted.length}',
+      '[SalonDB][CUSTOMER_FETCH] state = ${state ?? "null"}, district = ${district ?? "null"}, '
+      'city = ${city ?? "null"}, search = "${search ?? ""}", rowsReturned = ${sorted.length}, '
+      'databaseError = $databaseError',
     );
 
     return sorted;
@@ -464,11 +418,11 @@ class SalonRepository {
 
     final client = this.client;
     if (client == null) {
-      final matches = fallbackSalons.where((s) => s.id == trimmedId || s.ownerId == trimmedId);
-      if (matches.isNotEmpty) return matches.first;
       if (_ownerSalonsCache.containsKey(trimmedId)) return _ownerSalonsCache[trimmedId];
       final byOwner = _ownerSalonsCache.values.where((s) => s.id == trimmedId || s.ownerId == trimmedId);
       if (byOwner.isNotEmpty) return byOwner.first;
+      final matches = fallbackSalons.where((s) => s.id == trimmedId || s.ownerId == trimmedId);
+      if (matches.isNotEmpty) return matches.first;
       return null;
     }
 
@@ -518,21 +472,10 @@ class SalonRepository {
     }
   }
 
-  /// Fetches the salon owned by the current salon owner with strict per-owner data isolation
+  /// Fetches the salon owned by the current salon owner from Supabase.
+  /// If no salon exists in the database for this owner, provisions exactly ONE canonical row.
   Future<Salon?> fetchOwnerSalon(String ownerId) async {
     if (ownerId.isEmpty) return null;
-
-    // 1. In-memory cache check
-    if (_ownerSalonsCache.containsKey(ownerId)) {
-      return _ownerSalonsCache[ownerId];
-    }
-
-    // 2. Local disk persistent cache check (restores immediately even after logout / cold restart)
-    final diskSalon = await _loadSalonFromDisk(ownerId);
-    if (diskSalon != null) {
-      _ownerSalonsCache[ownerId] = diskSalon;
-      _ownerSalonsCache[diskSalon.id] = diskSalon;
-    }
 
     final client = this.client;
     if (client != null) {
@@ -541,7 +484,6 @@ class SalonRepository {
             .from('salons')
             .select('*, services(*)')
             .eq('owner_id', ownerId)
-            .order('updated_at', ascending: false)
             .limit(1);
 
         if ((resList as List).isNotEmpty) {
@@ -552,48 +494,13 @@ class SalonRepository {
               .toList();
 
           final remoteSalon = Salon.fromJson(map, services: services);
-
-          // Merge disk customizations with remote DB row
-          final finalSalon = diskSalon != null
-              ? diskSalon.copyWith(
-                  id: remoteSalon.id.isNotEmpty ? remoteSalon.id : diskSalon.id,
-                  name: remoteSalon.name.isNotEmpty && remoteSalon.name != 'My Salon & Spa'
-                      ? remoteSalon.name
-                      : diskSalon.name,
-                  description: remoteSalon.description ?? diskSalon.description,
-                  phone: remoteSalon.phone ?? diskSalon.phone,
-                  address: remoteSalon.address.isNotEmpty && remoteSalon.address != 'Main Market Road'
-                      ? remoteSalon.address
-                      : diskSalon.address,
-                  city: remoteSalon.city.isNotEmpty && remoteSalon.city != 'Angul'
-                      ? remoteSalon.city
-                      : diskSalon.city,
-                  district: remoteSalon.district.isNotEmpty ? remoteSalon.district : diskSalon.district,
-                  state: remoteSalon.state.isNotEmpty ? remoteSalon.state : diskSalon.state,
-                  coverImageUrl: remoteSalon.coverImageUrl ?? diskSalon.coverImageUrl,
-                  bannerUrl: remoteSalon.bannerUrl ?? diskSalon.bannerUrl,
-                  ownerAvatarUrl: remoteSalon.ownerAvatarUrl ?? diskSalon.ownerAvatarUrl,
-                  ownerName: remoteSalon.ownerName ?? diskSalon.ownerName,
-                  galleryImages: remoteSalon.galleryImages.isNotEmpty
-                      ? remoteSalon.galleryImages
-                      : diskSalon.galleryImages,
-                  services: services.isNotEmpty ? services : diskSalon.services,
-                )
-              : remoteSalon;
-
-          _ownerSalonsCache[ownerId] = finalSalon;
-          _ownerSalonsCache[finalSalon.id] = finalSalon;
-          unawaited(_saveSalonToDisk(finalSalon));
-          return finalSalon;
+          _ownerSalonsCache[ownerId] = remoteSalon;
+          _ownerSalonsCache[remoteSalon.id] = remoteSalon;
+          unawaited(_saveSalonToDisk(remoteSalon));
+          return remoteSalon;
         }
 
-        // If not in DB but exists on local disk, sync local disk up to database
-        if (diskSalon != null) {
-          unawaited(_updateSalonInDb(diskSalon.id, diskSalon.toJson(), ownerId: ownerId));
-          return diskSalon;
-        }
-
-        // Brand new owner without existing salon — provision a dedicated salon row for this auth.uid()
+        // Brand new owner without existing salon — provision exactly ONE dedicated salon row
         try {
           String initialOwnerName = 'Salon Owner';
           try {
@@ -619,7 +526,7 @@ class SalonRepository {
             'is_published': true,
             'opening_time': '09:00 AM',
             'closing_time': '09:00 PM',
-          }).select('*, services(*)').maybeSingle();
+          }).select('*').maybeSingle();
 
           if (inserted != null) {
             final map = Map<String, dynamic>.from(inserted);
@@ -656,9 +563,15 @@ class SalonRepository {
       }
     }
 
-    // Fallback: Return diskSalon or default isolated salon
+    // Fallback: Local disk cache or in-memory cache when offline or in test environment
+    final diskSalon = await _loadSalonFromDisk(ownerId);
     if (diskSalon != null) {
+      _ownerSalonsCache[ownerId] = diskSalon;
       return diskSalon;
+    }
+
+    if (_ownerSalonsCache.containsKey(ownerId)) {
+      return _ownerSalonsCache[ownerId];
     }
 
     final isolatedSalon = Salon(
@@ -687,178 +600,139 @@ class SalonRepository {
     return isolatedSalon;
   }
 
-  /// Helper to update a salon row in Supabase, matching by owner_id or id
-  Future<void> _updateSalonInDb(
+  /// Saves and persists salon data directly to Supabase public.salons.
+  /// Awaits database response and rethrows errors so callers know if write succeeded.
+  Future<Salon> _updateSalonInDb(
     String salonId,
     Map<String, dynamic> updateData, {
     String? ownerId,
   }) async {
     final activeClient = client;
-    final effectiveOwnerId =
-        ownerId ?? activeClient?.auth.currentUser?.id;
+    final effectiveOwnerId = ownerId ?? activeClient?.auth.currentUser?.id;
 
-    if (effectiveOwnerId == null || effectiveOwnerId.isEmpty) return;
-
-    // 1. Retrieve current salon from cache or disk to construct a FULL, complete record
-    Salon? existing = _ownerSalonsCache[effectiveOwnerId] ??
-        _ownerSalonsCache.values.cast<Salon?>().firstWhere(
-              (s) => s != null && (s.id == salonId || s.ownerId == effectiveOwnerId),
-              orElse: () => null,
-            );
-
-    existing ??= await _loadSalonFromDisk(effectiveOwnerId);
-
-    // 2. Immediately save local copy to memory and disk
-    final localUpdated = (existing != null)
-        ? existing.copyWith(
-            name: updateData['name'] ?? existing.name,
-            description: updateData['description'] ?? existing.description,
-            phone: updateData.containsKey('phone') ? updateData['phone'] : existing.phone,
-            address: updateData['address'] ?? existing.address,
-            city: updateData['city'] ?? existing.city,
-            district: updateData['district'] ?? existing.district,
-            state: updateData['state'] ?? existing.state,
-            pincode: updateData.containsKey('pincode') ? updateData['pincode'] : existing.pincode,
-            activeChairs: updateData['active_chairs'] ?? existing.activeChairs,
-            isQueueOpen: updateData['is_queue_open'] ?? existing.isQueueOpen,
-            openingTime: updateData['opening_time'] ?? existing.openingTime,
-            closingTime: updateData['closing_time'] ?? existing.closingTime,
-            coverImageUrl: updateData.containsKey('cover_image_url')
-                ? updateData['cover_image_url']
-                : existing.coverImageUrl,
-            bannerUrl: updateData.containsKey('banner_url')
-                ? updateData['banner_url']
-                : existing.bannerUrl,
-            ownerName: updateData['owner_name'] ?? existing.ownerName,
-            ownerAvatarUrl: updateData.containsKey('owner_avatar_url')
-                ? updateData['owner_avatar_url']
-                : existing.ownerAvatarUrl,
-            galleryImages: updateData['gallery_images'] != null
-                ? List<String>.from(updateData['gallery_images'])
-                : existing.galleryImages,
-          )
-        : Salon.fromJson(updateData);
-
-    _ownerSalonsCache[effectiveOwnerId] = localUpdated;
-    if (localUpdated.id.isNotEmpty) {
+    if (effectiveOwnerId == null || effectiveOwnerId.isEmpty || activeClient == null) {
+      final existing = _ownerSalonsCache[salonId] ??
+          _ownerSalonsCache[effectiveOwnerId] ??
+          fallbackSalons.cast<Salon?>().firstWhere(
+                (s) => s != null && (s.id == salonId || (effectiveOwnerId != null && s.ownerId == effectiveOwnerId)),
+                orElse: () => null,
+              );
+      final base = existing ?? Salon(
+        id: salonId,
+        ownerId: effectiveOwnerId ?? salonId,
+        name: updateData['name'] ?? 'My Salon & Spa',
+        address: updateData['address'] ?? '',
+        city: updateData['city'] ?? '',
+      );
+      final localUpdated = base.copyWith(
+        name: updateData['name'] ?? base.name,
+        description: updateData['description'] ?? base.description,
+        phone: updateData.containsKey('phone') ? updateData['phone'] : base.phone,
+        address: updateData['address'] ?? base.address,
+        city: updateData['city'] ?? base.city,
+        district: updateData['district'] ?? base.district,
+        state: updateData['state'] ?? base.state,
+        pincode: updateData.containsKey('pincode') ? updateData['pincode'] : base.pincode,
+        latitude: updateData.containsKey('latitude') ? (updateData['latitude'] as num?)?.toDouble() : base.latitude,
+        longitude: updateData.containsKey('longitude') ? (updateData['longitude'] as num?)?.toDouble() : base.longitude,
+        activeChairs: updateData['active_chairs'] ?? base.activeChairs,
+        isQueueOpen: updateData['is_queue_open'] ?? base.isQueueOpen,
+        openingTime: updateData['opening_time'] ?? base.openingTime,
+        closingTime: updateData['closing_time'] ?? base.closingTime,
+        coverImageUrl: updateData.containsKey('cover_image_url')
+            ? updateData['cover_image_url']
+            : base.coverImageUrl,
+        bannerUrl: updateData.containsKey('banner_url')
+            ? updateData['banner_url']
+            : base.bannerUrl,
+        ownerName: updateData['owner_name'] ?? base.ownerName,
+        ownerAvatarUrl: updateData.containsKey('owner_avatar_url')
+            ? updateData['owner_avatar_url']
+            : base.ownerAvatarUrl,
+        galleryImages: updateData['gallery_images'] != null
+            ? List<String>.from(updateData['gallery_images'])
+            : base.galleryImages,
+      );
+      if (effectiveOwnerId != null && effectiveOwnerId.isNotEmpty) {
+        _ownerSalonsCache[effectiveOwnerId] = localUpdated;
+      }
+      _ownerSalonsCache[salonId] = localUpdated;
       _ownerSalonsCache[localUpdated.id] = localUpdated;
+      return localUpdated;
     }
-    unawaited(_saveSalonToDisk(localUpdated));
-
-    if (activeClient == null) return;
 
     try {
-      debugPrint('[SalonSave] ownerId = $effectiveOwnerId, updateData = $updateData');
-
-      // 3. Prepare partial payload with only non-null updated fields
       final partialPayload = Map<String, dynamic>.from(updateData);
       partialPayload['updated_at'] = DateTime.now().toUtc().toIso8601String();
 
-      // 4. Try partial update by owner_id
-      bool updated = false;
-
-      final resOwner = await activeClient
+      // Check if row exists for owner
+      final existingRows = await activeClient
           .from('salons')
-          .update(partialPayload)
-          .eq('owner_id', effectiveOwnerId)
-          .select('*, services(*)');
+          .select('*')
+          .eq('owner_id', effectiveOwnerId);
 
-      if ((resOwner as List).isNotEmpty) {
-        final map = Map<String, dynamic>.from(resOwner.first as Map);
-        final rawServices = map['services'] as List? ?? [];
-        final services = rawServices
-            .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
-            .toList();
-        final updatedSalon = Salon.fromJson(map, services: services);
-        _ownerSalonsCache[effectiveOwnerId] = updatedSalon;
-        if (updatedSalon.id.isNotEmpty) {
-          _ownerSalonsCache[updatedSalon.id] = updatedSalon;
-        }
-        unawaited(_saveSalonToDisk(updatedSalon));
-        updated = true;
-        debugPrint('[SalonSave] Updated existing salon by owner_id: ${updatedSalon.id} (${updatedSalon.name}) at ${updatedSalon.city}, ${updatedSalon.district}, ${updatedSalon.state}');
-      }
+      Map<String, dynamic> savedRow;
 
-      // If no row matched owner_id, try update by id
-      if (!updated && salonId.isNotEmpty && salonId.length == 36 && !salonId.startsWith('salon-')) {
-        final resId = await activeClient
+      if ((existingRows as List).isNotEmpty) {
+        final resUpdate = await activeClient
             .from('salons')
             .update(partialPayload)
-            .eq('id', salonId)
-            .select('*, services(*)');
+            .eq('owner_id', effectiveOwnerId)
+            .select('*');
 
-        if ((resId as List).isNotEmpty) {
-          final map = Map<String, dynamic>.from(resId.first as Map);
-          final rawServices = map['services'] as List? ?? [];
-          final services = rawServices
-              .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
-              .toList();
-          final updatedSalon = Salon.fromJson(map, services: services);
-          _ownerSalonsCache[effectiveOwnerId] = updatedSalon;
-          _ownerSalonsCache[updatedSalon.id] = updatedSalon;
-          unawaited(_saveSalonToDisk(updatedSalon));
-          updated = true;
-          debugPrint('[SalonSave] Updated existing salon by id: ${updatedSalon.id} (${updatedSalon.name})');
+        if ((resUpdate as List).isEmpty) {
+          throw Exception('Failed to update salon record for owner $effectiveOwnerId');
         }
-      }
-
-      // If salon does not exist in DB yet, insert the fullPayload
-      if (!updated) {
-        final fullPayload = <String, dynamic>{
-          'owner_id': effectiveOwnerId,
-          'name': updateData['name'] ?? existing?.name ?? 'My Salon & Spa',
-          'description': updateData['description'] ?? existing?.description ?? 'Welcome to our premium salon.',
-          'phone': updateData.containsKey('phone') ? updateData['phone'] : existing?.phone,
-          'address': updateData['address'] ?? existing?.address ?? 'Main Market Road',
-          'city': updateData['city'] ?? existing?.city ?? 'Angul',
-          'district': updateData['district'] ?? existing?.district ?? 'Angul',
-          'state': updateData['state'] ?? existing?.state ?? 'Odisha',
-          'pincode': updateData.containsKey('pincode') ? updateData['pincode'] : existing?.pincode,
-          'active_chairs': updateData['active_chairs'] ?? existing?.activeChairs ?? 3,
-          'is_queue_open': updateData['is_queue_open'] ?? existing?.isQueueOpen ?? true,
-          'is_verified': true,
-          'is_active': true,
-          'is_published': true,
-          'opening_time': updateData['opening_time'] ?? existing?.openingTime ?? '09:00 AM',
-          'closing_time': updateData['closing_time'] ?? existing?.closingTime ?? '09:00 PM',
-          'cover_image_url': updateData.containsKey('cover_image_url')
-              ? updateData['cover_image_url']
-              : existing?.coverImageUrl,
-          'banner_url': updateData.containsKey('banner_url')
-              ? updateData['banner_url']
-              : existing?.bannerUrl,
-          'owner_name': updateData['owner_name'] ?? existing?.ownerName ?? 'Salon Owner',
-          'owner_avatar_url': updateData.containsKey('owner_avatar_url')
-              ? updateData['owner_avatar_url']
-              : existing?.ownerAvatarUrl,
-          'gallery_images': updateData['gallery_images'] ?? existing?.galleryImages ?? [],
-          if (updateData['latitude'] != null || existing?.latitude != null)
-            'latitude': updateData['latitude'] ?? existing?.latitude,
-          if (updateData['longitude'] != null || existing?.longitude != null)
-            'longitude': updateData['longitude'] ?? existing?.longitude,
-          'updated_at': DateTime.now().toUtc().toIso8601String(),
-        };
+        savedRow = Map<String, dynamic>.from(resUpdate.first as Map);
+      } else {
+        // First-time insert
+        partialPayload['owner_id'] = effectiveOwnerId;
+        partialPayload.putIfAbsent('name', () => 'My Salon & Spa');
+        partialPayload.putIfAbsent('description', () => 'Welcome to our premium salon.');
+        partialPayload.putIfAbsent('address', () => 'Main Market Road');
+        partialPayload.putIfAbsent('city', () => 'Angul');
+        partialPayload.putIfAbsent('district', () => 'Angul');
+        partialPayload.putIfAbsent('state', () => 'Odisha');
+        partialPayload.putIfAbsent('active_chairs', () => 3);
+        partialPayload.putIfAbsent('is_queue_open', () => true);
+        partialPayload.putIfAbsent('is_verified', () => true);
+        partialPayload.putIfAbsent('is_active', () => true);
+        partialPayload.putIfAbsent('is_published', () => true);
+        partialPayload.putIfAbsent('opening_time', () => '09:00 AM');
+        partialPayload.putIfAbsent('closing_time', () => '09:00 PM');
+        partialPayload.putIfAbsent('gallery_images', () => []);
 
         final resInsert = await activeClient
             .from('salons')
-            .insert(fullPayload)
-            .select('*, services(*)');
+            .insert(partialPayload)
+            .select('*');
 
-        if ((resInsert as List).isNotEmpty) {
-          final map = Map<String, dynamic>.from(resInsert.first as Map);
-          final rawServices = map['services'] as List? ?? [];
-          final services = rawServices
-              .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
-              .toList();
-          final updatedSalon = Salon.fromJson(map, services: services);
-          _ownerSalonsCache[effectiveOwnerId] = updatedSalon;
-          _ownerSalonsCache[updatedSalon.id] = updatedSalon;
-          unawaited(_saveSalonToDisk(updatedSalon));
-          debugPrint('[SalonSave] Inserted brand new salon in DB: ${updatedSalon.id} (${updatedSalon.name})');
+        if ((resInsert as List).isEmpty) {
+          throw Exception('Failed to insert new salon record for owner $effectiveOwnerId');
         }
+        savedRow = Map<String, dynamic>.from(resInsert.first as Map);
       }
+
+      final savedSalon = Salon.fromJson(savedRow);
+      _ownerSalonsCache[effectiveOwnerId] = savedSalon;
+      _ownerSalonsCache[savedSalon.id] = savedSalon;
+      unawaited(_saveSalonToDisk(savedSalon));
+
+      debugPrint(
+        '[SalonDB][SAVE] authUserId = $effectiveOwnerId, salonId = ${savedSalon.id}, '
+        'name = "${savedSalon.name}", state = "${savedSalon.state}", district = "${savedSalon.district}", '
+        'city = "${savedSalon.city}", databaseSuccess = true, databaseError = null',
+      );
+
+      return savedSalon;
     } catch (e) {
-      debugPrint('[SalonRepository] _updateSalonInDb error: $e');
+      debugPrint(
+        '[SalonDB][SAVE] authUserId = $effectiveOwnerId, salonId = $salonId, '
+        'name = "${updateData['name']}", state = "${updateData['state']}", '
+        'district = "${updateData['district']}", city = "${updateData['city']}", '
+        'databaseSuccess = false, databaseError = $e',
+      );
+      rethrow;
     }
   }
 
@@ -1243,41 +1117,68 @@ class SalonRepository {
     double userLng = 73.8567,
     double? maxRadiusKm,
   }) {
+    final normState = normalizeLocation(state);
+    final normDistrict = normalizeLocation(district);
+    final normCity = normalizeLocation(city);
+    final normPincode = normalizeLocation(pincode);
+    final normSearch = normalizeLocation(search);
+
+    final isAllStates = normState.isEmpty || normState == 'all' || normState == 'all states';
+    final isAllCities = normCity.isEmpty ||
+        normCity == 'all' ||
+        normCity == 'all cities' ||
+        normCity == 'all india' ||
+        normCity == 'all locations';
+    final isAllDistricts = normDistrict.isEmpty || normDistrict == 'all' || normDistrict == 'all districts';
+
     var result = list.map((s) {
       final dist = s.calculateDistance(userLat, userLng);
       return s.copyWith(distanceKm: dist);
     }).toList();
 
-    if (pincode != null && pincode.isNotEmpty) {
+    if (normPincode.isNotEmpty) {
       result = result.where((s) =>
-          s.pincode == pincode ||
-          s.address.contains(pincode)).toList();
+          normalizeLocation(s.pincode).contains(normPincode) ||
+          normalizeLocation(s.address).contains(normPincode)).toList();
     }
 
-    if (state != null && state.isNotEmpty && state.toLowerCase() != 'all' && state.toLowerCase() != 'all states') {
-      final sState = state.toLowerCase();
-      result = result.where((s) =>
-          s.state.toLowerCase().contains(sState) ||
-          s.city.toLowerCase().contains(sState) ||
-          s.district.toLowerCase().contains(sState) ||
-          s.address.toLowerCase().contains(sState)).toList();
+    if (!isAllStates) {
+      result = result.where((s) {
+        final sState = normalizeLocation(s.state);
+        final sAddr = normalizeLocation(s.address);
+        return sState.contains(normState) || normState.contains(sState) || sAddr.contains(normState);
+      }).toList();
     }
 
-    if (district != null && district.isNotEmpty) {
-      final d = district.toLowerCase();
-      result = result.where((s) =>
-          s.district.toLowerCase().contains(d) ||
-          s.city.toLowerCase().contains(d) ||
-          s.address.toLowerCase().contains(d)).toList();
+    if (!isAllDistricts) {
+      result = result.where((s) {
+        final sDist = normalizeLocation(s.district);
+        final sCity = normalizeLocation(s.city);
+        final sAddr = normalizeLocation(s.address);
+        return sDist.contains(normDistrict) ||
+            normDistrict.contains(sDist) ||
+            sCity.contains(normDistrict) ||
+            normDistrict.contains(sCity) ||
+            sAddr.contains(normDistrict);
+      }).toList();
     }
 
-    if (city != null && city.isNotEmpty && city.toLowerCase() != 'all' && city.toLowerCase() != 'all cities' && city.toLowerCase() != 'all india') {
-      final c = city.toLowerCase();
-      final cityMatches = result.where((s) =>
-          s.city.toLowerCase().contains(c) ||
-          s.district.toLowerCase().contains(c) ||
-          s.address.toLowerCase().contains(c) ||
-          s.state.toLowerCase().contains(c)).toList();
+    if (!isAllCities) {
+      final cityMatches = result.where((s) {
+        final sCity = normalizeLocation(s.city);
+        final sDist = normalizeLocation(s.district);
+        final sAddr = normalizeLocation(s.address);
+        final sName = normalizeLocation(s.name);
+        return sCity.contains(normCity) ||
+            normCity.contains(sCity) ||
+            sDist.contains(normCity) ||
+            normDistrict.contains(sCity) ||
+            sAddr.contains(normCity) ||
+            normCity.contains(sAddr) ||
+            sName.contains(normCity) ||
+            normCity.contains(sName);
+      }).toList();
+
       if (cityMatches.isNotEmpty) {
         result = cityMatches;
       } else if (maxRadiusKm != null && maxRadiusKm > 0) {
@@ -1287,25 +1188,28 @@ class SalonRepository {
       }
     }
 
-    if (maxRadiusKm != null && maxRadiusKm > 0 && (city == null || city.isEmpty || city.toLowerCase() == 'all india' || city.toLowerCase() == 'all cities')) {
-      final radiusMatches = result.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
-      if (radiusMatches.isNotEmpty) {
-        result = radiusMatches;
-      }
-    }
+    if (normSearch.isNotEmpty) {
+      result = result.where((s) {
+        final sName = normalizeLocation(s.name);
+        final sOwner = normalizeLocation(s.ownerName);
+        final sAddr = normalizeLocation(s.address);
+        final sCity = normalizeLocation(s.city);
+        final sDist = normalizeLocation(s.district);
+        final sState = normalizeLocation(s.state);
+        final sPin = normalizeLocation(s.pincode);
+        final sDesc = normalizeLocation(s.description);
+        final hasService = s.services.any((svc) => normalizeLocation(svc.name).contains(normSearch));
 
-    if (search != null && search.trim().isNotEmpty) {
-      final q = search.trim().toLowerCase();
-      result = result.where((s) =>
-          s.name.toLowerCase().contains(q) ||
-          (s.ownerName != null && s.ownerName!.toLowerCase().contains(q)) ||
-          s.address.toLowerCase().contains(q) ||
-          s.city.toLowerCase().contains(q) ||
-          s.district.toLowerCase().contains(q) ||
-          s.state.toLowerCase().contains(q) ||
-          (s.pincode != null && s.pincode!.contains(q)) ||
-          (s.description != null && s.description!.toLowerCase().contains(q)) ||
-          s.services.any((svc) => svc.name.toLowerCase().contains(q))).toList();
+        return sName.contains(normSearch) ||
+            sOwner.contains(normSearch) ||
+            sAddr.contains(normSearch) ||
+            sCity.contains(normSearch) ||
+            sDist.contains(normSearch) ||
+            sState.contains(normSearch) ||
+            sPin.contains(normSearch) ||
+            sDesc.contains(normSearch) ||
+            hasService;
+      }).toList();
     }
 
     final catFiltered = _filterByCategory(result, category);

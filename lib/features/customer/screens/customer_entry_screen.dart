@@ -558,11 +558,15 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                                         district,
                                         modalSelectedState!,
                                       );
+                                      final resolvedDistrict = IndiaLocations.resolveDistrictForCity(
+                                        district,
+                                        modalSelectedState!,
+                                      ) ?? district;
                                       setState(() {
                                         _selectedState = modalSelectedState!;
                                         _selectedLocation = district;
                                         _selectedCity = district;
-                                        _selectedDistrict = district;
+                                        _selectedDistrict = resolvedDistrict;
                                         _selectedPincode = null;
                                         _userLat = estCoords.latitude;
                                         _userLng = estCoords.longitude;
