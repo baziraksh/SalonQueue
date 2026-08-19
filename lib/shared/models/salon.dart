@@ -161,8 +161,8 @@ class Salon {
     final cover = json['cover_image_url'] as String? ?? json['banner_url'] as String?;
 
     return Salon(
-      id: json['id'] as String? ?? '',
-      ownerId: json['owner_id'] as String?,
+      id: json['id']?.toString() ?? '',
+      ownerId: json['owner_id']?.toString(),
       name: json['name'] as String? ?? '',
       description: json['description'] as String?,
       address: json['address'] as String? ?? '',

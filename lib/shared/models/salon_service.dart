@@ -20,8 +20,8 @@ class SalonService {
 
   factory SalonService.fromJson(Map<String, dynamic> json) {
     return SalonService(
-      id: json['id'] as String? ?? '',
-      salonId: json['salon_id'] as String? ?? '',
+      id: json['id']?.toString() ?? '',
+      salonId: json['salon_id']?.toString() ?? '',
       name: json['name'] as String? ?? '',
       category: json['category'] as String? ?? 'Hair',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,

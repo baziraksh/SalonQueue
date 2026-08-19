@@ -94,9 +94,9 @@ class QueueTicket {
     }
 
     return QueueTicket(
-      id: json['id'] as String? ?? '',
-      salonId: json['salon_id'] as String? ?? '',
-      customerId: json['customer_id'] as String?,
+      id: json['id']?.toString() ?? '',
+      salonId: json['salon_id']?.toString() ?? '',
+      customerId: json['customer_id']?.toString(),
       customerName: json['customer_name'] as String? ?? 'Customer',
       customerPhone: json['customer_phone'] as String?,
       serviceNames: services,
