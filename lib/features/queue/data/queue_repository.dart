@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import '../../../core/config/app_config.dart';
 import '../../../shared/models/queue_ticket.dart';
 import '../../../shared/models/salon_service.dart';
 import '../../notifications/data/notification_repository.dart';
@@ -12,6 +15,9 @@ class QueueRepository {
 
   final supabase.SupabaseClient? _client;
   final NotificationRepository _notifRepo = NotificationRepository();
+  static final HttpClient _directHttpClient = HttpClient()
+    ..connectionTimeout = const Duration(seconds: 5)
+    ..badCertificateCallback = ((_, __, ___) => true);
 
   supabase.SupabaseClient? get client {
     if (_client != null) return _client;
@@ -202,7 +208,24 @@ class QueueRepository {
       if (res == null) return null;
       return QueueTicket.fromJson(Map<String, dynamic>.from(res));
     } catch (e) {
-      debugPrint('[QueueRepository] fetchActiveTicketForCustomer error: $e');
+      if (AppConfig.isSupabaseConfigured) {
+        try {
+          final uri = Uri.parse('${AppConfig.supabaseUrl}/rest/v1/queue_tickets?customer_id=eq.$customerId&status=in.(WAITING,IN_CHAIR)&order=created_at.desc&limit=1');
+          final req = await _directHttpClient.getUrl(uri).timeout(const Duration(seconds: 4));
+          req.headers.set('apikey', AppConfig.supabaseAnonKey);
+          req.headers.set('Authorization', 'Bearer ${AppConfig.supabaseAnonKey}');
+          req.headers.set('Accept', 'application/json');
+          final res = await req.close().timeout(const Duration(seconds: 4));
+          if (res.statusCode == 200) {
+            final body = await res.transform(utf8.decoder).join();
+            final list = jsonDecode(body) as List<dynamic>;
+            if (list.isNotEmpty) {
+              return QueueTicket.fromJson(Map<String, dynamic>.from(list.first as Map));
+            }
+          }
+        } catch (_) {}
+      }
+
       try {
         return _inMemoryTickets.firstWhere(
           (t) => (t.customerId == customerId || t.customerId == null) &&
@@ -393,7 +416,23 @@ class QueueRepository {
           .map((r) => QueueTicket.fromJson(Map<String, dynamic>.from(r as Map)))
           .toList();
     } catch (e) {
-      debugPrint('[QueueRepository] fetchCustomerHistory error: $e');
+      if (AppConfig.isSupabaseConfigured) {
+        try {
+          final uri = Uri.parse('${AppConfig.supabaseUrl}/rest/v1/queue_tickets?customer_id=eq.$customerId&order=created_at.desc');
+          final req = await _directHttpClient.getUrl(uri).timeout(const Duration(seconds: 4));
+          req.headers.set('apikey', AppConfig.supabaseAnonKey);
+          req.headers.set('Authorization', 'Bearer ${AppConfig.supabaseAnonKey}');
+          req.headers.set('Accept', 'application/json');
+          final res = await req.close().timeout(const Duration(seconds: 4));
+          if (res.statusCode == 200) {
+            final body = await res.transform(utf8.decoder).join();
+            final list = jsonDecode(body) as List<dynamic>;
+            return list
+                .map((r) => QueueTicket.fromJson(Map<String, dynamic>.from(r as Map)))
+                .toList();
+          }
+        } catch (_) {}
+      }
       return _inMemoryTickets.where((t) => t.customerId == customerId).toList();
     }
   }

@@ -423,13 +423,17 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                             children: [
                               const Icon(Icons.format_list_numbered_rounded, size: 16, color: Color(0xFF14243A)),
                               const SizedBox(width: 6),
-                              Text(
-                                'CURRENT POSITION',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.grey.shade600,
-                                  letterSpacing: 0.5,
+                              Expanded(
+                                child: Text(
+                                  'CURRENT POSITION',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.grey.shade600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
