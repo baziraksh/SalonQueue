@@ -39,7 +39,7 @@ class NotificationRepository {
       try {
         final query = activeClient.from('notifications').select();
         final res = (ownerId.isNotEmpty)
-            ? await query.eq('user_id', ownerId).order('created_at', ascending: false)
+            ? await query.or('recipient_id.eq.$ownerId,user_id.eq.$ownerId').order('created_at', ascending: false)
             : await query.order('created_at', ascending: false);
 
         final list = (res as List)
@@ -136,7 +136,7 @@ class NotificationRepository {
           await activeClient
               .from('notifications')
               .update({'is_read': true})
-              .eq('user_id', ownerId)
+              .or('recipient_id.eq.$ownerId,user_id.eq.$ownerId')
               .eq('is_read', false);
         } else {
           await activeClient
@@ -182,6 +182,7 @@ class NotificationRepository {
     if (activeClient != null && ownerId.isNotEmpty) {
       try {
         final res = await activeClient.from('notifications').insert({
+          'recipient_id': ownerId,
           'user_id': ownerId,
           'owner_id': ownerId,
           'title': title,
