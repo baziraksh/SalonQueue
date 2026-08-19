@@ -144,6 +144,12 @@ class AuthService extends ChangeNotifier {
         );
       } on Exception catch (e) {
         _logForDebug('Session restore exception: $e');
+        if (e.toString().contains('431')) {
+          _logForDebug('Detected HTTP 431 header overflow. Clearing invalid local session.');
+          try {
+            await repo.signOut();
+          } catch (_) {}
+        }
         _currentUser = null;
         _status = AuthStatus.unauthenticated;
         _errorMessage = null;

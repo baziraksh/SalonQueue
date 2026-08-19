@@ -632,18 +632,12 @@ class AuthRepository {
 
       await activeClient.from('profiles').update(updateData).eq('id', userId);
 
-      // Synchronize into Supabase Auth user metadata ONLY lightweight fields
+      // Synchronize into Supabase Auth user metadata ONLY lightweight fields (name and phone)
       final metaUpdates = <String, dynamic>{};
       if (fullName != null) metaUpdates['full_name'] = fullName;
-      if (avatarUrl != null) {
-        if (!avatarUrl.startsWith('data:') && avatarUrl.length < 500) {
-          metaUpdates['avatar_url'] = avatarUrl;
-        } else {
-          // Clear any stored avatar_url in metadata to prevent JWT bloat
-          metaUpdates['avatar_url'] = null;
-        }
-      }
       if (phone != null) metaUpdates['phone'] = phone;
+      metaUpdates['avatar_url'] = null; // Guarantee avatar is never in JWT claims
+
       if (metaUpdates.isNotEmpty) {
         try {
           await activeClient.auth.updateUser(
