@@ -158,9 +158,9 @@ class AuthService extends ChangeNotifier {
           'Session restored successfully: user=${_currentUser?.id}, role=${_currentUser?.role}',
         );
       } on Exception catch (e) {
-        _logForDebug('Session restore exception: $e');
-        if (e.toString().contains('431')) {
-          _logForDebug('Detected HTTP 431 header overflow. Clearing invalid local session.');
+        final errStr = e.toString();
+        if (errStr.contains('431') || errStr.contains('400') || errStr.contains('Header') || errStr.contains('Too Large')) {
+          _logForDebug('Detected HTTP header/cookie overflow ($errStr). Clearing bloated local session.');
           try {
             await repo.signOut();
           } catch (_) {}

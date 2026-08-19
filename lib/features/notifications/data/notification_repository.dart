@@ -69,7 +69,7 @@ class NotificationRepository {
       try {
         final query = activeClient.from('notifications').select();
         final res = (ownerId.isNotEmpty)
-            ? await query.or('owner_id.eq.$ownerId,user_id.eq.$ownerId').order('created_at', ascending: false)
+            ? await query.eq('user_id', ownerId).order('created_at', ascending: false)
             : await query.order('created_at', ascending: false);
 
         if (res.isNotEmpty) {
@@ -79,18 +79,7 @@ class NotificationRepository {
           return list;
         }
       } catch (e) {
-        // Retry with owner_id only if or filter failed
-        try {
-          final res = (ownerId.isNotEmpty)
-              ? await activeClient.from('notifications').select().eq('owner_id', ownerId).order('created_at', ascending: false)
-              : await activeClient.from('notifications').select().order('created_at', ascending: false);
-          if (res.isNotEmpty) {
-            return (res as List)
-                .map((item) => AppNotification.fromJson(Map<String, dynamic>.from(item as Map)))
-                .toList();
-          }
-        } catch (_) {}
-        debugPrint('[NotificationRepository] fetchNotifications remote error: $e');
+        debugPrint('[NotificationRepository] fetchNotifications remote notice: $e');
       }
     }
 
@@ -115,7 +104,7 @@ class NotificationRepository {
       return activeClient
           .from('notifications')
           .stream(primaryKey: ['id'])
-          .eq('owner_id', ownerId)
+          .eq('user_id', ownerId)
           .map((rows) {
             final list = rows
                 .map((r) => AppNotification.fromJson(Map<String, dynamic>.from(r)))

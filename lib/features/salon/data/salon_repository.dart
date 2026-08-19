@@ -209,7 +209,7 @@ class SalonRepository {
   Future<List<dynamic>?> _fetchSalonsViaDirectHttp() async {
     if (!AppConfig.isSupabaseConfigured) return null;
     try {
-      final uri = Uri.parse('${AppConfig.supabaseUrl}/rest/v1/salons?select=*,services(*)&order=created_at.desc');
+      final uri = Uri.parse('${AppConfig.supabaseUrl}/rest/v1/salons?select=*&order=created_at.desc');
       final req = await _directHttpClient.getUrl(uri).timeout(const Duration(seconds: 5));
       req.headers.set('apikey', AppConfig.supabaseAnonKey);
       req.headers.set('Authorization', 'Bearer ${AppConfig.supabaseAnonKey}');
@@ -218,7 +218,11 @@ class SalonRepository {
       if (res.statusCode == 200) {
         final body = await res.transform(utf8.decoder).join();
         final list = jsonDecode(body) as List<dynamic>;
+        debugPrint('[SalonRepository] _fetchSalonsViaDirectHttp SUCCESS: loaded ${list.length} salons directly from database');
         return list;
+      } else {
+        final err = await res.transform(utf8.decoder).join();
+        debugPrint('[SalonRepository] _fetchSalonsViaDirectHttp status ${res.statusCode}: $err');
       }
     } catch (e) {
       debugPrint('[SalonRepository] _fetchSalonsViaDirectHttp error: $e');
@@ -281,26 +285,10 @@ class SalonRepository {
         }
       } on supabase.PostgrestException catch (pe) {
         if (pe.code == '431' || pe.message.contains('431') || pe.details?.toString().contains('431') == true) {
-          debugPrint('[SalonRepository] Caught HTTP 431. Sanitizing user session to unblock DB queries...');
-          final user = client.auth.currentUser;
-          if (user != null) {
-            try {
-              final metadata = user.userMetadata;
-              if (metadata != null) {
-                final cleanedData = <String, dynamic>{};
-                const allowedKeys = {'role', 'full_name', 'phone'};
-                for (final entry in metadata.entries) {
-                  if (!allowedKeys.contains(entry.key) || (entry.value is String && entry.value.toString().length > 200)) {
-                    cleanedData[entry.key] = null;
-                  }
-                }
-                if (cleanedData.isNotEmpty) {
-                  await client.auth.updateUser(supabase.UserAttributes(data: cleanedData));
-                  await client.auth.refreshSession();
-                }
-              }
-            } catch (_) {}
-          }
+          debugPrint('[SalonRepository] Caught HTTP 431. Clearing bloated session to unblock DB...');
+          try {
+            await client.auth.signOut();
+          } catch (_) {}
         }
       } catch (e) {
         debugPrint('[SalonRepository] fetchSalons DB query notice: $e');
@@ -429,7 +417,7 @@ class SalonRepository {
     // 6. Filter by Search Query (searches village, area, salon name, owner, services, etc.)
     if (search != null && search.trim().isNotEmpty) {
       final q = search.trim().toLowerCase();
-      filtered = filtered.where((s) =>
+      final queryMatches = filtered.where((s) =>
           s.name.toLowerCase().contains(q) ||
           (s.ownerName != null && s.ownerName!.toLowerCase().contains(q)) ||
           s.address.toLowerCase().contains(q) ||
@@ -439,6 +427,23 @@ class SalonRepository {
           (s.pincode != null && s.pincode!.contains(q)) ||
           (s.description != null && s.description!.toLowerCase().contains(q)) ||
           s.services.any((svc) => svc.name.toLowerCase().contains(q))).toList();
+
+      if (queryMatches.isNotEmpty) {
+        filtered = queryMatches;
+      } else {
+        // Fallback: If strict location narrowed to 0, match search across all salons in DB
+        final globalMatches = result.where((s) =>
+            s.name.toLowerCase().contains(q) ||
+            (s.ownerName != null && s.ownerName!.toLowerCase().contains(q)) ||
+            s.address.toLowerCase().contains(q) ||
+            s.city.toLowerCase().contains(q) ||
+            s.district.toLowerCase().contains(q) ||
+            s.state.toLowerCase().contains(q) ||
+            (s.pincode != null && s.pincode!.contains(q)) ||
+            (s.description != null && s.description!.toLowerCase().contains(q)) ||
+            s.services.any((svc) => svc.name.toLowerCase().contains(q))).toList();
+        filtered = globalMatches;
+      }
     }
 
     final catFiltered = _filterByCategory(filtered, category);

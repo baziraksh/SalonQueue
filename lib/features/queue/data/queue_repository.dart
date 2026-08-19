@@ -304,7 +304,25 @@ class QueueRepository {
       }
       return list;
     } catch (e) {
-      debugPrint('[QueueRepository] fetchLiveQueueForSalon error: $e');
+      if (AppConfig.isSupabaseConfigured) {
+        try {
+          final uri = Uri.parse('${AppConfig.supabaseUrl}/rest/v1/queue_tickets?salon_id=eq.$salonId&status=in.(WAITING,IN_CHAIR)&order=token_number.asc');
+          final req = await _directHttpClient.getUrl(uri).timeout(const Duration(seconds: 4));
+          req.headers.set('apikey', AppConfig.supabaseAnonKey);
+          req.headers.set('Authorization', 'Bearer ${AppConfig.supabaseAnonKey}');
+          req.headers.set('Accept', 'application/json');
+          final res = await req.close().timeout(const Duration(seconds: 4));
+          if (res.statusCode == 200) {
+            final body = await res.transform(utf8.decoder).join();
+            final list = jsonDecode(body) as List<dynamic>;
+            if (list.isNotEmpty) {
+              return list
+                  .map((r) => QueueTicket.fromJson(Map<String, dynamic>.from(r as Map)))
+                  .toList();
+            }
+          }
+        } catch (_) {}
+      }
       return _inMemoryTickets.where((t) => t.salonId == salonId).toList();
     }
   }
@@ -330,11 +348,9 @@ class QueueRepository {
               ..sort((a, b) => a.tokenNumber.compareTo(b.tokenNumber));
           })
           .handleError((error) {
-            debugPrint('[QueueRepository] streamLiveQueueForSalon stream error: $error');
             return <QueueTicket>[];
           });
     } catch (e) {
-      debugPrint('[QueueRepository] streamLiveQueueForSalon fallback: $e');
       return Stream.periodic(const Duration(seconds: 3), (_) => fetchLiveQueueForSalon(salonId))
           .asyncMap((event) => event);
     }

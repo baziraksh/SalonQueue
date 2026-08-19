@@ -157,22 +157,38 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       userLng: _userLng,
     );
 
-    // If exact city/locality search returned 0 items, fetch nearest salons within 10 km
+    // If exact city/locality search returned 0 items, expand search to nearby and named matches
     bool is10kmFallback = false;
     if (list.isEmpty && !isAllIndia) {
-      final proximitySalons = await _salonRepo.fetchSalons(
-        search: _searchController.text.trim(),
+      final queryText = _searchController.text.trim();
+      final broaderSalons = await _salonRepo.fetchSalons(
+        state: isAllStates ? null : _selectedState,
+        search: queryText,
         category: (_selectedCategory == 'All' || _selectedCategory == 'Favorites')
             ? null
             : _selectedCategory,
-        sortBy: 'nearest',
+        sortBy: _sortBy,
         userLat: _userLat,
         userLng: _userLng,
-        maxRadiusKm: 10.0,
+        maxRadiusKm: 25.0,
       );
-      if (proximitySalons.isNotEmpty) {
-        list = proximitySalons;
+      if (broaderSalons.isNotEmpty) {
+        list = broaderSalons;
         is10kmFallback = true;
+      } else if (queryText.isNotEmpty) {
+        // Match salon name or service globally across all locations
+        final globalMatches = await _salonRepo.fetchSalons(
+          search: queryText,
+          category: (_selectedCategory == 'All' || _selectedCategory == 'Favorites')
+              ? null
+              : _selectedCategory,
+          sortBy: _sortBy,
+          userLat: _userLat,
+          userLng: _userLng,
+        );
+        if (globalMatches.isNotEmpty) {
+          list = globalMatches;
+        }
       }
     }
 
