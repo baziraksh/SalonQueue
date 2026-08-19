@@ -42,38 +42,41 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
   }
 
   void _subscribeToStreams() {
-    // 1. Stream customer's personal ticket
-    if (_currentTicket.customerId != null) {
-      _ticketSub = _queueRepo
-          .streamActiveTicketForCustomer(_currentTicket.customerId!)
-          .listen(
-        (updated) {
-          if (updated != null && mounted) {
-            final previousStatus = _currentTicket.status;
-            setState(() => _currentTicket = updated);
-
-            // Check if called to chair
-            if (updated.status == QueueStatus.inChair &&
-                previousStatus == QueueStatus.waiting &&
-                !_hasShownTurnAlert) {
-              _hasShownTurnAlert = true;
-              HapticFeedback.heavyImpact();
-              _showTurnCalledAlert(updated.chairNumber ?? 1);
+    // 1. Stream the specific ticket by its ID for live updates (WAITING -> IN_CHAIR -> COMPLETED)
+    _ticketSub = _queueRepo.streamTicket(_currentTicket.id).listen(
+      (updated) {
+        if (updated != null && mounted) {
+          final previousStatus = _currentTicket.status;
+          setState(() {
+            _currentTicket = updated;
+            if (updated.status == QueueStatus.completed) {
+              _currentPosition = 0;
+              _peopleAhead = 0;
+              _estWaitMinutes = 0;
             }
+          });
 
-            // Check if completed
-            if (updated.status == QueueStatus.completed && !_hasShownRatingDialog) {
-              _hasShownRatingDialog = true;
-              HapticFeedback.mediumImpact();
-              _showRatingDialog();
-            }
+          // Check if called to chair
+          if (updated.status == QueueStatus.inChair &&
+              previousStatus == QueueStatus.waiting &&
+              !_hasShownTurnAlert) {
+            _hasShownTurnAlert = true;
+            HapticFeedback.heavyImpact();
+            _showTurnCalledAlert(updated.chairNumber ?? 1);
           }
-        },
-        onError: (err) {
-          debugPrint('[CustomerQueueScreen] streamActiveTicketForCustomer error: $err');
-        },
-      );
-    }
+
+          // Check if completed
+          if (updated.status == QueueStatus.completed && !_hasShownRatingDialog) {
+            _hasShownRatingDialog = true;
+            HapticFeedback.mediumImpact();
+            _showRatingDialog();
+          }
+        }
+      },
+      onError: (err) {
+        debugPrint('[CustomerQueueScreen] streamTicket error: $err');
+      },
+    );
 
     // 2. Stream salon's full queue to compute exact live position & people ahead
     _salonQueueSub = _queueRepo
@@ -88,14 +91,14 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
       final effectiveChairs = chairs > 0 ? chairs : 1;
 
       setState(() {
-        if (myIndex != -1) {
-          _currentPosition = myIndex + 1;
-          _peopleAhead = myIndex;
-          _estWaitMinutes = (_peopleAhead * (20 / effectiveChairs)).round();
-        } else if (_currentTicket.status == QueueStatus.inChair) {
+        if (_currentTicket.status == QueueStatus.completed || _currentTicket.status == QueueStatus.inChair) {
           _currentPosition = 0;
           _peopleAhead = 0;
           _estWaitMinutes = 0;
+        } else if (myIndex != -1) {
+          _currentPosition = myIndex + 1;
+          _peopleAhead = myIndex;
+          _estWaitMinutes = (_peopleAhead * (20 / effectiveChairs)).round();
         }
       });
     }, onError: (err) {
@@ -440,9 +443,11 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            _currentTicket.isInChair
-                                ? 'In Chair #${_currentTicket.chairNumber ?? 1}'
-                                : 'Position #$_currentPosition in Line',
+                            _currentTicket.isCompleted
+                                ? 'Service Completed 🎉'
+                                : (_currentTicket.isInChair
+                                    ? 'In Chair #${_currentTicket.chairNumber ?? 1}'
+                                    : 'Position #$_currentPosition in Line'),
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w900,
@@ -451,13 +456,19 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _currentTicket.isInChair
-                                ? 'Stylist currently serving you'
-                                : (_peopleAhead == 0 ? 'You are next!' : '$_peopleAhead customer(s) ahead of you'),
+                            _currentTicket.isCompleted
+                                ? 'All grooming services finished'
+                                : (_currentTicket.isInChair
+                                    ? 'Stylist currently attending you'
+                                    : (_peopleAhead == 0 ? 'You are next!' : '$_peopleAhead customer(s) ahead of you')),
                             style: TextStyle(
                               fontSize: 11,
-                              color: _peopleAhead == 0 ? const Color(0xFF2E7D32) : Colors.grey.shade600,
-                              fontWeight: _peopleAhead == 0 ? FontWeight.w700 : FontWeight.w500,
+                              color: _currentTicket.isCompleted || _peopleAhead == 0
+                                  ? const Color(0xFF2E7D32)
+                                  : Colors.grey.shade600,
+                              fontWeight: _currentTicket.isCompleted || _peopleAhead == 0
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                             ),
                           ),
                         ],
@@ -485,7 +496,13 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.timer_outlined, size: 16, color: Color(0xFFC9A45C)),
+                              Icon(
+                                Icons.timer_outlined,
+                                size: 16,
+                                color: _currentTicket.isCompleted
+                                    ? const Color(0xFF2E7D32)
+                                    : const Color(0xFFC9A45C),
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'ESTIMATED WAIT',
@@ -500,21 +517,35 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            _currentTicket.isInChair
-                                ? 'Active Service'
-                                : '~$_estWaitMinutes mins',
-                            style: const TextStyle(
+                            _currentTicket.isCompleted
+                                ? 'Completed'
+                                : (_currentTicket.isInChair
+                                    ? 'Active Service'
+                                    : '~$_estWaitMinutes mins'),
+                            style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFFC9A45C),
+                              color: _currentTicket.isCompleted
+                                  ? const Color(0xFF2E7D32)
+                                  : const Color(0xFFC9A45C),
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _currentTicket.isInChair
-                                ? 'In progress'
-                                : 'Live estimated time',
-                            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                            _currentTicket.isCompleted
+                                ? 'Finished'
+                                : (_currentTicket.isInChair
+                                    ? 'In progress'
+                                    : 'Live estimated time'),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _currentTicket.isCompleted
+                                  ? const Color(0xFF2E7D32)
+                                  : Colors.grey.shade600,
+                              fontWeight: _currentTicket.isCompleted
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
                           ),
                         ],
                       ),
@@ -564,7 +595,7 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                         title: 'Completed',
                         subtitle: 'Grooming finished',
                         isDone: _currentTicket.isCompleted,
-                        isCurrent: false,
+                        isCurrent: _currentTicket.isCompleted,
                         isLast: true,
                       ),
                     ],
@@ -574,7 +605,71 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
 
               const SizedBox(height: 16),
 
-              // Services & Amount Summary Card
+              // ── 4. Completed Visit / Rate Stylist Action Card ─────────────
+              if (_currentTicket.isCompleted)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E7D32).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.3)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.check_circle_rounded, color: Color(0xFF2E7D32), size: 40),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Service Completed Successfully!',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2E7D32),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Thank you for visiting $salonName. We hope you enjoyed your service.',
+                        style: const TextStyle(fontSize: 12, color: Colors.black54),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _showRatingDialog,
+                              icon: const Icon(Icons.star_rounded, color: Color(0xFFC9A45C), size: 18),
+                              label: const Text('Rate Stylist'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF14243A),
+                                side: const BorderSide(color: Color(0xFFC9A45C)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => AppRouter.navigateToCustomerEntry(context),
+                              icon: const Icon(Icons.home_rounded, size: 18),
+                              label: const Text('Done / Home'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF14243A),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+              if (_currentTicket.isCompleted) const SizedBox(height: 16),
+
+              // ── 5. Services & Amount Summary Card ─────────────────────────
               Card(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: Padding(
@@ -623,7 +718,7 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
 
               const SizedBox(height: 24),
 
-              // Cancel Token Button
+              // Cancel Token Button (only shown while waiting)
               if (_currentTicket.isWaiting)
                 SizedBox(
                   width: double.infinity,
@@ -655,7 +750,9 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
     required bool isCurrent,
     bool isLast = false,
   }) {
-    final color = isDone || isCurrent ? const Color(0xFF6750A4) : Colors.grey.shade400;
+    final color = isDone
+        ? const Color(0xFF2E7D32)
+        : (isCurrent ? const Color(0xFF6750A4) : Colors.grey.shade400);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -698,8 +795,10 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
               Text(
                 title,
                 style: TextStyle(
-                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
-                  color: isCurrent ? const Color(0xFF6750A4) : null,
+                  fontWeight: isDone || isCurrent ? FontWeight.bold : FontWeight.w600,
+                  color: isDone
+                      ? const Color(0xFF2E7D32)
+                      : (isCurrent ? const Color(0xFF6750A4) : null),
                   fontSize: 14,
                 ),
               ),

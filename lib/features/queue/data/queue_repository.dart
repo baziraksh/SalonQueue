@@ -212,6 +212,84 @@ class QueueRepository {
   Future<QueueTicket?> getActiveTicketForCustomer(String customerId) =>
       fetchActiveTicketForCustomer(customerId);
 
+  /// Fetches a single ticket by its unique ID
+  Future<QueueTicket?> fetchTicketById(String ticketId) async {
+    final client = this.client;
+    if (client == null) {
+      try {
+        return _inMemoryTickets.firstWhere((t) => t.id == ticketId);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    try {
+      final res = await client
+          .from('queue_tickets')
+          .select()
+          .eq('id', ticketId)
+          .maybeSingle();
+
+      if (res == null) return null;
+      return QueueTicket.fromJson(Map<String, dynamic>.from(res));
+    } catch (e) {
+      debugPrint('[QueueRepository] fetchTicketById error: $e');
+      try {
+        return _inMemoryTickets.firstWhere((t) => t.id == ticketId);
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
+  /// Real-time live stream for a specific queue ticket by its ID (receives WAITING, IN_CHAIR, COMPLETED, CANCELLED)
+  Stream<QueueTicket?> streamTicket(String ticketId) {
+    final client = this.client;
+    if (client == null) {
+      late StreamController<QueueTicket?> controller;
+      StreamSubscription<List<QueueTicket>>? sub;
+      controller = StreamController<QueueTicket?>(
+        onListen: () {
+          final initial = _inMemoryTickets.cast<QueueTicket?>().firstWhere(
+                (t) => t?.id == ticketId,
+                orElse: () => null,
+              );
+          controller.add(initial);
+          sub = _localQueueStreamController.stream.listen((all) {
+            final found = all.cast<QueueTicket?>().firstWhere(
+                  (t) => t?.id == ticketId,
+                  orElse: () => null,
+                );
+            controller.add(found);
+          });
+        },
+        onCancel: () {
+          sub?.cancel();
+        },
+      );
+      return controller.stream;
+    }
+
+    try {
+      return client
+          .from('queue_tickets')
+          .stream(primaryKey: ['id'])
+          .eq('id', ticketId)
+          .map((rows) {
+            if (rows.isEmpty) return null;
+            return QueueTicket.fromJson(Map<String, dynamic>.from(rows.first));
+          })
+          .handleError((error) {
+            debugPrint('[QueueRepository] streamTicket stream error: $error');
+            return null;
+          });
+    } catch (e) {
+      debugPrint('[QueueRepository] streamTicket fallback: $e');
+      return Stream.periodic(const Duration(seconds: 2))
+          .asyncMap((_) => fetchTicketById(ticketId));
+    }
+  }
+
   /// Real-time live stream for a customer's active queue ticket
   Stream<QueueTicket?> streamActiveTicketForCustomer(String customerId) {
     final client = this.client;
@@ -234,12 +312,10 @@ class QueueRepository {
           .stream(primaryKey: ['id'])
           .eq('customer_id', customerId)
           .map((rows) {
-            final active = rows.where((r) {
-              final status = r['status'] as String?;
-              return status == 'WAITING' || status == 'IN_CHAIR';
-            }).toList();
-            if (active.isEmpty) return null;
-            return QueueTicket.fromJson(Map<String, dynamic>.from(active.first));
+            if (rows.isEmpty) return null;
+            final sorted = rows.map((r) => QueueTicket.fromJson(Map<String, dynamic>.from(r))).toList()
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return sorted.first;
           })
           .handleError((error) {
             debugPrint('[QueueRepository] streamActiveTicketForCustomer stream error: $error');

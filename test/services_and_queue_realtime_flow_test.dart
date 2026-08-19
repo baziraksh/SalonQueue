@@ -175,6 +175,59 @@ void main() {
 
       final postCompleteQueue = await queueRepo.fetchLiveQueueForSalon(salonId);
       expect(postCompleteQueue.any((t) => t.id == ticket.id && t.status == QueueStatus.inChair), isFalse);
+
+      final completedTicket = await queueRepo.fetchTicketById(ticket.id);
+      expect(completedTicket, isNotNull);
+      expect(completedTicket!.status, equals(QueueStatus.completed));
+      expect(completedTicket.isCompleted, isTrue);
+      expect(completedTicket.completedAt, isNotNull);
+    });
+
+    test('streamTicket receives realtime completed state when owner finishes service', () async {
+      final queueRepo = QueueRepository();
+      const salonId = 'salon-queue-test-3';
+
+      final ticket = await queueRepo.joinQueue(
+        salonId: salonId,
+        customerId: 'customer-uuid-789',
+        customerName: 'Rahul Nayak',
+        customerPhone: '+91 91234 56789',
+        selectedServices: [
+          const SalonService(
+            id: 'svc-3',
+            salonId: salonId,
+            name: 'Hair Wash',
+            category: 'Hair',
+            price: 70.0,
+            durationMinutes: 10,
+          ),
+        ],
+      );
+
+      final streamEvents = <QueueTicket>[];
+      final sub = queueRepo.streamTicket(ticket.id).listen((t) {
+        if (t != null) streamEvents.add(t);
+      });
+
+      // Advance to in chair
+      await queueRepo.updateTicketStatus(
+        ticketId: ticket.id,
+        status: QueueStatus.inChair,
+        chairNumber: 1,
+      );
+
+      // Advance to completed (Owner clicks Finish)
+      await queueRepo.updateTicketStatus(
+        ticketId: ticket.id,
+        status: QueueStatus.completed,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 150));
+      await sub.cancel();
+
+      expect(streamEvents.any((t) => t.status == QueueStatus.completed), isTrue);
+      final finalEvent = streamEvents.lastWhere((t) => t.status == QueueStatus.completed);
+      expect(finalEvent.isCompleted, isTrue);
     });
   });
 }
