@@ -229,5 +229,69 @@ void main() {
       final finalEvent = streamEvents.lastWhere((t) => t.status == QueueStatus.completed);
       expect(finalEvent.isCompleted, isTrue);
     });
+
+    test('fetchCompletedTicketsForSalon returns completed tickets and calculates accurate revenue', () async {
+      final queueRepo = QueueRepository();
+      const salonId = 'salon-analytics-test-1';
+
+      final t1 = await queueRepo.joinQueue(
+        salonId: salonId,
+        customerId: 'c-1',
+        customerName: 'User One',
+        selectedServices: [
+          const SalonService(id: 's1', salonId: salonId, name: 'Haircut', category: 'Hair', price: 200, durationMinutes: 20),
+        ],
+      );
+
+      final t2 = await queueRepo.joinQueue(
+        salonId: salonId,
+        customerId: 'c-2',
+        customerName: 'User Two',
+        selectedServices: [
+          const SalonService(id: 's2', salonId: salonId, name: 'Facial', category: 'Facial', price: 350, durationMinutes: 30),
+        ],
+      );
+
+      // Complete t1
+      await queueRepo.updateTicketStatus(ticketId: t1.id, status: QueueStatus.completed);
+      // Put t2 in chair
+      await queueRepo.updateTicketStatus(ticketId: t2.id, status: QueueStatus.inChair, chairNumber: 1);
+
+      final completedTickets = await queueRepo.fetchCompletedTicketsForSalon(salonId);
+      expect(completedTickets.length, equals(1));
+      expect(completedTickets.first.id, equals(t1.id));
+      expect(completedTickets.first.totalPrice, equals(200.0));
+
+      // Complete t2 as well
+      await queueRepo.updateTicketStatus(ticketId: t2.id, status: QueueStatus.completed);
+
+      final allCompleted = await queueRepo.fetchCompletedTicketsForSalon(salonId);
+      expect(allCompleted.length, equals(2));
+      final totalRevenue = allCompleted.fold<double>(0.0, (sum, t) => sum + t.totalPrice);
+      expect(totalRevenue, equals(550.0));
+    });
+
+    test('fetchLatestTicketForCustomer retrieves recent completed ticket for My Queue history', () async {
+      final queueRepo = QueueRepository();
+      const salonId = 'salon-latest-test-1';
+      const customerId = 'customer-history-user-1';
+
+      final ticket = await queueRepo.joinQueue(
+        salonId: salonId,
+        customerId: customerId,
+        customerName: 'Subhashish',
+        selectedServices: [
+          const SalonService(id: 's1', salonId: salonId, name: 'Beard Trim', category: 'Beard', price: 100, durationMinutes: 15),
+        ],
+      );
+
+      await queueRepo.updateTicketStatus(ticketId: ticket.id, status: QueueStatus.completed);
+
+      final latest = await queueRepo.fetchLatestTicketForCustomer(customerId);
+      expect(latest, isNotNull);
+      expect(latest!.id, equals(ticket.id));
+      expect(latest.status, equals(QueueStatus.completed));
+      expect(latest.isCompleted, isTrue);
+    });
   });
 }

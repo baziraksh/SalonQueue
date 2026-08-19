@@ -57,6 +57,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   final Set<String> _favoriteSalonIds = {};
   List<Salon> _salons = [];
   QueueTicket? _activeTicket;
+  QueueTicket? _latestTicket;
+  Salon? _latestTicketSalon;
   bool _isLoading = true;
   int _unreadNotifsCount = 0;
   StreamSubscription<List<AppNotification>>? _notifSubscription;
@@ -138,6 +140,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
     if (userId != null) {
       _activeTicket = await _queueRepo.fetchActiveTicketForCustomer(userId);
+      _latestTicket = await _queueRepo.fetchLatestTicketForCustomer(userId);
+      if (_latestTicket != null) {
+        _latestTicketSalon = await _salonRepo.fetchSalonById(_latestTicket!.salonId);
+      }
     }
 
     final isAllIndia = (_selectedLocation == 'All India' || _selectedLocation == 'All Cities');
@@ -1667,7 +1673,245 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   /// My Queue Tab (Index 2)
   Widget _buildMyQueueTab() {
     if (_activeTicket != null && (_activeTicket!.isWaiting || _activeTicket!.isInChair)) {
-      return CustomerQueueScreen(ticket: _activeTicket!);
+      return CustomerQueueScreen(
+        ticket: _activeTicket!,
+        salon: _latestTicketSalon,
+      );
+    }
+
+    if (_latestTicket != null && _latestTicket!.isCompleted) {
+      final salonName = _latestTicketSalon?.name ?? 'Salon Lounge';
+      final salonAddress = _latestTicketSalon?.address ?? 'Main Road';
+
+      return SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'My Queue & Recent Token',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColorSchemes.charcoal),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const CustomerHistoryScreen()),
+                      ).then((_) => _loadData());
+                    },
+                    icon: const Icon(Icons.history_rounded, size: 16, color: AppColorSchemes.navy),
+                    label: const Text('All History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Recent Completed Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20.0),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF14243A), Color(0xFF1E3650)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.6), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF14243A).withValues(alpha: 0.25),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Text(
+                            'RECENT TOKEN',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2E7D32),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Text(
+                            'COMPLETED',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _latestTicket!.formattedToken,
+                              style: const TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              salonName,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              salonAddress,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Icon(Icons.check_circle_rounded, color: Color(0xFF4CAF50), size: 44),
+                      ],
+                    ),
+
+                    const Divider(color: Colors.white24, height: 28),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Services: ${_latestTicket!.serviceNames.join(", ")}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                        Text(
+                          '₹${_latestTicket!.totalPrice.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            color: Color(0xFFC9A45C),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => CustomerQueueScreen(
+                                    ticket: _latestTicket!,
+                                    salon: _latestTicketSalon,
+                                  ),
+                                ),
+                              ).then((_) => _loadData());
+                            },
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.white54),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('View Token Details'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => setState(() => _currentTabIndex = 0),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColorSchemes.gold,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('Book Next Visit'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Action Banner
+              Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(18.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColorSchemes.navy.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.storefront_rounded, color: AppColorSchemes.navy, size: 28),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Ready for another grooming?',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Browse top-rated salons nearby and join queues with zero wait time.',
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     return SafeArea(

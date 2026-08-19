@@ -72,18 +72,17 @@ class NotificationRepository {
             ? await query.eq('user_id', ownerId).order('created_at', ascending: false)
             : await query.order('created_at', ascending: false);
 
-        if (res.isNotEmpty) {
-          final list = (res as List)
-              .map((item) => AppNotification.fromJson(Map<String, dynamic>.from(item as Map)))
-              .toList();
-          return list;
-        }
+        final list = (res as List)
+            .map((item) => AppNotification.fromJson(Map<String, dynamic>.from(item as Map)))
+            .toList();
+        return list;
       } catch (e) {
         debugPrint('[NotificationRepository] fetchNotifications remote notice: $e');
+        return [];
       }
     }
 
-    // Fallback to in-memory list
+    // Fallback to in-memory list for test environments when client is null
     return _inMemoryNotifications
         .where((n) => n.ownerId == ownerId || n.ownerId == 'demo-owner' || ownerId.isEmpty)
         .toList();

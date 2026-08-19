@@ -30,6 +30,7 @@ class QueueRepository {
 
   static final StreamController<List<QueueTicket>> _localQueueStreamController =
       StreamController<List<QueueTicket>>.broadcast();
+  static int _localIdCounter = 0;
 
   /// Clears in-memory ticket cache on user logout
   static void clearLocalCache() {
@@ -87,7 +88,7 @@ class QueueRepository {
     if (client == null) {
       final nextToken = _inMemoryTickets.where((t) => t.salonId == salonId).length + 1;
       final ticket = QueueTicket(
-        id: 't-local-${DateTime.now().millisecondsSinceEpoch}',
+        id: 't-local-${DateTime.now().microsecondsSinceEpoch}-${++_localIdCounter}',
         salonId: salonId,
         customerId: customerId,
         customerName: customerName,
@@ -136,6 +137,8 @@ class QueueRepository {
 
       final response = await client.from('queue_tickets').insert(payload).select().single();
       final ticket = QueueTicket.fromJson(Map<String, dynamic>.from(response));
+      _inMemoryTickets.add(ticket);
+      _notifyLocalStream(salonId);
 
       if (customerId != null && customerId.isNotEmpty) {
         _notifRepo.notifyCustomerQueueJoined(
@@ -211,6 +214,103 @@ class QueueRepository {
   /// Alias for fetchActiveTicketForCustomer
   Future<QueueTicket?> getActiveTicketForCustomer(String customerId) =>
       fetchActiveTicketForCustomer(customerId);
+
+  /// Fetches the most recent ticket for a customer (regardless of whether WAITING, IN_CHAIR, or COMPLETED)
+  Future<QueueTicket?> fetchLatestTicketForCustomer(String customerId) async {
+    final client = this.client;
+    if (client == null) {
+      final list = _inMemoryTickets
+          .where((t) => t.customerId == customerId || t.customerId == null)
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list.isNotEmpty ? list.first : null;
+    }
+
+    try {
+      final res = await client
+          .from('queue_tickets')
+          .select()
+          .eq('customer_id', customerId)
+          .order('created_at', ascending: false)
+          .limit(1);
+
+      if (res.isNotEmpty) {
+        return QueueTicket.fromJson(Map<String, dynamic>.from(res.first as Map));
+      }
+      final list = _inMemoryTickets
+          .where((t) => t.customerId == customerId || t.customerId == null)
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list.isNotEmpty ? list.first : null;
+    } catch (e) {
+      debugPrint('[QueueRepository] fetchLatestTicketForCustomer error: $e');
+      final list = _inMemoryTickets
+          .where((t) => t.customerId == customerId || t.customerId == null)
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list.isNotEmpty ? list.first : null;
+    }
+  }
+
+  /// Fetches all completed tickets for a salon (for Analytics & Revenue calculations)
+  Future<List<QueueTicket>> fetchCompletedTicketsForSalon(String salonId, {DateTime? since}) async {
+    final client = this.client;
+    List<QueueTicket> list = [];
+    if (client != null) {
+      try {
+        final res = await client
+            .from('queue_tickets')
+            .select()
+            .eq('salon_id', salonId)
+            .eq('status', 'COMPLETED');
+
+        list = (res as List)
+            .map((r) => QueueTicket.fromJson(Map<String, dynamic>.from(r as Map)))
+            .toList();
+      } catch (e) {
+        debugPrint('[QueueRepository] fetchCompletedTicketsForSalon error: $e');
+      }
+    }
+
+    if (list.isEmpty) {
+      list = _inMemoryTickets
+          .where((t) => t.salonId == salonId && t.status == QueueStatus.completed)
+          .toList();
+    }
+
+    if (since != null) {
+      return list.where((t) => t.completedAt != null && t.completedAt!.isAfter(since)).toList();
+    }
+    return list;
+  }
+
+  /// Fetches all tickets (live and historical) for a salon
+  Future<List<QueueTicket>> fetchAllTicketsForSalon(String salonId) async {
+    final client = this.client;
+    if (client == null) {
+      return _inMemoryTickets.where((t) => t.salonId == salonId).toList();
+    }
+
+    try {
+      final res = await client
+          .from('queue_tickets')
+          .select()
+          .eq('salon_id', salonId)
+          .order('created_at', ascending: false);
+
+      final list = (res as List)
+          .map((r) => QueueTicket.fromJson(Map<String, dynamic>.from(r as Map)))
+          .toList();
+
+      if (list.isEmpty) {
+        return _inMemoryTickets.where((t) => t.salonId == salonId).toList();
+      }
+      return list;
+    } catch (e) {
+      debugPrint('[QueueRepository] fetchAllTicketsForSalon error: $e');
+      return _inMemoryTickets.where((t) => t.salonId == salonId).toList();
+    }
+  }
 
   /// Fetches a single ticket by its unique ID
   Future<QueueTicket?> fetchTicketById(String ticketId) async {

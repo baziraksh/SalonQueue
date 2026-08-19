@@ -282,6 +282,9 @@ void main() {
 
       expect(find.text('Currently Serving'), findsOneWidget);
       expect(find.text('Live Queue'), findsOneWidget);
+
+      // Bottom Navigation has Home label
+      expect(find.text('Home'), findsOneWidget);
     });
 
     testWidgets('Owner Hamburger Menu contains all required store management & account items', (tester) async {

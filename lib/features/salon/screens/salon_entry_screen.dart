@@ -1619,9 +1619,9 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard_rounded),
-              label: 'Command',
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_rounded),
+              label: 'Home',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.menu_book_outlined),
