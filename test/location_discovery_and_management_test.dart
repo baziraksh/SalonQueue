@@ -126,6 +126,17 @@ void main() {
 
     test('fetchSalons filters by pincode, city, and sorts by nearest distance', () async {
       final repo = SalonRepository();
+      await repo.updateSalonLocation(
+        salonId: 'pune-test-1',
+        ownerId: 'owner-pune-1',
+        state: 'Maharashtra',
+        district: 'Pune',
+        city: 'Pune',
+        address: 'FC Road',
+        pincode: '411004',
+        latitude: 18.5196,
+        longitude: 73.8413,
+      );
 
       // Query with Pune coordinates (18.5204, 73.8567)
       final salons = await repo.fetchSalons(
@@ -143,6 +154,17 @@ void main() {
 
     test('fetchSalons 10km proximity fallback when exact city has no salon', () async {
       final repo = SalonRepository();
+      await repo.updateSalonLocation(
+        salonId: 'pune-test-2',
+        ownerId: 'owner-pune-2',
+        state: 'Maharashtra',
+        district: 'Pune',
+        city: 'Pune',
+        address: 'Deccan Gymkhana',
+        pincode: '411004',
+        latitude: 18.5196,
+        longitude: 73.8413,
+      );
 
       // Query for a non-existent city near Pune coordinates
       final nearbySalons = await repo.fetchSalons(
@@ -152,7 +174,7 @@ void main() {
         maxRadiusKm: 10.0,
       );
 
-      // Should find nearby Pune fallback salons within 10 km
+      // Should find nearby registered salons within 10 km
       expect(nearbySalons.isNotEmpty, isTrue);
       for (final s in nearbySalons) {
         expect(s.distanceKm, isNotNull);
@@ -193,8 +215,8 @@ void main() {
       expect(find.text('Address & Region'), findsOneWidget);
       expect(find.text('State *'), findsOneWidget);
       expect(find.text('District *'), findsOneWidget);
-      expect(find.text('City / Town *'), findsOneWidget);
-      expect(find.text('Street Address *'), findsOneWidget);
+      expect(find.text('City / Village / Area *'), findsOneWidget);
+      expect(find.text('Street Address & Locality *'), findsOneWidget);
       expect(find.text('PIN Code'), findsOneWidget);
 
       // Enter new address
@@ -236,10 +258,10 @@ void main() {
       // Check bottom sheet contents
       expect(find.text('Select Location across India 🇮🇳'), findsOneWidget);
       expect(find.text('📍 Near Me'), findsOneWidget);
-      expect(find.text('All India 🇮🇳'), findsOneWidget);
+      expect(find.widgetWithText(ActionChip, 'All India 🇮🇳'), findsOneWidget);
 
       // Tap "All India 🇮🇳" chip
-      await tester.tap(find.text('All India 🇮🇳'));
+      await tester.tap(find.widgetWithText(ActionChip, 'All India 🇮🇳'));
       await tester.pumpAndSettle();
 
       // Verify home screen is updated with All India

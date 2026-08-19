@@ -43,7 +43,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   int _currentTabIndex = 0;
 
   String _selectedState = 'All States';
-  String _selectedLocation = 'Pune'; // City/District/Area
+  String _selectedLocation = 'All India'; // Shows all registered live salons by default
   String? _selectedCity;
   String? _selectedDistrict;
   String? _selectedPincode;
@@ -60,6 +60,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   bool _isLoading = true;
   int _unreadNotifsCount = 0;
   StreamSubscription<List<AppNotification>>? _notifSubscription;
+  StreamSubscription<List<Salon>>? _salonsSub;
 
   bool _isRealtimeOnlyFilter = false;
   bool _isVerifiedOnlyFilter = false;
@@ -81,6 +82,16 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _verifyAccess());
     _loadData();
     _loadNotifications();
+    _setupSalonsAutoFetch();
+  }
+
+  void _setupSalonsAutoFetch() {
+    _salonsSub?.cancel();
+    _salonsSub = _salonRepo.streamSalons().listen((_) {
+      if (mounted && !_isLoading) {
+        _loadData();
+      }
+    });
   }
 
   void _verifyAccess() {
@@ -96,6 +107,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   void dispose() {
     _searchController.dispose();
     _notifSubscription?.cancel();
+    _salonsSub?.cancel();
     super.dispose();
   }
 
@@ -395,18 +407,55 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                         }
 
                         if (locationSearchCtrl.text.trim().isNotEmpty && !isSearching) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.search_off, size: 48, color: Colors.grey.shade400),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No locations found for "${locationSearchCtrl.text.trim()}"',
-                                  style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                          final queryText = locationSearchCtrl.text.trim();
+                          return ListView(
+                            children: [
+                              ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColorSchemes.gold.withValues(alpha: 0.15),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.place_rounded,
+                                    color: AppColorSchemes.navy,
+                                    size: 20,
+                                  ),
                                 ),
-                              ],
-                            ),
+                                title: Text(
+                                  'Find Salons in "$queryText"',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColorSchemes.navy),
+                                ),
+                                subtitle: const Text(
+                                  'Search salons by this village, area, or locality name',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: AppColorSchemes.gold),
+                                onTap: () {
+                                  debounceTimer?.cancel();
+                                  setState(() {
+                                    _selectedLocation = queryText;
+                                    _selectedCity = queryText;
+                                    _selectedDistrict = null;
+                                    _selectedState = 'All States';
+                                    _selectedPincode = null;
+                                  });
+                                  Navigator.of(ctx).pop();
+                                  _loadData();
+                                },
+                              ),
+                              if (searchResults.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 24),
+                                  child: Center(
+                                    child: Text(
+                                      'Tap above to search for salons in "$queryText"',
+                                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           );
                         }
 

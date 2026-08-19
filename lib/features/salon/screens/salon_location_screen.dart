@@ -177,7 +177,7 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                                 ),
                               ),
                               Text(
-                                'State, district, city, street and pin code',
+                                'State, district, city/village, area & PIN code',
                                 style: TextStyle(fontSize: 11, color: Colors.grey),
                               ),
                             ],
@@ -213,7 +213,7 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // District & City Row
+                    // District & City/Village Row
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -243,28 +243,28 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                           child: TextFormField(
                             controller: _cityController,
                             decoration: const InputDecoration(
-                              labelText: 'City / Town *',
-                              hintText: 'e.g. Pune',
+                              labelText: 'City / Village / Area *',
+                              hintText: 'e.g. Banarpal / Angul / Turanga',
                               prefixIcon: Icon(Icons.apartment_outlined, color: AppColorSchemes.navy),
                             ),
                             validator: (v) =>
-                                (v == null || v.trim().isEmpty) ? 'Enter city' : null,
+                                (v == null || v.trim().isEmpty) ? 'Enter city or village' : null,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 14),
 
-                    // Street Address
+                    // Street Address / Village Area
                     TextFormField(
                       controller: _addressController,
                       decoration: const InputDecoration(
-                        labelText: 'Street Address *',
-                        hintText: 'e.g. FC Road, Lane 4, Near Metro Station',
+                        labelText: 'Street Address & Locality *',
+                        hintText: 'e.g. Near Bus Stand, Main Road, Turanga Village',
                         prefixIcon: Icon(Icons.pin_drop_outlined, color: AppColorSchemes.navy),
                       ),
                       validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Enter street address' : null,
+                          (v == null || v.trim().isEmpty) ? 'Enter street or village address' : null,
                     ),
                     const SizedBox(height: 14),
 
@@ -274,7 +274,7 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         labelText: 'PIN Code',
-                        hintText: '411004',
+                        hintText: '759122',
                         prefixIcon: Icon(Icons.local_post_office_outlined, color: AppColorSchemes.navy),
                       ),
                     ),

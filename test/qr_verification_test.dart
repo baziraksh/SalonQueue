@@ -6,8 +6,45 @@ import 'package:salon_queue/features/salon/data/salon_repository.dart';
 void main() {
   late SalonRepository salonRepo;
 
-  setUp(() {
+  setUp(() async {
     salonRepo = SalonRepository();
+    await salonRepo.updateSalonLocation(
+      salonId: '11111111-1111-1111-1111-111111111111',
+      ownerId: 'owner-1',
+      state: 'Maharashtra',
+      district: 'Pune',
+      city: 'Pune',
+      address: 'FC Road',
+      pincode: '411004',
+      latitude: 18.5196,
+      longitude: 73.8413,
+    );
+    await salonRepo.updateStoreInfo(
+      salonId: '11111111-1111-1111-1111-111111111111',
+      ownerId: 'owner-1',
+      name: 'Royal Cuts & Grooming Lounge',
+      description: 'Luxury grooming',
+      phone: '+91 98765 43210',
+    );
+
+    await salonRepo.updateSalonLocation(
+      salonId: '22222222-2222-2222-2222-222222222222',
+      ownerId: 'owner-2',
+      state: 'Maharashtra',
+      district: 'Pune',
+      city: 'Pune',
+      address: 'Koregaon Park',
+      pincode: '411001',
+      latitude: 18.5362,
+      longitude: 73.8940,
+    );
+    await salonRepo.updateStoreInfo(
+      salonId: '22222222-2222-2222-2222-222222222222',
+      ownerId: 'owner-2',
+      name: 'Scissors & Combs Unisex Studio',
+      description: 'Trendy unisex studio',
+      phone: '+91 98234 56789',
+    );
   });
 
   group('SalonQueue QR Verification Suite', () {

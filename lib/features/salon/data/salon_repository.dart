@@ -147,360 +147,61 @@ class SalonRepository {
     }
   }
 
-  /// Default demo salons across major Indian States, Districts, and Cities
-  static final List<Salon> fallbackSalons = [
-    // Maharashtra - Pune
-    Salon(
-      id: '11111111-1111-1111-1111-111111111111',
-      ownerId: 'owner-demo-1',
-      name: 'Royal Cuts & Grooming Lounge',
-      description: 'Premium men salon with expert stylists, AC ambience & luxury grooming.',
-      address: 'FC Road, Near Deccan Gymkhana',
-      city: 'Pune',
-      district: 'Pune',
-      state: 'Maharashtra',
-      pincode: '411004',
-      latitude: 18.5196,
-      longitude: 73.8413,
-      phone: '+91 98765 43210',
-      rating: 4.9,
-      reviewCount: 142,
-      activeChairs: 4,
-      isQueueOpen: true,
-      isVerified: true,
-      ownerName: 'Rahul Sharma',
-      openingTime: '08:30 AM',
-      closingTime: '09:30 PM',
-      waitingCount: 1,
-      estWaitMinutes: 8,
-      distanceKm: 0.8,
-      galleryImages: [
-        'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800',
-        'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800',
-        'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=800',
-      ],
-      services: [
-        SalonService(id: 's1', salonId: '11111111-1111-1111-1111-111111111111', name: 'Classic Haircut', category: 'Hair', price: 150, durationMinutes: 25),
-        SalonService(id: 's2', salonId: '11111111-1111-1111-1111-111111111111', name: 'Beard Trim & Shape', category: 'Beard', price: 80, durationMinutes: 15),
-        SalonService(id: 's3', salonId: '11111111-1111-1111-1111-111111111111', name: 'Gold Glow Facial', category: 'Facial', price: 450, durationMinutes: 35),
-        SalonService(id: 's4', salonId: '11111111-1111-1111-1111-111111111111', name: 'De-Tan Clean Up', category: 'Facial', price: 250, durationMinutes: 20),
-        SalonService(id: 's5', salonId: '11111111-1111-1111-1111-111111111111', name: 'Head & Shoulder Massage', category: 'Spa', price: 200, durationMinutes: 20),
-        SalonService(id: 's6', salonId: '11111111-1111-1111-1111-111111111111', name: 'Royal Grooming Combo', category: 'Combo', price: 420, durationMinutes: 50),
-      ],
-    ),
-    Salon(
-      id: '22222222-2222-2222-2222-222222222222',
-      name: 'Scissors & Combs Unisex Studio',
-      description: 'Trendy unisex salon offering professional haircuts, facials, keratin & hair spas.',
-      address: 'Koregaon Park, Lane 7',
-      city: 'Pune',
-      district: 'Pune',
-      state: 'Maharashtra',
-      pincode: '411001',
-      latitude: 18.5362,
-      longitude: 73.8940,
-      phone: '+91 98234 56789',
-      rating: 4.7,
-      reviewCount: 98,
-      activeChairs: 3,
-      isQueueOpen: true,
-      openingTime: '09:00 AM',
-      closingTime: '10:00 PM',
-      waitingCount: 3,
-      estWaitMinutes: 25,
-      distanceKm: 2.4,
-      services: [
-        SalonService(id: 's7', salonId: '22222222-2222-2222-2222-222222222222', name: 'Trendy Haircut & Wash', category: 'Hair', price: 200, durationMinutes: 30),
-        SalonService(id: 's8', salonId: '22222222-2222-2222-2222-222222222222', name: 'Beard Styling & Oil Spa', category: 'Beard', price: 120, durationMinutes: 20),
-        SalonService(id: 's9', salonId: '22222222-2222-2222-2222-222222222222', name: 'Fruit Facial & Glow Pack', category: 'Facial', price: 350, durationMinutes: 30),
-        SalonService(id: 's10', salonId: '22222222-2222-2222-2222-222222222222', name: 'Hair Spa & Scalp Therapy', category: 'Spa', price: 500, durationMinutes: 40),
-      ],
-    ),
+  /// Real registered salons cache only (No demo fake profiles)
+  static final List<Salon> fallbackSalons = [];
 
-    // Maharashtra - Mumbai
-    Salon(
-      id: '44444444-4444-4444-4444-444444444444',
-      name: 'The Urban Barber Club',
-      description: 'Classic barber fades, hot towel shaves, beard spas & charcoal treatments.',
-      address: 'Bandra West, Linking Road',
-      city: 'Mumbai',
-      district: 'Mumbai Suburban',
-      state: 'Maharashtra',
-      pincode: '400050',
-      latitude: 19.0596,
-      longitude: 72.8295,
-      phone: '+91 98111 22334',
-      rating: 4.8,
-      reviewCount: 210,
-      activeChairs: 5,
-      isQueueOpen: true,
-      openingTime: '08:00 AM',
-      closingTime: '10:00 PM',
-      waitingCount: 2,
-      estWaitMinutes: 12,
-      distanceKm: 1.5,
-      services: [
-        SalonService(id: 's14', salonId: '44444444-4444-4444-4444-444444444444', name: 'Urban Signature Cut', category: 'Hair', price: 250, durationMinutes: 30),
-        SalonService(id: 's15', salonId: '44444444-4444-4444-4444-444444444444', name: 'Hot Towel Beard Shave', category: 'Beard', price: 150, durationMinutes: 20),
-        SalonService(id: 's16', salonId: '44444444-4444-4444-4444-444444444444', name: 'Charcoal Deep Facial', category: 'Facial', price: 500, durationMinutes: 35),
-      ],
-    ),
+  /// Real-time live stream of salons auto-fetching from Supabase database
+  Stream<List<Salon>> streamSalons({
+    String? state,
+    String? city,
+    String? district,
+    String? pincode,
+    String? search,
+    String? category,
+    String sortBy = 'nearest',
+    double userLat = 18.5204,
+    double userLng = 73.8567,
+  }) {
+    final activeClient = client;
+    if (activeClient == null) {
+      return Stream.value(_ownerSalonsCache.values.toList());
+    }
 
-    // Delhi
-    Salon(
-      id: '55555555-5555-5555-5555-555555555555',
-      name: 'Style Studio & Spa Lounge',
-      description: 'Luxury hair styling, beard grooming, organic facials & head relaxation therapy.',
-      address: 'Connaught Place, Block B',
-      city: 'New Delhi',
-      district: 'New Delhi',
-      state: 'Delhi',
-      pincode: '110001',
-      latitude: 28.6304,
-      longitude: 77.2177,
-      phone: '+91 99887 76655',
-      rating: 4.6,
-      reviewCount: 175,
-      activeChairs: 4,
-      isQueueOpen: true,
-      openingTime: '09:00 AM',
-      closingTime: '09:00 PM',
-      waitingCount: 4,
-      estWaitMinutes: 30,
-      distanceKm: 3.2,
-      services: [
-        SalonService(id: 's17', salonId: '55555555-5555-5555-5555-555555555555', name: 'Executive Haircut', category: 'Hair', price: 220, durationMinutes: 25),
-        SalonService(id: 's18', salonId: '55555555-5555-5555-5555-555555555555', name: 'Diamond Glow Facial', category: 'Facial', price: 600, durationMinutes: 40),
-      ],
-    ),
+    try {
+      return activeClient
+          .from('salons')
+          .stream(primaryKey: ['id'])
+          .order('created_at', ascending: false)
+          .asyncMap((_) async {
+            return await fetchSalons(
+              state: state,
+              city: city,
+              district: district,
+              pincode: pincode,
+              search: search,
+              category: category,
+              sortBy: sortBy,
+              userLat: userLat,
+              userLng: userLng,
+            );
+          });
+    } catch (_) {
+      return Stream.periodic(const Duration(seconds: 4))
+          .asyncMap((_) => fetchSalons(
+                state: state,
+                city: city,
+                district: district,
+                pincode: pincode,
+                search: search,
+                category: category,
+                sortBy: sortBy,
+                userLat: userLat,
+                userLng: userLng,
+              ));
+    }
+  }
 
-    // Karnataka - Bangalore
-    Salon(
-      id: '66666666-6666-6666-6666-666666666666',
-      name: 'Bangalore Fade & Beard Bar',
-      description: 'Specialists in skin fades, beard sculpting & organic scalp treatments.',
-      address: 'Koramangala 5th Block, 80 Feet Road',
-      city: 'Bangalore',
-      district: 'Bangalore Urban',
-      state: 'Karnataka',
-      pincode: '560095',
-      latitude: 12.9352,
-      longitude: 77.6245,
-      phone: '+91 98888 11223',
-      rating: 4.9,
-      reviewCount: 188,
-      activeChairs: 4,
-      isQueueOpen: true,
-      openingTime: '08:30 AM',
-      closingTime: '09:30 PM',
-      waitingCount: 2,
-      estWaitMinutes: 15,
-      distanceKm: 1.1,
-      services: [
-        SalonService(id: 's19', salonId: '66666666-6666-6666-6666-666666666666', name: 'Signature Skin Fade', category: 'Hair', price: 220, durationMinutes: 30),
-        SalonService(id: 's20', salonId: '66666666-6666-6666-6666-666666666666', name: 'Beard Spa & Shape', category: 'Beard', price: 130, durationMinutes: 20),
-      ],
-    ),
-
-    // Telangana - Hyderabad
-    Salon(
-      id: '77777777-7777-7777-7777-777777777777',
-      name: 'Nizami Cuts & Grooming House',
-      description: 'Traditional & modern haircuts, herbal facials and beard styling.',
-      address: 'Jubilee Hills, Road No 36',
-      city: 'Hyderabad',
-      district: 'Hyderabad',
-      state: 'Telangana',
-      pincode: '500033',
-      latitude: 17.4319,
-      longitude: 78.4073,
-      phone: '+91 97777 22334',
-      rating: 4.8,
-      reviewCount: 130,
-      activeChairs: 4,
-      isQueueOpen: true,
-      openingTime: '09:00 AM',
-      closingTime: '10:00 PM',
-      waitingCount: 1,
-      estWaitMinutes: 10,
-      distanceKm: 2.0,
-      services: [
-        SalonService(id: 's21', salonId: '77777777-7777-7777-7777-777777777777', name: 'Royal Nizam Haircut', category: 'Hair', price: 200, durationMinutes: 25),
-        SalonService(id: 's22', salonId: '77777777-7777-7777-7777-777777777777', name: 'Herbal Glow Facial', category: 'Facial', price: 400, durationMinutes: 30),
-      ],
-    ),
-
-    // Gujarat - Ahmedabad
-    Salon(
-      id: '88888888-8888-8888-8888-888888888888',
-      name: 'Apex Men Styling Studio',
-      description: 'Hygienic salon with hair spas, modern cuts & wedding grooming packages.',
-      address: 'SG Highway, Bodakdev',
-      city: 'Ahmedabad',
-      district: 'Ahmedabad',
-      state: 'Gujarat',
-      pincode: '380054',
-      latitude: 23.0338,
-      longitude: 72.5070,
-      phone: '+91 96666 33445',
-      rating: 4.7,
-      reviewCount: 92,
-      activeChairs: 3,
-      isQueueOpen: true,
-      openingTime: '09:00 AM',
-      closingTime: '09:00 PM',
-      waitingCount: 2,
-      estWaitMinutes: 18,
-      distanceKm: 1.8,
-      services: [
-        SalonService(id: 's23', salonId: '88888888-8888-8888-8888-888888888888', name: 'Smart Styling Cut', category: 'Hair', price: 180, durationMinutes: 25),
-        SalonService(id: 's24', salonId: '88888888-8888-8888-8888-888888888888', name: 'De-Tan Facial Pack', category: 'Facial', price: 300, durationMinutes: 25),
-      ],
-    ),
-
-    // Rajasthan - Jaipur
-    Salon(
-      id: '99999999-9999-9999-9999-999999999999',
-      name: 'Pink City Hair & Beard Lounge',
-      description: 'Royal haircuts, mustache styling & head massages.',
-      address: 'C-Scheme, Ashok Nagar',
-      city: 'Jaipur',
-      district: 'Jaipur',
-      state: 'Rajasthan',
-      pincode: '302001',
-      latitude: 26.9124,
-      longitude: 75.7873,
-      phone: '+91 95555 44556',
-      rating: 4.8,
-      reviewCount: 115,
-      activeChairs: 4,
-      isQueueOpen: true,
-      openingTime: '08:30 AM',
-      closingTime: '09:30 PM',
-      waitingCount: 1,
-      estWaitMinutes: 10,
-      distanceKm: 1.2,
-      services: [
-        SalonService(id: 's25', salonId: '99999999-9999-9999-9999-999999999999', name: 'Jaipur Classic Cut', category: 'Hair', price: 150, durationMinutes: 25),
-        SalonService(id: 's26', salonId: '99999999-9999-9999-9999-999999999999', name: 'Moustache & Beard Groom', category: 'Beard', price: 90, durationMinutes: 15),
-      ],
-    ),
-
-    // Uttar Pradesh - Lucknow
-    Salon(
-      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      name: 'Nawabi Grooming Lounge',
-      description: 'Luxury haircuts, beard spas & herbal cleanups.',
-      address: 'Hazratganj, MG Marg',
-      city: 'Lucknow',
-      district: 'Lucknow',
-      state: 'Uttar Pradesh',
-      pincode: '226001',
-      latitude: 26.8467,
-      longitude: 80.9462,
-      phone: '+91 94444 55667',
-      rating: 4.7,
-      reviewCount: 104,
-      activeChairs: 3,
-      isQueueOpen: true,
-      openingTime: '09:00 AM',
-      closingTime: '09:30 PM',
-      waitingCount: 3,
-      estWaitMinutes: 22,
-      distanceKm: 2.1,
-      services: [
-        SalonService(id: 's27', salonId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', name: 'Nawabi Special Cut', category: 'Hair', price: 180, durationMinutes: 25),
-        SalonService(id: 's28', salonId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', name: 'Pearl Glow Facial', category: 'Facial', price: 400, durationMinutes: 35),
-      ],
-    ),
-
-    // West Bengal - Kolkata
-    Salon(
-      id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-      name: 'City of Joy Barber & Spa',
-      description: 'Trendy hairstyles, head relaxation therapy & beard contouring.',
-      address: 'Park Street, Near Metro',
-      city: 'Kolkata',
-      district: 'Kolkata',
-      state: 'West Bengal',
-      pincode: '700016',
-      latitude: 22.5535,
-      longitude: 88.3518,
-      phone: '+91 93333 66778',
-      rating: 4.8,
-      reviewCount: 160,
-      activeChairs: 4,
-      isQueueOpen: true,
-      openingTime: '08:30 AM',
-      closingTime: '09:00 PM',
-      waitingCount: 2,
-      estWaitMinutes: 14,
-      distanceKm: 1.4,
-      services: [
-        SalonService(id: 's29', salonId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', name: 'Metro Style Haircut', category: 'Hair', price: 160, durationMinutes: 25),
-        SalonService(id: 's30', salonId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', name: 'Ayurvedic Head Spa', category: 'Spa', price: 250, durationMinutes: 25),
-      ],
-    ),
-
-    // Odisha - Bhubaneswar
-    Salon(
-      id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
-      name: 'Kalinga Cuts & Grooming Studio',
-      description: 'Hygienic family salon with professional hair styling & skin therapy.',
-      address: 'Saheed Nagar, Janpath',
-      city: 'Bhubaneswar',
-      district: 'Bhubaneswar (Khurda)',
-      state: 'Odisha',
-      pincode: '751007',
-      latitude: 20.2961,
-      longitude: 85.8245,
-      phone: '+91 92222 77889',
-      rating: 4.8,
-      reviewCount: 88,
-      activeChairs: 3,
-      isQueueOpen: true,
-      openingTime: '08:30 AM',
-      closingTime: '09:30 PM',
-      waitingCount: 1,
-      estWaitMinutes: 8,
-      distanceKm: 1.0,
-      services: [
-        SalonService(id: 's31', salonId: 'cccccccc-cccc-cccc-cccc-cccccccccccc', name: 'Smart Cut & Wash', category: 'Hair', price: 150, durationMinutes: 20),
-        SalonService(id: 's32', salonId: 'cccccccc-cccc-cccc-cccc-cccccccccccc', name: 'Gold Facial Spa', category: 'Facial', price: 400, durationMinutes: 30),
-      ],
-    ),
-
-    // Bihar - Patna
-    Salon(
-      id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
-      name: 'Patliputra Styles & Salon',
-      description: 'Modern men salon for haircuts, beard shaping & charcoal facials.',
-      address: 'Boring Road, Near Crossing',
-      city: 'Patna',
-      district: 'Patna',
-      state: 'Bihar',
-      pincode: '800001',
-      latitude: 25.6186,
-      longitude: 85.1189,
-      phone: '+91 91111 88990',
-      rating: 4.7,
-      reviewCount: 76,
-      activeChairs: 3,
-      isQueueOpen: true,
-      openingTime: '09:00 AM',
-      closingTime: '09:00 PM',
-      waitingCount: 2,
-      estWaitMinutes: 16,
-      distanceKm: 1.7,
-      services: [
-        SalonService(id: 's33', salonId: 'dddddddd-dddd-dddd-dddd-dddddddddddd', name: 'Regular Haircut', category: 'Hair', price: 120, durationMinutes: 20),
-        SalonService(id: 's34', salonId: 'dddddddd-dddd-dddd-dddd-dddddddddddd', name: 'Beard Trimming & Set', category: 'Beard', price: 70, durationMinutes: 15),
-      ],
-    ),
-  ];
-
-  /// Fetches salons filtered by state, district/city, search query, category, or sorted by distance/rush.
-  /// Fetches salons filtered by state, district/city, pincode, search query, category, or proximity (10km nearest).
+  /// Fetches real registered salons from database filtered by state, district, city/village/area, pincode, or search query.
   Future<List<Salon>> fetchSalons({
     String? state,
     String? city,
@@ -508,52 +209,76 @@ class SalonRepository {
     String? pincode,
     String? search,
     String? category,
-    String sortBy = 'nearest', // 'nearest', 'rush', 'rating'
-    double userLat = 18.5204, // Default center
+    String sortBy = 'nearest',
+    double userLat = 18.5204,
     double userLng = 73.8567,
-    double? maxRadiusKm, // e.g. 10.0
+    double? maxRadiusKm,
   }) async {
     final client = this.client;
-    if (client == null) {
-      return _filterLocalSalons(
-        fallbackSalons,
-        state: state,
-        city: city,
-        district: district,
-        pincode: pincode,
-        search: search,
-        category: category,
-        sortBy: sortBy,
-        userLat: userLat,
-        userLng: userLng,
-        maxRadiusKm: maxRadiusKm,
-      );
+    List<Salon> result = [];
+
+    if (client != null) {
+      try {
+        final response = await client
+            .from('salons')
+            .select('*, services(*)')
+            .order('created_at', ascending: false);
+
+        for (final raw in (response as List)) {
+          final Map<String, dynamic> map = Map<String, dynamic>.from(raw as Map);
+          final rawServices = map['services'] as List? ?? [];
+          final services = rawServices
+              .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
+              .toList();
+
+          // Live waiting count from active tickets in DB
+          try {
+            final ticketsCount = await client
+                .from('queue_tickets')
+                .select('id')
+                .eq('salon_id', map['id'])
+                .eq('status', 'WAITING');
+            map['waiting_count'] = (ticketsCount as List).length;
+          } catch (_) {
+            map['waiting_count'] = 0;
+          }
+
+          final salon = Salon.fromJson(
+            map,
+            services: services,
+            userLat: userLat,
+            userLng: userLng,
+          );
+
+          result.add(salon);
+          _ownerSalonsCache[salon.ownerId ?? salon.id] = salon;
+          _ownerSalonsCache[salon.id] = salon;
+        }
+      } catch (e) {
+        debugPrint('[SalonRepository] fetchSalons DB query notice: $e');
+      }
     }
 
-    // Normalize city & state
+    // Merge in any locally registered owner salons that were provisioned
+    for (final s in _ownerSalonsCache.values) {
+      if (!result.any((existing) => existing.id == s.id || (s.ownerId != null && existing.ownerId == s.ownerId))) {
+        final dist = s.calculateDistance(userLat, userLng);
+        result.add(s.copyWith(distanceKm: dist));
+      }
+    }
+
+    // Normalize search terms
     String? cleanCity = city?.trim();
     String? cleanDistrict = district?.trim();
     String? cleanPincode = pincode?.trim();
     String? cleanState = state?.trim();
 
-    if (cleanCity != null && cleanCity.contains(',')) {
-      final parts = cleanCity.split(',');
-      cleanCity = parts[0].trim();
-      if ((cleanState == null ||
-              cleanState.isEmpty ||
-              cleanState.toLowerCase() == 'all' ||
-              cleanState.toLowerCase() == 'all states') &&
-          parts.length > 1 &&
-          parts[1].trim().isNotEmpty) {
-        cleanState = parts[1].trim();
-      }
-    }
-
     if (cleanCity != null &&
         (cleanCity.isEmpty ||
             cleanCity.toLowerCase() == 'all' ||
             cleanCity.toLowerCase() == 'all cities' ||
-            cleanCity.toLowerCase() == 'all india')) {
+            cleanCity.toLowerCase() == 'all india' ||
+            cleanCity.toLowerCase() == 'all locations')) {
       cleanCity = null;
     }
 
@@ -564,122 +289,79 @@ class SalonRepository {
       cleanState = null;
     }
 
-    try {
-      final response = await client
-          .from('salons')
-          .select('*, services(*)')
-          .order('created_at', ascending: false);
+    var filtered = result;
 
-      final List<Salon> result = [];
-
-      for (final raw in (response as List)) {
-        final Map<String, dynamic> map = Map<String, dynamic>.from(raw as Map);
-        final rawServices = map['services'] as List? ?? [];
-        final services = rawServices
-            .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
-            .toList();
-
-        // Live waiting count from active tickets
-        try {
-          final ticketsCount = await client
-              .from('queue_tickets')
-              .select('id')
-              .eq('salon_id', map['id'])
-              .eq('status', 'WAITING');
-          map['waiting_count'] = (ticketsCount as List).length;
-        } catch (_) {
-          map['waiting_count'] = 0;
-        }
-
-        result.add(Salon.fromJson(
-          map,
-          services: services,
-          userLat: userLat,
-          userLng: userLng,
-        ));
-      }
-
-      // Filter in-memory for pincode, city/district, state, and search query
-      var filtered = result;
-
-      if (cleanPincode != null && cleanPincode.isNotEmpty) {
-        filtered = filtered.where((s) =>
-            s.pincode == cleanPincode ||
-            s.address.contains(cleanPincode)).toList();
-      }
-
-      if (cleanState != null && cleanState.isNotEmpty) {
-        final sState = cleanState.toLowerCase();
-        filtered = filtered.where((s) =>
-            s.state.toLowerCase().contains(sState) ||
-            s.city.toLowerCase().contains(sState) ||
-            s.district.toLowerCase().contains(sState) ||
-            s.address.toLowerCase().contains(sState)).toList();
-      }
-
-      if (cleanDistrict != null && cleanDistrict.isNotEmpty) {
-        final d = cleanDistrict.toLowerCase();
-        filtered = filtered.where((s) =>
-            s.district.toLowerCase().contains(d) ||
-            s.city.toLowerCase().contains(d) ||
-            s.address.toLowerCase().contains(d)).toList();
-      }
-
-      if (cleanCity != null && cleanCity.isNotEmpty) {
-        final c = cleanCity.toLowerCase();
-        final cityMatches = filtered.where((s) =>
-            s.city.toLowerCase().contains(c) ||
-            s.district.toLowerCase().contains(c) ||
-            s.address.toLowerCase().contains(c) ||
-            s.state.toLowerCase().contains(c)).toList();
-        if (cityMatches.isNotEmpty) {
-          filtered = cityMatches;
-        } else if (maxRadiusKm != null && maxRadiusKm > 0) {
-          filtered = filtered.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
-        } else {
-          filtered = [];
-        }
-      }
-
-      if (maxRadiusKm != null && maxRadiusKm > 0 && (cleanCity == null || cleanCity.isEmpty)) {
-        final radiusMatches = filtered.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
-        if (radiusMatches.isNotEmpty) {
-          filtered = radiusMatches;
-        }
-      }
-
-      if (search != null && search.trim().isNotEmpty) {
-        final q = search.trim().toLowerCase();
-        filtered = filtered.where((s) =>
-            s.name.toLowerCase().contains(q) ||
-            (s.ownerName != null && s.ownerName!.toLowerCase().contains(q)) ||
-            s.address.toLowerCase().contains(q) ||
-            s.city.toLowerCase().contains(q) ||
-            s.district.toLowerCase().contains(q) ||
-            s.state.toLowerCase().contains(q) ||
-            (s.pincode != null && s.pincode!.contains(q)) ||
-            (s.description != null && s.description!.toLowerCase().contains(q)) ||
-            s.services.any((svc) => svc.name.toLowerCase().contains(q))).toList();
-      }
-
-      final catFiltered = _filterByCategory(filtered, category);
-      return _sortSalons(catFiltered, sortBy);
-    } catch (e) {
-      debugPrint('[SalonRepository] fetchSalons error: $e');
-      return _filterLocalSalons(
-        fallbackSalons,
-        state: state,
-        city: city,
-        district: district,
-        pincode: pincode,
-        search: search,
-        category: category,
-        sortBy: sortBy,
-        userLat: userLat,
-        userLng: userLng,
-        maxRadiusKm: maxRadiusKm,
-      );
+    // 1. Filter by State
+    if (cleanState != null && cleanState.isNotEmpty) {
+      final sState = cleanState.toLowerCase();
+      filtered = filtered.where((s) =>
+          s.state.toLowerCase().contains(sState) ||
+          s.city.toLowerCase().contains(sState) ||
+          s.district.toLowerCase().contains(sState) ||
+          s.address.toLowerCase().contains(sState)).toList();
     }
+
+    // 2. Filter by District
+    if (cleanDistrict != null && cleanDistrict.isNotEmpty) {
+      final d = cleanDistrict.toLowerCase();
+      filtered = filtered.where((s) =>
+          s.district.toLowerCase().contains(d) ||
+          s.city.toLowerCase().contains(d) ||
+          s.address.toLowerCase().contains(d) ||
+          s.state.toLowerCase().contains(d)).toList();
+    }
+
+    // 3. Filter by City / Village / Area / Locality
+    if (cleanCity != null && cleanCity.isNotEmpty) {
+      final c = cleanCity.toLowerCase();
+      final cityMatches = filtered.where((s) =>
+          s.city.toLowerCase().contains(c) ||
+          s.district.toLowerCase().contains(c) ||
+          s.address.toLowerCase().contains(c) ||
+          s.name.toLowerCase().contains(c) ||
+          s.state.toLowerCase().contains(c)).toList();
+
+      if (cityMatches.isNotEmpty) {
+        filtered = cityMatches;
+      } else if (maxRadiusKm != null && maxRadiusKm > 0) {
+        filtered = filtered.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
+      } else {
+        filtered = [];
+      }
+    }
+
+    // 4. Filter by Pincode
+    if (cleanPincode != null && cleanPincode.isNotEmpty) {
+      filtered = filtered.where((s) =>
+          (s.pincode != null && s.pincode!.contains(cleanPincode)) ||
+          s.address.contains(cleanPincode)).toList();
+    }
+
+    // 5. Filter by Proximity Radius if specified
+    if (maxRadiusKm != null && maxRadiusKm > 0 && (cleanCity == null || cleanCity.isEmpty)) {
+      final radiusMatches = filtered.where((s) => (s.distanceKm ?? 999) <= maxRadiusKm).toList();
+      if (radiusMatches.isNotEmpty) {
+        filtered = radiusMatches;
+      }
+    }
+
+    // 6. Filter by Search Query (searches village, area, salon name, owner, services, etc.)
+    if (search != null && search.trim().isNotEmpty) {
+      final q = search.trim().toLowerCase();
+      filtered = filtered.where((s) =>
+          s.name.toLowerCase().contains(q) ||
+          (s.ownerName != null && s.ownerName!.toLowerCase().contains(q)) ||
+          s.address.toLowerCase().contains(q) ||
+          s.city.toLowerCase().contains(q) ||
+          s.district.toLowerCase().contains(q) ||
+          s.state.toLowerCase().contains(q) ||
+          (s.pincode != null && s.pincode!.contains(q)) ||
+          (s.description != null && s.description!.toLowerCase().contains(q)) ||
+          s.services.any((svc) => svc.name.toLowerCase().contains(q))).toList();
+    }
+
+    final catFiltered = _filterByCategory(filtered, category);
+    return _sortSalons(catFiltered, sortBy);
   }
 
   /// Fetches a single salon by ID or Owner ID
