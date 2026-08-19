@@ -254,6 +254,29 @@ class SalonRepository {
           _ownerSalonsCache[salon.ownerId ?? salon.id] = salon;
           _ownerSalonsCache[salon.id] = salon;
         }
+      } on supabase.PostgrestException catch (pe) {
+        if (pe.code == '431' || pe.message.contains('431') || pe.details?.toString().contains('431') == true) {
+          debugPrint('[SalonRepository] Caught HTTP 431. Sanitizing user session to unblock DB queries...');
+          final user = client.auth.currentUser;
+          if (user != null) {
+            try {
+              final metadata = user.userMetadata;
+              if (metadata != null) {
+                final cleanedData = <String, dynamic>{};
+                const allowedKeys = {'role', 'full_name', 'phone'};
+                for (final entry in metadata.entries) {
+                  if (!allowedKeys.contains(entry.key) || (entry.value is String && entry.value.toString().length > 200)) {
+                    cleanedData[entry.key] = null;
+                  }
+                }
+                if (cleanedData.isNotEmpty) {
+                  await client.auth.updateUser(supabase.UserAttributes(data: cleanedData));
+                  await client.auth.refreshSession();
+                }
+              }
+            } catch (_) {}
+          }
+        }
       } catch (e) {
         debugPrint('[SalonRepository] fetchSalons DB query notice: $e');
       }

@@ -344,12 +344,14 @@ class AuthRepository {
     if (metadata == null) return;
 
     bool needsCleanup = false;
-    final cleanedData = Map<String, dynamic>.from(metadata);
+    final cleanedData = <String, dynamic>{};
 
+    const allowedKeys = {'role', 'full_name', 'phone'};
     for (final entry in metadata.entries) {
+      final key = entry.key;
       final val = entry.value;
-      if (val is String && (val.startsWith('data:image') || val.length > 500)) {
-        cleanedData[entry.key] = null;
+      if (!allowedKeys.contains(key) || (val is String && (val.startsWith('data:') || val.length > 200))) {
+        cleanedData[key] = null;
         needsCleanup = true;
       }
     }
