@@ -6,6 +6,7 @@ import '../../../core/routing/app_router.dart';
 import '../../../core/theme/color_schemes.dart';
 import '../../../shared/models/queue_ticket.dart';
 import '../../../shared/models/salon.dart';
+import '../../../shared/models/salon_service.dart';
 import '../../auth/services/auth_scope.dart';
 import '../../notifications/data/notification_repository.dart';
 import '../../notifications/models/app_notification.dart';
@@ -308,7 +309,18 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
 
                   final servicesToUse = chosenServices.isNotEmpty
                       ? chosenServices
-                      : [_salon!.services.first];
+                      : (_salon!.services.isNotEmpty
+                          ? [_salon!.services.first]
+                          : [
+                              SalonService(
+                                id: 'svc-general',
+                                salonId: _salon!.id,
+                                name: 'General Grooming',
+                                category: 'Hair',
+                                price: 150.0,
+                                durationMinutes: 20,
+                              ),
+                            ]);
 
                   await _queueRepo.joinQueue(
                     salonId: _salon!.id,
