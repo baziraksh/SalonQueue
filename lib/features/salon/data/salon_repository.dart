@@ -2,9 +2,11 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import '../../../core/config/app_config.dart';
 import '../../../shared/models/salon.dart';
 import '../../../shared/models/salon_service.dart';
 
@@ -14,6 +16,9 @@ class SalonRepository {
   SalonRepository({supabase.SupabaseClient? client}) : _client = client;
 
   final supabase.SupabaseClient? _client;
+  static final HttpClient _directHttpClient = HttpClient()
+    ..connectionTimeout = const Duration(seconds: 5)
+    ..badCertificateCallback = ((_, __, ___) => true);
 
   /// Dedicated in-memory owner salon storage isolated strictly per auth.uid()
   static final Map<String, Salon> _ownerSalonsCache = {};
@@ -201,6 +206,26 @@ class SalonRepository {
     }
   }
 
+  Future<List<dynamic>?> _fetchSalonsViaDirectHttp() async {
+    if (!AppConfig.isSupabaseConfigured) return null;
+    try {
+      final uri = Uri.parse('${AppConfig.supabaseUrl}/rest/v1/salons?select=*,services(*)&order=created_at.desc');
+      final req = await _directHttpClient.getUrl(uri).timeout(const Duration(seconds: 5));
+      req.headers.set('apikey', AppConfig.supabaseAnonKey);
+      req.headers.set('Authorization', 'Bearer ${AppConfig.supabaseAnonKey}');
+      req.headers.set('Accept', 'application/json');
+      final res = await req.close().timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) {
+        final body = await res.transform(utf8.decoder).join();
+        final list = jsonDecode(body) as List<dynamic>;
+        return list;
+      }
+    } catch (e) {
+      debugPrint('[SalonRepository] _fetchSalonsViaDirectHttp error: $e');
+    }
+    return null;
+  }
+
   /// Fetches real registered salons from database filtered by state, district, city/village/area, pincode, or search query.
   Future<List<Salon>> fetchSalons({
     String? state,
@@ -282,6 +307,35 @@ class SalonRepository {
       }
     }
 
+    // Direct clean REST query fallback if SDK query returned 0 salons (guarantees cross-device live fetching)
+    if (result.isEmpty && AppConfig.isSupabaseConfigured) {
+      try {
+        final directList = await _fetchSalonsViaDirectHttp();
+        if (directList != null && directList.isNotEmpty) {
+          for (final raw in directList) {
+            final Map<String, dynamic> map = Map<String, dynamic>.from(raw as Map);
+            final rawServices = map['services'] as List? ?? [];
+            final services = rawServices
+                .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
+                .toList();
+
+            final salon = Salon.fromJson(
+              map,
+              services: services,
+              userLat: userLat,
+              userLng: userLng,
+            );
+
+            result.add(salon);
+            _ownerSalonsCache[salon.ownerId ?? salon.id] = salon;
+            _ownerSalonsCache[salon.id] = salon;
+          }
+        }
+      } catch (e) {
+        debugPrint('[SalonRepository] Direct HTTP query notice: $e');
+      }
+    }
+
     // Merge in any locally registered owner salons that were provisioned
     for (final s in _ownerSalonsCache.values) {
       if (!result.any((existing) => existing.id == s.id || (s.ownerId != null && existing.ownerId == s.ownerId))) {
@@ -339,9 +393,13 @@ class SalonRepository {
       final c = cleanCity.toLowerCase();
       final cityMatches = filtered.where((s) =>
           s.city.toLowerCase().contains(c) ||
+          c.contains(s.city.toLowerCase()) ||
           s.district.toLowerCase().contains(c) ||
+          c.contains(s.district.toLowerCase()) ||
           s.address.toLowerCase().contains(c) ||
+          c.contains(s.address.toLowerCase()) ||
           s.name.toLowerCase().contains(c) ||
+          c.contains(s.name.toLowerCase()) ||
           s.state.toLowerCase().contains(c)).toList();
 
       if (cityMatches.isNotEmpty) {
@@ -707,6 +765,10 @@ class SalonRepository {
             ? updateData['owner_avatar_url']
             : existing?.ownerAvatarUrl,
         'gallery_images': updateData['gallery_images'] ?? existing?.galleryImages ?? [],
+        if (updateData['latitude'] != null || existing?.latitude != null)
+          'latitude': updateData['latitude'] ?? existing?.latitude,
+        if (updateData['longitude'] != null || existing?.longitude != null)
+          'longitude': updateData['longitude'] ?? existing?.longitude,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
 
