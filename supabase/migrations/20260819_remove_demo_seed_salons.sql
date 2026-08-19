@@ -45,5 +45,45 @@ ALTER TABLE public.salons ALTER COLUMN rating SET DEFAULT 0.0;
 ALTER TABLE public.salons ALTER COLUMN review_count SET DEFAULT 0;
 ALTER TABLE public.salons ALTER COLUMN active_chairs SET DEFAULT 1;
 
--- 5. Reload PostgREST schema cache
+-- 5. Ensure publications are enabled for all interactive tables
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+        AND schemaname = 'public' 
+        AND tablename = 'salons'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.salons;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+        AND schemaname = 'public' 
+        AND tablename = 'services'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.services;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+        AND schemaname = 'public' 
+        AND tablename = 'queue_tickets'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.queue_tickets;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+        AND schemaname = 'public' 
+        AND tablename = 'notifications'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+    END IF;
+END $$;
+
+-- 6. Reload PostgREST schema cache
 NOTIFY pgrst, 'reload schema';
