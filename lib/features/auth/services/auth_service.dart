@@ -116,6 +116,21 @@ class AuthService extends ChangeNotifier {
     final session = repo.currentSession;
     final user = repo.currentUser;
 
+    // Proactively purge historical bloated tokens (> 2000 bytes) that cause HTTP 431 header overflows
+    if (session != null && session.accessToken.length > 2000) {
+      _logForDebug('Detected oversized JWT token (${session.accessToken.length} bytes). Purging bloated session...');
+      try {
+        await repo.signOut();
+      } catch (_) {}
+      _currentUser = null;
+      _status = AuthStatus.unauthenticated;
+      _errorMessage = null;
+      _initialized = true;
+      if (!_initCompleter.isCompleted) _initCompleter.complete();
+      notifyListeners();
+      return;
+    }
+
     if (session != null && session.isExpired) {
       _logForDebug('Stored session is expired. Attempting token refresh...');
       final refreshRes = await repo.refreshSession();
