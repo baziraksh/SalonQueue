@@ -103,16 +103,23 @@ class NotificationRepository {
     // Update local memory
     final idx = _inMemoryNotifications.indexWhere((n) => n.id == notificationId);
     if (idx != -1) {
-      _inMemoryNotifications[idx] = _inMemoryNotifications[idx].copyWith(isRead: true);
+      _inMemoryNotifications[idx] = _inMemoryNotifications[idx].copyWith(
+        isRead: true,
+        readAt: DateTime.now(),
+      );
       _localStreamController.add(List.from(_inMemoryNotifications));
     }
 
     final activeClient = client;
     if (activeClient != null) {
       try {
+        final nowIso = DateTime.now().toUtc().toIso8601String();
         await activeClient
             .from('notifications')
-            .update({'is_read': true})
+            .update({
+              'is_read': true,
+              'read_at': nowIso,
+            })
             .eq('id', notificationId);
       } catch (e) {
         debugPrint('[NotificationRepository] markAsRead error: $e');
@@ -122,9 +129,13 @@ class NotificationRepository {
 
   /// Marks all notifications for a user/owner as read
   Future<void> markAllAsRead(String ownerId) async {
+    final now = DateTime.now();
     for (int i = 0; i < _inMemoryNotifications.length; i++) {
       if (_inMemoryNotifications[i].ownerId == ownerId || ownerId.isEmpty) {
-        _inMemoryNotifications[i] = _inMemoryNotifications[i].copyWith(isRead: true);
+        _inMemoryNotifications[i] = _inMemoryNotifications[i].copyWith(
+          isRead: true,
+          readAt: now,
+        );
       }
     }
     _localStreamController.add(List.from(_inMemoryNotifications));
@@ -132,16 +143,23 @@ class NotificationRepository {
     final activeClient = client;
     if (activeClient != null) {
       try {
+        final nowIso = now.toUtc().toIso8601String();
         if (ownerId.isNotEmpty) {
           await activeClient
               .from('notifications')
-              .update({'is_read': true})
+              .update({
+                'is_read': true,
+                'read_at': nowIso,
+              })
               .eq('recipient_id', ownerId)
               .eq('is_read', false);
         } else {
           await activeClient
               .from('notifications')
-              .update({'is_read': true})
+              .update({
+                'is_read': true,
+                'read_at': nowIso,
+              })
               .eq('is_read', false);
         }
       } catch (e) {
@@ -183,10 +201,14 @@ class NotificationRepository {
       try {
         final res = await activeClient.from('notifications').insert({
           'recipient_id': ownerId,
+          'user_id': ownerId,
           'title': title,
-          'message': message,
+          'body': message,
           'type': type.dbName,
-          'related_id': relatedId,
+          'data': {
+            'type': type.dbName,
+            if (relatedId != null) 'related_id': relatedId,
+          },
           'is_read': false,
           'created_at': now.toUtc().toIso8601String(),
         }).select().single();
@@ -209,6 +231,10 @@ class NotificationRepository {
       type: type,
       relatedId: relatedId,
       isRead: false,
+      data: {
+        'type': type.dbName,
+        if (relatedId != null) 'related_id': relatedId,
+      },
       createdAt: now,
     );
     _inMemoryNotifications.insert(0, notif);

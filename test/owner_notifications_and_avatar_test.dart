@@ -35,7 +35,8 @@ void main() {
 
       final outJson = notif.toJson();
       expect(outJson['id'], equals('notif-123'));
-      expect(outJson['owner_id'], equals('owner-456'));
+      expect(outJson['recipient_id'], equals('owner-456'));
+      expect(outJson['body'], equals('Rajesh Sharma was assigned Token #5'));
       expect(outJson['type'], equals('CUSTOMER_JOINED'));
     });
 

@@ -38,27 +38,39 @@ class AppNotification {
     required this.type,
     this.relatedId,
     this.isRead = false,
+    this.readAt,
+    this.data,
     required this.createdAt,
   });
 
   final String id;
   final String ownerId;
+  String get recipientId => ownerId;
   final String title;
   final String message;
+  String get body => message;
   final NotificationType type;
   final String? relatedId;
   final bool isRead;
+  final DateTime? readAt;
+  final Map<String, dynamic>? data;
   final DateTime createdAt;
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
+    final dataMap = json['data'] is Map ? Map<String, dynamic>.from(json['data'] as Map) : null;
+    final rawType = json['type'] as String? ?? dataMap?['type'] as String?;
+    final relId = json['related_id'] as String? ?? dataMap?['related_id'] as String?;
+
     return AppNotification(
       id: json['id']?.toString() ?? '',
-      ownerId: (json['user_id'] ?? json['recipient_id'] ?? json['owner_id'] ?? '').toString(),
+      ownerId: (json['recipient_id'] ?? json['user_id'] ?? json['owner_id'] ?? '').toString(),
       title: json['title'] as String? ?? 'Notification',
-      message: json['message'] as String? ?? '',
-      type: NotificationType.fromDb(json['type'] as String?),
-      relatedId: json['related_id'] as String?,
-      isRead: json['is_read'] as bool? ?? false,
+      message: (json['body'] ?? json['message'] ?? '').toString(),
+      type: NotificationType.fromDb(rawType),
+      relatedId: relId,
+      isRead: json['is_read'] as bool? ?? (json['read_at'] != null),
+      readAt: json['read_at'] != null ? DateTime.tryParse(json['read_at'].toString())?.toLocal() : null,
+      data: dataMap,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())?.toLocal() ?? DateTime.now()
           : DateTime.now(),
@@ -69,12 +81,16 @@ class AppNotification {
     return {
       'id': id,
       'recipient_id': ownerId,
-      'owner_id': ownerId,
+      'user_id': ownerId,
       'title': title,
-      'message': message,
+      'body': message,
       'type': type.dbName,
-      if (relatedId != null) 'related_id': relatedId,
+      'data': data ?? {
+        'type': type.dbName,
+        if (relatedId != null) 'related_id': relatedId,
+      },
       'is_read': isRead,
+      if (readAt != null) 'read_at': readAt!.toUtc().toIso8601String(),
       'created_at': createdAt.toUtc().toIso8601String(),
     };
   }
@@ -87,6 +103,8 @@ class AppNotification {
     NotificationType? type,
     String? relatedId,
     bool? isRead,
+    DateTime? readAt,
+    Map<String, dynamic>? data,
     DateTime? createdAt,
   }) {
     return AppNotification(
@@ -97,6 +115,8 @@ class AppNotification {
       type: type ?? this.type,
       relatedId: relatedId ?? this.relatedId,
       isRead: isRead ?? this.isRead,
+      readAt: readAt ?? this.readAt,
+      data: data ?? this.data,
       createdAt: createdAt ?? this.createdAt,
     );
   }
