@@ -27,12 +27,7 @@ void main() {
       role: AppRole.customer,
     );
 
-    const ownerA = AppUser(
-      id: 'owner-uuid-aaaa-1111',
-      email: 'ownerA@example.com',
-      fullName: 'Owner Alex',
-      role: AppRole.salonOwner,
-    );
+
 
     const ownerB = AppUser(
       id: 'owner-uuid-bbbb-2222',

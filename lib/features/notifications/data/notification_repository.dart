@@ -207,7 +207,7 @@ class NotificationRepository {
           'type': type.dbName,
           'data': {
             'type': type.dbName,
-            if (relatedId != null) 'related_id': relatedId,
+            'related_id': ?relatedId,
           },
           'is_read': false,
           'created_at': now.toUtc().toIso8601String(),
@@ -233,7 +233,7 @@ class NotificationRepository {
       isRead: false,
       data: {
         'type': type.dbName,
-        if (relatedId != null) 'related_id': relatedId,
+        'related_id': ?relatedId,
       },
       createdAt: now,
     );

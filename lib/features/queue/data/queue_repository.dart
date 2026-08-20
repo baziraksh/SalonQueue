@@ -32,15 +32,24 @@ class QueueRepository {
       StreamController<List<QueueTicket>>.broadcast();
   static int _localIdCounter = 0;
 
+  static final Map<String, int> _inMemorySalonTokenCounters = {};
+
   /// Clears in-memory ticket cache on user logout
   static void clearLocalCache() {
     _inMemoryTickets.clear();
+    _inMemorySalonTokenCounters.clear();
+  }
+
+  static int _allocateInMemoryToken(String salonId) {
+    final next = (_inMemorySalonTokenCounters[salonId] ?? 0) + 1;
+    _inMemorySalonTokenCounters[salonId] = next;
+    return next;
   }
 
   // Local fallback storage for offline testing
   static final List<QueueTicket> _inMemoryTickets = [];
 
-  /// Customers join live queue and get assigned a digital token
+  /// Customers join live queue and get assigned a digital token atomically in the database
   Future<QueueTicket> joinQueue({
     required String salonId,
     required String? customerId,
@@ -55,7 +64,7 @@ class QueueRepository {
     final serviceNames = selectedServices.map((s) => s.name).toList();
 
     if (client == null) {
-      final nextToken = _inMemoryTickets.where((t) => t.salonId == salonId).length + 1;
+      final nextToken = _allocateInMemoryToken(salonId);
       final ticket = QueueTicket(
         id: 't-local-${DateTime.now().microsecondsSinceEpoch}-${++_localIdCounter}',
         salonId: salonId,
@@ -78,34 +87,28 @@ class QueueRepository {
     }
 
     try {
-      // Get highest token number today
-      final existing = await client
-          .from('queue_tickets')
-          .select('token_number')
-          .eq('salon_id', salonId)
-          .order('token_number', ascending: false)
-          .limit(1);
-
-      int nextToken = 1;
-      if ((existing as List).isNotEmpty) {
-        nextToken = ((existing.first['token_number'] as int?) ?? 0) + 1;
-      }
-
-      final payload = {
-        'salon_id': salonId,
-        'customer_id': ?customerId,
-        'customer_name': customerName,
-        'customer_phone': ?customerPhone,
-        'service_names': serviceNames,
-        'total_price': totalPrice,
-        'total_duration_minutes': totalDuration > 0 ? totalDuration : 20,
-        'token_number': nextToken,
-        'status': 'WAITING',
-        'notes': ?notes,
+      final rpcParams = {
+        'p_salon_id': salonId,
+        'p_customer_id': customerId,
+        'p_customer_name': customerName,
+        'p_customer_phone': customerPhone,
+        'p_service_names': serviceNames,
+        'p_total_price': totalPrice,
+        'p_total_duration_minutes': totalDuration > 0 ? totalDuration : 20,
+        'p_notes': notes,
       };
 
-      final response = await client.from('queue_tickets').insert(payload).select().single();
-      final ticket = QueueTicket.fromJson(Map<String, dynamic>.from(response));
+      final response = await client.rpc('join_queue_atomic', params: rpcParams);
+      final Map<String, dynamic> ticketMap;
+      if (response is Map) {
+        ticketMap = Map<String, dynamic>.from(response);
+      } else if (response is List && response.isNotEmpty) {
+        ticketMap = Map<String, dynamic>.from(response.first as Map);
+      } else {
+        throw Exception('Invalid response received from join_queue_atomic: $response');
+      }
+
+      final ticket = QueueTicket.fromJson(ticketMap);
       _inMemoryTickets.add(ticket);
       _notifyLocalStream(salonId);
 
