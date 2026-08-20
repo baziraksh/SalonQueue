@@ -194,5 +194,24 @@ void main() {
       );
       expect(t2.tokenNumber, equals(1));
     });
+
+    test('Customer join passes real non-null customerId and user info', () async {
+      final queueRepo = QueueRepository();
+      const realCustomerId = 'usr-uuid-real-authenticated-777';
+
+      final ticket = await queueRepo.joinQueue(
+        salonId: 'salon-auth-test',
+        customerId: realCustomerId,
+        customerName: 'Rajesh Sharma',
+        customerPhone: '+91 98765 12345',
+        selectedServices: [service1],
+      );
+
+      expect(ticket.customerId, equals(realCustomerId));
+      expect(ticket.customerId, isNotNull);
+      expect(ticket.customerId!.isNotEmpty, isTrue);
+      expect(ticket.customerName, equals('Rajesh Sharma'));
+      expect(ticket.customerPhone, equals('+91 98765 12345'));
+    });
   });
 }

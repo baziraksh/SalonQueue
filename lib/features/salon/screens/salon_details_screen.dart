@@ -2,9 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../core/routing/app_router.dart';
+import '../../../core/theme/color_schemes.dart';
 import '../../../shared/models/queue_ticket.dart';
 import '../../../shared/models/salon.dart';
 import '../../../shared/models/salon_service.dart';
+import '../../auth/models/app_user.dart';
 import '../../auth/services/auth_scope.dart';
 import '../../queue/data/queue_repository.dart';
 import '../../queue/screens/customer_queue_screen.dart';
@@ -199,17 +202,28 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
       return;
     }
 
-    setState(() => _isJoining = true);
-
     final auth = AuthScope.of(context, listen: false);
     final user = auth.currentUser;
+
+    if (user == null || !user.isAuthenticated || user.id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in before joining the queue.'),
+          backgroundColor: AppColorSchemes.navy,
+        ),
+      );
+      AppRouter.navigateToSignIn(context, requestedRole: AppRole.customer);
+      return;
+    }
+
+    setState(() => _isJoining = true);
 
     try {
       final ticket = await _queueRepo.joinQueue(
         salonId: widget.salon.id,
-        customerId: user?.id,
-        customerName: user?.fullName ?? 'Valued Customer',
-        customerPhone: user?.phone,
+        customerId: user.id,
+        customerName: user.fullName ?? 'Valued Customer',
+        customerPhone: user.phone,
         selectedServices: _selectedServicesList,
       );
 
