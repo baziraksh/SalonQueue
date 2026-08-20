@@ -23,7 +23,6 @@ import '../../queue/screens/customer_queue_screen.dart';
 import '../../qr/screens/qr_scanner_screen.dart';
 import '../../salon/data/salon_repository.dart';
 import '../../salon/screens/salon_details_screen.dart';
-import '../../support/screens/support_center_screen.dart';
 import '../services/location_suggestion_service.dart';
 
 /// Customer Home & All-India Salon Discovery Dashboard
@@ -2118,64 +2117,6 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const QrScannerScreen()),
               ).then((_) => _loadData());
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.history, color: AppColorSchemes.navy),
-            title: const Text('Visit History & Bookings'),
-            onTap: () {
-              Navigator.pop(context);
-              setState(() => _currentTabIndex = 1);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.person, color: AppColorSchemes.navy),
-            title: const Text('My Profile & Account'),
-            onTap: () {
-              Navigator.pop(context);
-              setState(() => _currentTabIndex = 4);
-            },
-          ),
-          ListTile(
-            leading: Badge.count(
-              count: _unreadNotifsCount,
-              isLabelVisible: _unreadNotifsCount > 0,
-              backgroundColor: AppColorSchemes.gold,
-              textColor: AppColorSchemes.navy,
-              child: const Icon(Icons.notifications_outlined, color: AppColorSchemes.navy),
-            ),
-            title: const Text('Notifications'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const CustomerNotificationsScreen(),
-                ),
-              ).then((_) => _loadNotifications());
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.shield_outlined, color: AppColorSchemes.navy),
-            title: const Text('Security & Privacy'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const SecurityPrivacyScreen(),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.help_outline_rounded, color: AppColorSchemes.navy),
-            title: const Text('Help & Support Center'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const SupportCenterScreen(isOwner: false),
-                ),
-              );
             },
           ),
           const Divider(),
