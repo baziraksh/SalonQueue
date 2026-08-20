@@ -39,7 +39,7 @@ class NotificationRepository {
       try {
         final query = activeClient.from('notifications').select();
         final res = (ownerId.isNotEmpty)
-            ? await query.or('recipient_id.eq.$ownerId,user_id.eq.$ownerId').order('created_at', ascending: false)
+            ? await query.eq('recipient_id', ownerId).order('created_at', ascending: false)
             : await query.order('created_at', ascending: false);
 
         final list = (res as List)
@@ -73,7 +73,7 @@ class NotificationRepository {
       return activeClient
           .from('notifications')
           .stream(primaryKey: ['id'])
-          .eq('user_id', ownerId)
+          .eq('recipient_id', ownerId)
           .map((rows) {
             final list = rows
                 .map((r) => AppNotification.fromJson(Map<String, dynamic>.from(r)))
@@ -136,7 +136,7 @@ class NotificationRepository {
           await activeClient
               .from('notifications')
               .update({'is_read': true})
-              .or('recipient_id.eq.$ownerId,user_id.eq.$ownerId')
+              .eq('recipient_id', ownerId)
               .eq('is_read', false);
         } else {
           await activeClient
@@ -183,8 +183,6 @@ class NotificationRepository {
       try {
         final res = await activeClient.from('notifications').insert({
           'recipient_id': ownerId,
-          'user_id': ownerId,
-          'owner_id': ownerId,
           'title': title,
           'message': message,
           'type': type.dbName,

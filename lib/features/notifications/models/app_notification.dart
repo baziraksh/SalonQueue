@@ -68,6 +68,7 @@ class AppNotification {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'recipient_id': ownerId,
       'owner_id': ownerId,
       'title': title,
       'message': message,
