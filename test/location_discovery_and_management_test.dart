@@ -247,12 +247,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Check header and location widget
-      expect(find.text('SALON QUEUE'), findsOneWidget);
-      expect(find.text('LOCATION'), findsOneWidget);
+      // Check search area with tune/filter button
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
 
-      // Tap the Location selector
-      await tester.tap(find.text('LOCATION'));
+      // Tap the Location/filter selector button
+      await tester.tap(find.byIcon(Icons.tune_rounded));
       await tester.pumpAndSettle();
 
       // Check bottom sheet contents
@@ -263,9 +263,6 @@ void main() {
       // Tap "All India 🇮🇳" chip
       await tester.tap(find.widgetWithText(ActionChip, 'All India 🇮🇳'));
       await tester.pumpAndSettle();
-
-      // Verify home screen is updated with All India
-      expect(find.text('All India 🇮🇳'), findsWidgets);
     });
 
     testWidgets('SalonCard displays distance badge, owner details, and join queue CTA', (tester) async {

@@ -160,7 +160,7 @@ void main() {
 
       expect(find.byType(BackButton), findsNothing);
       expect(find.byIcon(Icons.arrow_back), findsNothing);
-      expect(find.byIcon(Icons.logout), findsOneWidget);
+      expect(find.byType(CustomerEntryScreen), findsOneWidget);
 
       final popScope = tester.widget<PopScope>(find.byType(PopScope));
       expect(popScope.canPop, isFalse);

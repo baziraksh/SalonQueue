@@ -209,7 +209,7 @@ void main() {
       expect(find.text('Instant Digital Queue Token'), findsOneWidget);
     });
 
-    testWidgets('CustomerEntryScreen top header contains notification bell with unread badge and logo on left', (tester) async {
+    testWidgets('CustomerEntryScreen top header contains notification bell with unread badge and greeting', (tester) async {
       final authService = AuthService(null);
 
       await tester.pumpWidget(
@@ -222,9 +222,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.content_cut), findsAtLeast(1));
-      expect(find.text('SALON QUEUE'), findsOneWidget);
-      expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
+      expect(find.text('Find and book the best salons'), findsOneWidget);
+      expect(find.byIcon(Icons.notifications_none_rounded), findsOneWidget);
 
       // Verify the 4 Quick Benefits cards are removed from Customer Home
       expect(find.text('Real-time Queue'), findsNothing);

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/routing/app_router.dart';
@@ -7,8 +8,6 @@ import '../../../shared/data/india_locations.dart';
 import '../../../shared/models/queue_ticket.dart';
 import '../../../shared/models/salon.dart';
 import '../../../shared/widgets/active_queue_card.dart';
-import '../../../shared/widgets/salon_card.dart';
-import '../../../shared/widgets/service_card.dart';
 import '../../auth/services/auth_scope.dart';
 import 'customer_history_screen.dart';
 import 'customer_profile_screen.dart';
@@ -23,7 +22,7 @@ import '../../salon/screens/salon_details_screen.dart';
 import '../services/location_suggestion_service.dart';
 
 /// Customer Home & All-India Salon Discovery Dashboard
-/// Redesigned in luxury Navy (#14243A) & Gold (#C9A45C) SalonQueue marketplace aesthetic.
+/// Redesigned in modern clean white/purple/pink aesthetic matching reference.
 class CustomerEntryScreen extends StatefulWidget {
   const CustomerEntryScreen({super.key});
 
@@ -45,7 +44,6 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   String? _selectedPincode;
   double _userLat = 18.5204;
   double _userLng = 73.8567;
-  bool _isShowing10KmFallback = false;
   String _selectedCategory = 'All';
   String _sortBy = 'nearest'; // 'nearest', 'rush', 'rating'
   final TextEditingController _searchController = TextEditingController();
@@ -56,24 +54,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   QueueTicket? _latestTicket;
   Salon? _latestTicketSalon;
   bool _isLoading = true;
-  bool _isFindingSalons = false;
   int _unreadNotifsCount = 0;
   StreamSubscription<List<AppNotification>>? _notifSubscription;
   StreamSubscription<List<Salon>>? _salonsSub;
-
-  final bool _isRealtimeOnlyFilter = false;
-  bool _isVerifiedOnlyFilter = false;
-
-  final List<Map<String, String>> _categories = [
-    {'name': 'All', 'icon': '✨'},
-    {'name': 'Favorites', 'icon': '❤️'},
-    {'name': 'Hair', 'icon': '✂️'},
-    {'name': 'Beard', 'icon': '🧔'},
-    {'name': 'Facial', 'icon': '💆'},
-    {'name': 'Spa', 'icon': '💈'},
-    {'name': 'Color', 'icon': '🎨'},
-    {'name': 'Combo', 'icon': '🎁'},
-  ];
 
   @override
   void initState() {
@@ -129,29 +112,6 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     });
   }
 
-  /// Explicit search triggered by user clicking "FIND SALONS"
-  Future<void> _handleFindSalons() async {
-    if (_isFindingSalons) return;
-    setState(() => _isFindingSalons = true);
-    try {
-      FocusScope.of(context).unfocus();
-      await _loadData();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not complete search: $e'),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isFindingSalons = false);
-      }
-    }
-  }
-
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
@@ -185,14 +145,6 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       maxRadiusKm: isNearMe ? 25.0 : null,
     );
 
-    if (_isVerifiedOnlyFilter) {
-      list = list.where((s) => s.isVerified).toList();
-    }
-
-    if (_isRealtimeOnlyFilter) {
-      list = list.where((s) => s.isQueueOpen).toList();
-    }
-
     if (_selectedCategory == 'Favorites' || _currentTabIndex == 3) {
       list = list.where((s) => _favoriteSalonIds.contains(s.id)).toList();
     }
@@ -200,7 +152,6 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     if (!mounted) return;
     setState(() {
       _salons = list;
-      _isShowing10KmFallback = false;
       _isLoading = false;
     });
   }
@@ -590,7 +541,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: AppColorSchemes.ivory,
+        backgroundColor: Colors.white,
         drawer: _buildAppDrawer(context),
         body: _buildCurrentTabBody(context),
         bottomNavigationBar: _buildBottomNavigationBar(),
@@ -617,11 +568,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   // ── HOME SCREEN (TAB 0) ──────────────────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildHomeScreen(BuildContext context) {
-    final theme = Theme.of(context);
-
     return SafeArea(
       child: RefreshIndicator(
-        color: AppColorSchemes.navy,
+        color: const Color(0xFF6D28D9),
         onRefresh: _loadData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -631,207 +580,38 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               // ── 1. Top Header ──────────────────────────────────────────
               _buildTopHeader(context),
 
-              // ── 2. Hero Section ────────────────────────────────────────
-              _buildHeroSection(),
+              // ── 2. Search Area ─────────────────────────────────────────
+              _buildSearchArea(),
 
-              // ── 3. Search & Filter Card ────────────────────────────────
-              _buildSearchFilterCard(),
-
-              // ── 4. Active Queue Card (if active) ───────────────────────
+              // ── 3. Active Queue Card (if active) ───────────────────────
               if (_activeTicket != null && (_activeTicket!.isWaiting || _activeTicket!.isInChair)) ...[
-                ActiveQueueCard(
-                  ticket: _activeTicket!,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => CustomerQueueScreen(ticket: _activeTicket!),
-                      ),
-                    ).then((_) => _loadData());
-                  },
-                ),
-                const SizedBox(height: 16),
-              ] else
-                const SizedBox(height: 8),
-
-              // ── 5. Popular Services Section ────────────────────────────
-              _buildPopularServicesSection(),
-
-              const SizedBox(height: 20),
-
-              // ── 7. Nearby Salons Section Header ────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Nearby Salons',
-                          style: TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                            color: AppColorSchemes.charcoal,
-                            letterSpacing: -0.3,
-                          ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  child: ActiveQueueCard(
+                    ticket: _activeTicket!,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => CustomerQueueScreen(ticket: _activeTicket!),
                         ),
-                        Text(
-                          'Real-time queue & live crowd tracker',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Sort Filter Pill
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _sortBy,
-                          isDense: true,
-                          icon: const Icon(Icons.arrow_drop_down, color: AppColorSchemes.navy, size: 20),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColorSchemes.navy,
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: 'nearest', child: Text('📍 Nearest')),
-                            DropdownMenuItem(value: 'rush', child: Text('🟢 Low Rush')),
-                            DropdownMenuItem(value: 'rating', child: Text('⭐ Rating')),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() => _sortBy = val);
-                              _loadData();
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // ── 7. Salons List ─────────────────────────────────────────
-              if (_isShowing10KmFallback && _salons.isNotEmpty)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColorSchemes.gold.withValues(alpha: 0.6)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColorSchemes.gold.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.near_me, color: Color(0xFFB8860B), size: 18),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Showing Nearest Salons (within 10 km)',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade900,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'No direct salon registered in "$_selectedLocation". We found ${_salons.length} nearby verified salons for you.',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ).then((_) => _loadData());
+                    },
                   ),
                 ),
+              ],
 
-              if (_isLoading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(40.0),
-                    child: CircularProgressIndicator(color: AppColorSchemes.gold),
-                  ),
-                )
-              else if (_salons.isEmpty)
-                _buildEmptySalonsView(theme)
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _salons.length,
-                  itemBuilder: (context, idx) {
-                    final salon = _salons[idx];
-                    final isFav = _favoriteSalonIds.contains(salon.id);
-
-                    return SalonCard(
-                      salon: salon,
-                      isFavorite: isFav,
-                      onFavoriteTap: () {
-                        setState(() {
-                          if (isFav) {
-                            _favoriteSalonIds.remove(salon.id);
-                          } else {
-                            _favoriteSalonIds.add(salon.id);
-                          }
-                        });
-                        if (_selectedCategory == 'Favorites') {
-                          _loadData();
-                        }
-                      },
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => SalonDetailsScreen(salon: salon),
-                          ),
-                        ).then((_) => _loadData());
-                      },
-                      onJoinQueue: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => SalonDetailsScreen(salon: salon),
-                          ),
-                        ).then((_) => _loadData());
-                      },
-                    );
-                  },
-                ),
+              // ── 4. Promotional Banner (Orange → Pink → Purple) ─────────
+              _buildPromotionalBanner(),
 
               const SizedBox(height: 24),
 
-              // ── 8. "How SalonQueue Works" Section ──────────────────────
-              _buildHowItWorksSection(),
+              // ── 5. Nearby Salons (Horizontal Scroll) ───────────────────
+              _buildNearbySalonsSection(),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              // ── 9. Notification CTA Card ───────────────────────────────
-              _buildNotificationCtaCard(),
+              // ── 6. Popular Services (Horizontal Icons) ─────────────────
+              _buildPopularServicesSection(),
 
               const SizedBox(height: 32),
             ],
@@ -846,101 +626,83 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     final auth = AuthScope.of(context, listen: false);
     final user = auth.currentUser;
     final avatar = user?.avatarUrl;
-    final firstName = user?.fullName != null && user!.fullName!.trim().isNotEmpty
-        ? user.fullName!.trim().split(' ').first
-        : null;
+    final fullName = user?.fullName?.trim();
+    final firstName = (fullName != null && fullName.isNotEmpty)
+        ? fullName.split(' ').first
+        : 'Rakesh';
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left: Brand Logo & Personalized Greeting
+          // Left: User Greeting & Subtitle
           Expanded(
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColorSchemes.navy,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColorSchemes.gold, width: 1.2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColorSchemes.navy.withValues(alpha: 0.15),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+                Text(
+                  'Hi, $firstName 👋',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                    letterSpacing: -0.4,
                   ),
-                  child: const Icon(Icons.content_cut, color: AppColorSchemes.gold, size: 18),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'SALON QUEUE',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: AppColorSchemes.navy,
-                          letterSpacing: 1.1,
-                        ),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        firstName != null ? 'Hi, $firstName 👋' : AppConstants.appTaglineShort,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppColorSchemes.gold,
-                          letterSpacing: 0.2,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                const SizedBox(height: 3),
+                const Text(
+                  'Find and book the best salons',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF6B7280),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
 
-          // Right: Notification Bell (with Badge) & Customer Profile Avatar
+          // Right: Notification Bell & Profile Avatar
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Notification Bell (White circular button with border & shadow)
               Container(
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade200),
+                  border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 8,
+                      blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: IconButton(
+                  padding: EdgeInsets.zero,
                   icon: Badge.count(
                     count: _unreadNotifsCount,
                     isLabelVisible: _unreadNotifsCount > 0,
-                    backgroundColor: AppColorSchemes.gold,
-                    textColor: AppColorSchemes.navy,
-                    textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
+                    backgroundColor: const Color(0xFFE91E63),
+                    textColor: Colors.white,
+                    textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 9.5),
                     child: const Icon(
-                      Icons.notifications_outlined,
-                      color: AppColorSchemes.navy,
+                      Icons.notifications_none_rounded,
+                      color: Color(0xFF111827),
                       size: 22,
                     ),
                   ),
                   tooltip: 'Notifications',
-                  visualDensity: VisualDensity.compact,
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -950,39 +712,37 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
+
+              // Profile Avatar (Dark navy circular button)
               GestureDetector(
                 onTap: () {
                   setState(() => _currentTabIndex = 4);
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(2),
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
+                    color: const Color(0xFF10233F),
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColorSchemes.gold, width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColorSchemes.gold.withValues(alpha: 0.25),
+                        color: const Color(0xFF10233F).withValues(alpha: 0.25),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: CircleAvatar(
-                    radius: 17,
-                    backgroundColor: AppColorSchemes.navy,
-                    child: avatar != null && avatar.isNotEmpty
-                        ? ClipOval(
-                            child: _buildAvatarImage(avatar),
-                          )
-                        : const Icon(Icons.person, size: 20, color: AppColorSchemes.gold),
-                  ),
+                  child: avatar != null && avatar.isNotEmpty
+                      ? ClipOval(
+                          child: _buildAvatarImage(avatar),
+                        )
+                      : const Icon(
+                          Icons.person,
+                          size: 22,
+                          color: Color(0xFFD4AF5A),
+                        ),
                 ),
-              ),
-              const SizedBox(
-                width: 0,
-                height: 0,
-                child: Icon(Icons.logout, size: 0),
               ),
             ],
           ),
@@ -995,718 +755,652 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return Image.network(
         path,
-        width: 34,
-        height: 34,
+        width: 44,
+        height: 44,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => const Icon(Icons.person, size: 20, color: AppColorSchemes.gold),
+        errorBuilder: (_, _, _) => const Icon(Icons.person, size: 22, color: Color(0xFFD4AF5A)),
       );
     }
-    return const Icon(Icons.person, size: 20, color: AppColorSchemes.gold);
+    return const Icon(Icons.person, size: 22, color: Color(0xFFD4AF5A));
   }
 
-  // ── 2. Hero Section ────────────────────────────────────────────────────────
-  Widget _buildHeroSection() {
+  // ── 2. Search Area ─────────────────────────────────────────────────────────
+  Widget _buildSearchArea() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF0D1B2A),
-            Color(0xFF14243A),
-            Color(0xFF1F3652),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppColorSchemes.gold.withValues(alpha: 0.35),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColorSchemes.navy.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -25,
-            top: -25,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColorSchemes.gold.withValues(alpha: 0.08),
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              // Left headline text & live tracker pill
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColorSchemes.gold.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColorSchemes.gold.withValues(alpha: 0.6), width: 1),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.bolt, color: AppColorSchemes.gold, size: 13),
-                          SizedBox(width: 4),
-                          Text(
-                            'LIVE QUEUE TRACKER',
-                            style: TextStyle(
-                              color: AppColorSchemes.goldLight,
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.6,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Find a Salon.',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w900,
-                        height: 1.15,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    const Text(
-                      'Check the Queue.',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w900,
-                        height: 1.15,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    const Text(
-                      'Get Served.',
-                      style: TextStyle(
-                        color: AppColorSchemes.gold,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w900,
-                        height: 1.15,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Live queue updates from salons near you.',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 12,
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Right decorative salon chair / store badge
-              Expanded(
-                flex: 2,
-                child: Center(
-                  child: Container(
-                    width: 84,
-                    height: 84,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColorSchemes.gold.withValues(alpha: 0.25),
-                          AppColorSchemes.navyLight.withValues(alpha: 0.4),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColorSchemes.gold,
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColorSchemes.gold.withValues(alpha: 0.2),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.storefront_rounded,
-                        color: AppColorSchemes.gold,
-                        size: 40,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── 3. Search & Filter Card ────────────────────────────────────────────────
-  Widget _buildSearchFilterCard() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      height: 54,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE8EEF5)),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Location Selector Button
-          InkWell(
-            onTap: _showAllIndiaLocationSelector,
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6F8FB),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColorSchemes.gold.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.location_on, color: AppColorSchemes.gold, size: 16),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'LOCATION',
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.grey.shade600,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          _selectedLocation == 'All India'
-                              ? 'All India 🇮🇳'
-                              : (_selectedPincode != null && _selectedPincode!.isNotEmpty
-                                  ? '$_selectedLocation, $_selectedState (${_selectedPincode!})'
-                                  : '$_selectedLocation, $_selectedState'),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: AppColorSchemes.charcoal,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.keyboard_arrow_down_rounded, color: AppColorSchemes.navy, size: 20),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          // Search Salon / Haircut TextField
-          TextField(
-            controller: _searchController,
-            onChanged: (_) => _loadData(),
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: AppColorSchemes.charcoal,
-            ),
-            decoration: InputDecoration(
-              hintText: 'Search salon, haircut, facial...',
-              hintStyle: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade400,
-              ),
-              prefixIcon: const Icon(Icons.search, color: AppColorSchemes.navy, size: 20),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        _searchController.clear();
-                        _loadData();
-                      },
-                    )
-                  : null,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              filled: true,
-              fillColor: const Color(0xFFF6F8FB),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: AppColorSchemes.navy, width: 1.5),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Large Gold "FIND SALONS" Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isFindingSalons ? null : _handleFindSalons,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorSchemes.gold,
-                disabledBackgroundColor: AppColorSchemes.gold.withValues(alpha: 0.6),
-                foregroundColor: Colors.white,
-                disabledForegroundColor: Colors.white70,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-              ),
-              child: _isFindingSalons
-                  ? const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          'FINDING SALONS...',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.0,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    )
-                  : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.search, size: 18),
-                        SizedBox(width: 8),
-                        Text(
-                          'FIND SALONS',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── 4. Popular Services Horizontal Scroll ──────────────────────────────────
-  Widget _buildPopularServicesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Popular Services',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: AppColorSchemes.charcoal,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              if (_selectedCategory != 'All')
-                GestureDetector(
-                  onTap: () {
-                    setState(() => _selectedCategory = 'All');
-                    _loadData();
-                  },
-                  child: const Text(
-                    'Reset',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColorSchemes.gold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 44,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _categories.length,
-            itemBuilder: (context, idx) {
-              final item = _categories[idx];
-              final name = item['name']!;
-              final icon = item['icon']!;
-              final isSelected = _selectedCategory == name;
-
-              return ServiceCard(
-                name: name,
-                icon: icon,
-                isSelected: isSelected,
-                onTap: () {
-                  setState(() => _selectedCategory = name);
-                  _loadData();
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── 8. "How SalonQueue Works" Section ──────────────────────────────────────
-  Widget _buildHowItWorksSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColorSchemes.navy,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: AppColorSchemes.navy.withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColorSchemes.gold.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.lightbulb_outline, color: AppColorSchemes.gold, size: 18),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'How SalonQueue Works',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -0.2,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Step 1
-          _buildHowItWorksStep(
-            number: '1',
-            title: 'Find a Salon',
-            description: 'Search salons near you with live availability and verified reviews.',
-          ),
-          const SizedBox(height: 12),
-
-          // Step 2
-          _buildHowItWorksStep(
-            number: '2',
-            title: 'Check Queue',
-            description: 'See live waiting tokens, chair count, and estimated wait time.',
-          ),
-          const SizedBox(height: 12),
-
-          // Step 3
-          _buildHowItWorksStep(
-            number: '3',
-            title: 'Join Queue',
-            description: 'Join the queue remotely from home and get live position updates.',
-          ),
-          const SizedBox(height: 12),
-
-          // Step 4
-          _buildHowItWorksStep(
-            number: '4',
-            title: 'Get Served',
-            description: 'Reach the salon right when it\'s your turn without wasting time waiting.',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHowItWorksStep({
-    required String number,
-    required String title,
-    required String description,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: AppColorSchemes.gold,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              number,
-              style: const TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.w900,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                description,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.75),
-                  fontSize: 11,
-                  height: 1.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── 9. Notification CTA Card ───────────────────────────────────────────────
-  Widget _buildNotificationCtaCard() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColorSchemes.gold.withValues(alpha: 0.4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 14,
             offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColorSchemes.gold.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.notifications_active, color: AppColorSchemes.gold, size: 24),
+          const SizedBox(width: 16),
+          const Icon(
+            Icons.search_rounded,
+            color: Color(0xFF6B7280),
+            size: 22,
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Never Miss Your Turn!',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                    color: AppColorSchemes.charcoal,
-                  ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (_) => _loadData(),
+              onSubmitted: (_) => _loadData(),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF111827),
+              ),
+              decoration: const InputDecoration(
+                hintText: 'Search salon, services or location',
+                hintStyle: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF9CA3AF),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Get notified when it\'s almost your turn.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+              ),
             ),
           ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifications enabled! You\'ll be alerted before your turn.')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColorSchemes.navy,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
+          if (_searchController.text.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF9CA3AF)),
+              onPressed: () {
+                _searchController.clear();
+                _loadData();
+              },
             ),
-            child: const Text('ENABLE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+          // Right-side manual search & location/options button
+          InkWell(
+            onTap: _showAllIndiaLocationSelector,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF3F4F6),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.tune_rounded,
+                color: Color(0xFF111827),
+                size: 18,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ── Empty State ───────────────────────────────────────────────────────────
-  Widget _buildEmptySalonsView(ThemeData theme) {
-    if (_isVerifiedOnlyFilter) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+  // ── 3. Promotional Banner ──────────────────────────────────────────────────
+  Widget _buildPromotionalBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      height: 200,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFF5A1F), // Vibrant Orange
+            Color(0xFFE91E63), // Hot Pink
+            Color(0xFF6D28D9), // Deep Purple
+          ],
+          stops: [0.0, 0.45, 1.0],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE91E63).withValues(alpha: 0.35),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Left Content
+          Positioned(
+            left: 22,
+            top: 22,
+            bottom: 22,
+            right: 150,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Skip the Wait',
+                  style: TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.15,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const Text(
+                  'Book Your',
+                  style: TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.15,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const Text(
+                  'Slot Now',
+                  style: TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.15,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_salons.isNotEmpty) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SalonDetailsScreen(salon: _salons.first),
+                        ),
+                      ).then((_) => _loadData());
+                    } else {
+                      _showAllIndiaLocationSelector();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF111827),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: const Text(
+                    'Book Now',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Right Salon Chair Visual
+          Positioned(
+            right: 6,
+            bottom: 6,
+            top: 10,
+            child: Image.asset(
+              'assets/images/salon_chair.png',
+              height: 185,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Center(
+                child: Icon(
+                  Icons.chair_rounded,
+                  size: 90,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 4. Nearby Salons Section ───────────────────────────────────────────────
+  Widget _buildNearbySalonsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColorSchemes.navy.withValues(alpha: 0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.verified_outlined, size: 48, color: AppColorSchemes.navy),
-              ),
-              const SizedBox(height: 14),
               const Text(
-                'No verified salons available nearby.',
+                'Nearby Salons',
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: AppColorSchemes.charcoal,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                  letterSpacing: -0.3,
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Try selecting another location or browse all salons.',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 14),
-              OutlinedButton(
-                onPressed: () {
-                  setState(() => _isVerifiedOnlyFilter = false);
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedCategory = 'All';
+                    _searchController.clear();
+                  });
                   _loadData();
                 },
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColorSchemes.gold),
-                  foregroundColor: AppColorSchemes.navy,
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Text(
+                    'See all',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF6D28D9),
+                    ),
+                  ),
                 ),
-                child: const Text('Show All Salons', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
         ),
-      );
-    }
+        const SizedBox(height: 14),
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.storefront_outlined, size: 56, color: Colors.grey.shade400),
-            const SizedBox(height: 12),
-            Text(
-              'No salons found in $_selectedLocation',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: AppColorSchemes.charcoal,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+        // Horizontal List of Salon Cards
+        if (_isLoading)
+          const SizedBox(
+            height: 210,
+            child: Center(
+              child: CircularProgressIndicator(color: Color(0xFF6D28D9)),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Try selecting another city or changing filters.',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-              textAlign: TextAlign.center,
+          )
+        else if (_salons.isEmpty)
+          _buildEmptyNearbySalons()
+        else
+          SizedBox(
+            height: 215,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: _salons.length,
+              itemBuilder: (context, idx) {
+                final salon = _salons[idx];
+                return _buildHorizontalSalonCard(salon);
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildHorizontalSalonCard(Salon salon) {
+    final isFav = _favoriteSalonIds.contains(salon.id);
+    final rating = salon.rating > 0 ? salon.rating.toStringAsFixed(1) : '4.8';
+    final reviews = salon.reviewCount > 0 ? salon.reviewCount : 126;
+    final distanceStr = salon.distanceKm != null
+        ? '${salon.distanceKm!.toStringAsFixed(1)} km'
+        : '2.4 km';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => SalonDetailsScreen(salon: salon),
+          ),
+        ).then((_) => _loadData());
+      },
+      child: Container(
+        width: 185,
+        margin: const EdgeInsets.only(right: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFF1F3F5)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Image with Favorite Overlay
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  child: Container(
+                    height: 120,
+                    width: double.infinity,
+                    color: const Color(0xFF1E293B),
+                    child: _buildSalonCardImage(salon.effectiveCoverImage),
+                  ),
+                ),
+                // Heart Favorite Button
+                Positioned(
+                  bottom: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isFav) {
+                          _favoriteSalonIds.remove(salon.id);
+                        } else {
+                          _favoriteSalonIds.add(salon.id);
+                        }
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        color: const Color(0xFFEF4444),
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // Card Body
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    salon.name,
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF111827),
+                      letterSpacing: -0.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 16),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          '$rating ($reviews)',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        distanceStr,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSalonCardImage(String? imagePath) {
+    if (imagePath != null && imagePath.isNotEmpty) {
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return Image.network(
+          imagePath,
+          height: 120,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildFallbackSalonImage(),
+        );
+      } else if (imagePath.startsWith('data:image')) {
+        try {
+          final base64Str = imagePath.split(',').last;
+          final bytes = base64Decode(base64Str);
+          return Image.memory(
+            bytes,
+            height: 120,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          );
+        } catch (_) {
+          return _buildFallbackSalonImage();
+        }
+      }
+    }
+    return _buildFallbackSalonImage();
+  }
+
+  Widget _buildFallbackSalonImage() {
+    return Container(
+      height: 120,
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFF1E293B),
+            Color(0xFF334155),
+            Color(0xFF475569),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.storefront_rounded,
+          color: Color(0xFFD4AF5A),
+          size: 36,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyNearbySalons() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEDE9FE),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.storefront_outlined, color: Color(0xFF6D28D9), size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'No Salons in this View',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Change location or clear search to find salons.',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── 5. Popular Services Section ────────────────────────────────────────────
+  Widget _buildPopularServicesSection() {
+    final servicesList = [
+      {'name': 'Haircut', 'icon': Icons.content_cut_rounded, 'filter': 'Hair'},
+      {'name': 'Beard', 'icon': Icons.face_retouching_natural, 'filter': 'Beard'},
+      {'name': 'Hair Color', 'icon': Icons.brush_rounded, 'filter': 'Color'},
+      {'name': 'Spa', 'icon': Icons.spa_rounded, 'filter': 'Spa'},
+      {'name': 'More', 'icon': Icons.more_horiz_rounded, 'filter': 'All'},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Popular Services',
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                  letterSpacing: -0.3,
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                  setState(() => _selectedCategory = 'All');
+                  _loadData();
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Text(
+                    'See all',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF6D28D9),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Horizontal Row of 5 Service Icons
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: servicesList.map((srv) {
+              final name = srv['name'] as String;
+              final icon = srv['icon'] as IconData;
+              final filter = srv['filter'] as String;
+              final isSelected = _selectedCategory == filter;
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedCategory = (_selectedCategory == filter) ? 'All' : filter;
+                  });
+                  _loadData();
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF6D28D9)
+                            : const Color(0xFFF3E8FF), // Light purple / lavender
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFF6D28D9)
+                              : const Color(0xFFE9D5FF),
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          if (isSelected)
+                            BoxShadow(
+                              color: const Color(0xFF6D28D9).withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                        ],
+                      ),
+                      child: Icon(
+                        icon,
+                        color: isSelected ? Colors.white : const Color(0xFF6D28D9),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                        color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFF111827),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2014,17 +1708,17 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 16,
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
             offset: const Offset(0, -4),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         child: BottomNavigationBar(
           currentIndex: _currentTabIndex,
           onTap: (idx) {
@@ -2039,8 +1733,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
             if (idx == 0) _loadData();
           },
           backgroundColor: Colors.white,
-          selectedItemColor: AppColorSchemes.navy,
-          unselectedItemColor: Colors.grey.shade400,
+          selectedItemColor: const Color(0xFFE91E63), // Pink/Purple active accent matching reference
+          unselectedItemColor: const Color(0xFF9CA3AF),
           type: BottomNavigationBarType.fixed,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
@@ -2057,23 +1751,19 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
             ),
             BottomNavigationBarItem(
               icon: Container(
-                padding: const EdgeInsets.all(7),
+                padding: const EdgeInsets.all(8),
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColorSchemes.navy, AppColorSchemes.navyLight],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: Color(0xFF10233F),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Color(0x3314243A),
+                      color: Color(0x3310233F),
                       blurRadius: 8,
                       offset: Offset(0, 2),
                     ),
                   ],
                 ),
-                child: const Icon(Icons.qr_code_scanner_rounded, color: AppColorSchemes.gold, size: 22),
+                child: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFFD4AF5A), size: 22),
               ),
               label: 'Scan',
             ),

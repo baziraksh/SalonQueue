@@ -50,7 +50,7 @@ Future<AuthService> _buildAuthService(AppUser user) async {
 
 void main() {
   group('1. CUSTOMER POST-LOGIN UI & HEADER TESTS', () {
-    testWidgets('Customer Home Header contains Logo on left, Bell & Avatar on right', (tester) async {
+    testWidgets('Customer Home Header contains Greeting, Bell & Avatar', (tester) async {
       tester.view.physicalSize = const Size(1080, 1920);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -67,26 +67,27 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Top Header: Logo on Left
-      expect(find.byIcon(Icons.content_cut), findsAtLeast(1));
-      expect(find.text('SALON QUEUE'), findsOneWidget);
+      // Top Header: Greeting & Subtitle
+      expect(find.text('Hi, Ananya 👋'), findsOneWidget);
+      expect(find.text('Find and book the best salons'), findsOneWidget);
 
-      // Top Header: Notification Bell on Right
-      expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
+      // Top Header: Notification Bell & Profile Avatar
+      expect(find.byIcon(Icons.notifications_none_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.person), findsAtLeast(1));
 
-      // Top Header: Profile Avatar on Right
-      expect(find.byType(CircleAvatar), findsAtLeast(1));
-
-      // Large search bar & Find Salons button
+      // Modern Search bar
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('FIND SALONS'), findsOneWidget);
+      expect(find.text('Search salon, services or location'), findsOneWidget);
 
-      // 4 Quick Benefits Cards are removed from Customer Home
+      // Promotional Banner & Sections
+      expect(find.text('Skip the Wait'), findsOneWidget);
+      expect(find.text('Book Now'), findsOneWidget);
+      expect(find.text('Nearby Salons'), findsOneWidget);
+      expect(find.text('Popular Services'), findsOneWidget);
+
+      // Old feature cards are removed
       expect(find.text('Real-time Queue'), findsNothing);
       expect(find.text('Verified Salons'), findsNothing);
-      expect(find.text('Easy Booking'), findsNothing);
-      expect(find.text('Secure & Safe'), findsNothing);
-      expect(find.text('Popular Services'), findsOneWidget);
     });
   });
 
@@ -398,8 +399,8 @@ void main() {
     });
   });
 
-  group('8. FIND SALONS BUTTON & ZERO FAKE SALONS AUDIT TESTS', () {
-    testWidgets('FIND SALONS button renders clearly and has tap feedback', (tester) async {
+  group('8. PROMOTIONAL BOOK NOW & ZERO FAKE SALONS AUDIT TESTS', () {
+    testWidgets('Book Now button renders clearly and has tap feedback', (tester) async {
       tester.view.physicalSize = const Size(1080, 1920);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -416,17 +417,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Find Salons button is present
-      final findButton = find.widgetWithText(ElevatedButton, 'FIND SALONS');
-      expect(findButton, findsOneWidget);
+      // Book Now button is present
+      final bookNowButton = find.widgetWithText(ElevatedButton, 'Book Now');
+      expect(bookNowButton, findsOneWidget);
 
-      // Tapping it triggers search
-      await tester.tap(findButton);
-      await tester.pump();
-
-      // Pump to settle
+      // Tapping Book Now navigates to Salon Details
+      await tester.tap(bookNowButton);
       await tester.pumpAndSettle();
-      expect(find.widgetWithText(ElevatedButton, 'FIND SALONS'), findsOneWidget);
+
+      expect(find.byType(SalonDetailsScreen), findsOneWidget);
     });
 
     test('Salon.fromJson does not fabricate fake ratings, reviews or cities', () {
