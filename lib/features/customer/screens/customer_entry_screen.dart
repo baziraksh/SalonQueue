@@ -11,6 +11,7 @@ import '../../../shared/widgets/active_queue_card.dart';
 import '../../auth/services/auth_scope.dart';
 import 'customer_history_screen.dart';
 import 'customer_profile_screen.dart';
+import 'customer_search_screen.dart';
 import '../../notifications/data/notification_repository.dart';
 import '../../notifications/models/app_notification.dart';
 import '../../notifications/screens/customer_notifications_screen.dart';
@@ -156,7 +157,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     });
   }
 
-  void _showAllIndiaLocationSelector() {
+  void showAllIndiaLocationSelector() {
     final locationSearchCtrl = TextEditingController();
     String? modalSelectedState;
     List<LocationSuggestion> searchResults = [];
@@ -764,84 +765,85 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     return const Icon(Icons.person, size: 22, color: Color(0xFFD4AF5A));
   }
 
+  void _openSearchScreen({String? query, String? category}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CustomerSearchScreen(
+          initialQuery: query,
+          initialCategory: category,
+          initialLocation: _selectedLocation,
+        ),
+      ),
+    ).then((_) => _loadData());
+  }
+
   // ── 2. Search Area ─────────────────────────────────────────────────────────
   Widget _buildSearchArea() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      height: 54,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 14,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 16),
-          const Icon(
-            Icons.search_rounded,
-            color: Color(0xFF6B7280),
-            size: 22,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              onChanged: (_) => _loadData(),
-              onSubmitted: (_) => _loadData(),
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF111827),
-              ),
-              decoration: const InputDecoration(
-                hintText: 'Search salon, services or location',
-                hintStyle: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF9CA3AF),
+    return GestureDetector(
+      onTap: () => _openSearchScreen(),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        height: 54,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 14,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 16),
+            const Icon(
+              Icons.search_rounded,
+              color: Color(0xFF6B7280),
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                readOnly: true,
+                onTap: () => _openSearchScreen(),
+                decoration: const InputDecoration(
+                  hintText: 'Search salon, services or location',
+                  hintStyle: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  isDense: true,
                 ),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                isDense: true,
               ),
             ),
-          ),
-          if (_searchController.text.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF9CA3AF)),
-              onPressed: () {
-                _searchController.clear();
-                _loadData();
-              },
-            ),
-          // Right-side manual search & location/options button
-          InkWell(
-            onTap: _showAllIndiaLocationSelector,
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF3F4F6),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.tune_rounded,
-                color: Color(0xFF111827),
-                size: 18,
+            // Right-side manual search & location/options button
+            InkWell(
+              onTap: showAllIndiaLocationSelector,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF3F4F6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.tune_rounded,
+                  color: Color(0xFF111827),
+                  size: 18,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -877,9 +879,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
           // Left Content
           Positioned(
             left: 22,
-            top: 22,
-            bottom: 22,
-            right: 150,
+            top: 18,
+            bottom: 18,
+            right: 145,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -887,7 +889,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 const Text(
                   'Skip the Wait',
                   style: TextStyle(
-                    fontSize: 23,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                     height: 1.15,
@@ -897,7 +899,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 const Text(
                   'Book Your',
                   style: TextStyle(
-                    fontSize: 23,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                     height: 1.15,
@@ -907,14 +909,14 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 const Text(
                   'Slot Now',
                   style: TextStyle(
-                    fontSize: 23,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                     height: 1.15,
                     letterSpacing: -0.3,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 ElevatedButton(
                   onPressed: () {
                     if (_salons.isNotEmpty) {
@@ -924,7 +926,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                         ),
                       ).then((_) => _loadData());
                     } else {
-                      _showAllIndiaLocationSelector();
+                      _openSearchScreen();
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -951,9 +953,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
           // Right Salon Chair Visual
           Positioned(
-            right: 6,
-            bottom: 6,
-            top: 10,
+            right: 4,
+            bottom: 4,
+            top: 8,
+            width: 140,
             child: Image.asset(
               'assets/images/salon_chair.png',
               height: 185,
@@ -961,7 +964,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               errorBuilder: (context, error, stackTrace) => const Center(
                 child: Icon(
                   Icons.chair_rounded,
-                  size: 90,
+                  size: 80,
                   color: Colors.white,
                 ),
               ),
@@ -993,13 +996,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 ),
               ),
               InkWell(
-                onTap: () {
-                  setState(() {
-                    _selectedCategory = 'All';
-                    _searchController.clear();
-                  });
-                  _loadData();
-                },
+                onTap: () => _openSearchScreen(),
                 borderRadius: BorderRadius.circular(8),
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -1312,10 +1309,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 ),
               ),
               InkWell(
-                onTap: () {
-                  setState(() => _selectedCategory = 'All');
-                  _loadData();
-                },
+                onTap: () => _openSearchScreen(category: 'All'),
                 borderRadius: BorderRadius.circular(8),
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -1348,10 +1342,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
               return GestureDetector(
                 onTap: () {
-                  setState(() {
-                    _selectedCategory = (_selectedCategory == filter) ? 'All' : filter;
-                  });
-                  _loadData();
+                  setState(() => _selectedCategory = filter);
+                  _openSearchScreen(category: filter);
                 },
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
