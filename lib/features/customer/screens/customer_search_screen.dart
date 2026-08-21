@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../shared/data/india_locations.dart';
 import '../../../shared/models/salon.dart';
 import '../../salon/data/salon_repository.dart';
 import '../../salon/screens/salon_details_screen.dart';
@@ -461,12 +462,18 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                                         subtitle: Text(city['state']!, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                                         onTap: () {
                                           debounceTimer?.cancel();
+                                          final cityName = city['name']!;
+                                          final stateName = city['state']!;
+                                          final estCoords = LocationSuggestionService.getEstimatedCoordinates(cityName, stateName);
+                                          final resolvedDistrict = IndiaLocations.resolveDistrictForCity(cityName, stateName) ?? cityName;
                                           setState(() {
-                                            _selectedLocation = '${city['name']!}, ${city['state']!}';
-                                            _selectedCity = city['name']!;
-                                            _selectedState = city['state']!;
-                                            _selectedDistrict = null;
+                                            _selectedLocation = '$cityName, $stateName';
+                                            _selectedCity = cityName;
+                                            _selectedState = stateName;
+                                            _selectedDistrict = resolvedDistrict;
                                             _selectedPincode = null;
+                                            _userLat = estCoords.latitude;
+                                            _userLng = estCoords.longitude;
                                           });
                                           Navigator.of(ctx).pop();
                                           _loadSalons();

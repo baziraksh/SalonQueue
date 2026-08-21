@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/routing/app_router.dart';
@@ -62,6 +63,23 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   @override
   void initState() {
     super.initState();
+    // 1. Instant frame-1 cache retrieval to display cached salons immediately without spinner
+    final cached = _salonRepo.getCachedSalons(
+      state: _selectedState == 'All States' ? null : _selectedState,
+      city: (_selectedLocation == 'All India' || _selectedLocation == 'Near Me') ? null : (_selectedCity ?? _selectedLocation),
+      district: _selectedDistrict,
+      pincode: _selectedPincode,
+      search: _searchController.text.trim(),
+      category: (_selectedCategory == 'All' || _selectedCategory == 'Favorites') ? null : _selectedCategory,
+      sortBy: _sortBy,
+      userLat: _userLat,
+      userLng: _userLng,
+    );
+    if (cached.isNotEmpty) {
+      _salons = cached;
+      _isLoading = false;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _verifyAccess());
     _loadData();
     _loadNotifications();
@@ -114,24 +132,20 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    // Only set loading indicator if we don't already have salons on screen
+    if (_salons.isEmpty) {
+      setState(() => _isLoading = true);
+    }
 
     final auth = AuthScope.of(context, listen: false);
     final userId = auth.currentUser?.id;
-
-    if (userId != null) {
-      _activeTicket = await _queueRepo.fetchActiveTicketForCustomer(userId);
-      _latestTicket = await _queueRepo.fetchLatestTicketForCustomer(userId);
-      if (_latestTicket != null) {
-        _latestTicketSalon = await _salonRepo.fetchSalonById(_latestTicket!.salonId);
-      }
-    }
 
     final isAllIndia = (_selectedLocation == 'All India' || _selectedLocation == 'All Cities');
     final isAllStates = (_selectedState == 'All States' || _selectedState == 'All');
     final isNearMe = (_selectedLocation == 'Near Me');
 
-    var list = await _salonRepo.fetchSalons(
+    // Run salon query and ticket query concurrently in parallel for maximum speed
+    final salonFuture = _salonRepo.fetchSalons(
       state: isAllStates ? null : _selectedState,
       city: (isAllIndia || isNearMe) ? null : (_selectedCity ?? _selectedLocation),
       district: _selectedDistrict,
@@ -146,23 +160,68 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       maxRadiusKm: isNearMe ? 25.0 : null,
     );
 
-    if (_selectedCategory == 'Favorites' || _currentTabIndex == 3) {
-      list = list.where((s) => _favoriteSalonIds.contains(s.id)).toList();
-    }
+    final ticketsFuture = (userId != null)
+        ? Future.wait([
+            _queueRepo.fetchActiveTicketForCustomer(userId),
+            _queueRepo.fetchLatestTicketForCustomer(userId),
+          ])
+        : Future.value(<dynamic>[null, null]);
 
-    if (!mounted) return;
-    setState(() {
-      _salons = list;
-      _isLoading = false;
-    });
+    try {
+      final results = await Future.wait([salonFuture, ticketsFuture]);
+      var list = results[0] as List<Salon>;
+
+      if (userId != null) {
+        final ticketData = results[1];
+        _activeTicket = ticketData[0] as QueueTicket?;
+        _latestTicket = ticketData[1] as QueueTicket?;
+        if (_latestTicket != null) {
+          _latestTicketSalon = await _salonRepo.fetchSalonById(_latestTicket!.salonId);
+        }
+      }
+
+      if (_selectedCategory == 'Favorites' || _currentTabIndex == 3) {
+        list = list.where((s) => _favoriteSalonIds.contains(s.id)).toList();
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _salons = list;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
+  /// Exact Location Selector Modal matching Reference Image 2
   void showAllIndiaLocationSelector() {
     final locationSearchCtrl = TextEditingController();
-    String? modalSelectedState;
     List<LocationSuggestion> searchResults = [];
     bool isSearching = false;
     Timer? debounceTimer;
+
+    // Canonical list of Popular Cities across India using the existing dataset
+    const popularCities = [
+      {'city': 'Bhubaneswar', 'state': 'Odisha', 'district': 'Khurda'},
+      {'city': 'Cuttack', 'state': 'Odisha', 'district': 'Cuttack'},
+      {'city': 'Pune', 'state': 'Maharashtra', 'district': 'Pune'},
+      {'city': 'Mumbai', 'state': 'Maharashtra', 'district': 'Mumbai City'},
+      {'city': 'Bengaluru', 'state': 'Karnataka', 'district': 'Bangalore Urban'},
+      {'city': 'Delhi', 'state': 'Delhi', 'district': 'Central Delhi'},
+      {'city': 'Hyderabad', 'state': 'Telangana', 'district': 'Hyderabad'},
+      {'city': 'Kolkata', 'state': 'West Bengal', 'district': 'Kolkata'},
+      {'city': 'Chennai', 'state': 'Tamil Nadu', 'district': 'Chennai'},
+      {'city': 'Ahmedabad', 'state': 'Gujarat', 'district': 'Ahmedabad'},
+      {'city': 'Jaipur', 'state': 'Rajasthan', 'district': 'Jaipur'},
+      {'city': 'Chandigarh', 'state': 'Punjab', 'district': 'Chandigarh'},
+      {'city': 'Angul', 'state': 'Odisha', 'district': 'Angul'},
+      {'city': 'Pallahara', 'state': 'Odisha', 'district': 'Angul'},
+      {'city': 'Rourkela', 'state': 'Odisha', 'district': 'Sundargarh'},
+      {'city': 'Berhampur', 'state': 'Odisha', 'district': 'Ganjam'},
+      {'city': 'Sambalpur', 'state': 'Odisha', 'district': 'Sambalpur'},
+      {'city': 'Puri', 'state': 'Odisha', 'district': 'Puri'},
+    ];
 
     showModalBottomSheet(
       context: context,
@@ -173,8 +232,6 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
-          final allStates = IndiaLocations.getAllStates();
-
           void performSearch(String query) {
             debounceTimer?.cancel();
             if (query.trim().isEmpty) {
@@ -204,22 +261,20 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 1. Header with Close X
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Expanded(
-                        child: Text(
-                          'Select Location across India 🇮🇳',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: AppColorSchemes.charcoal,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      const Text(
+                        'Select Location across India 🇮🇳',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF111827),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(Icons.close_rounded, color: Color(0xFF6B7280)),
                         onPressed: () {
                           debounceTimer?.cancel();
                           Navigator.of(ctx).pop();
@@ -229,24 +284,25 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Search Location Input (Live Maps Suggestions)
+                  // 2. Search Field
                   TextField(
                     controller: locationSearchCtrl,
                     decoration: InputDecoration(
-                      hintText: 'Search locality, street, city, or PIN code...',
-                      prefixIcon: const Icon(Icons.search, color: AppColorSchemes.navy),
+                      hintText: 'Search locality, street, city or PIN code...',
+                      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF6D28D9)),
                       suffixIcon: isSearching
                           ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: Padding(
                                 padding: EdgeInsets.all(12),
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColorSchemes.gold),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6D28D9)),
                               ),
                             )
                           : (locationSearchCtrl.text.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.clear),
+                                  icon: const Icon(Icons.clear, size: 18),
                                   onPressed: () {
                                     locationSearchCtrl.clear();
                                     debounceTimer?.cancel();
@@ -257,21 +313,37 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                                   },
                                 )
                               : null),
+                      filled: true,
+                      fillColor: const Color(0xFFF9FAFB),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Color(0xFF6D28D9), width: 1.5),
+                      ),
                     ),
                     onChanged: performSearch,
                   ),
                   const SizedBox(height: 12),
 
-                  // Quick Action Chips: Near Me & All India
+                  // 3. Quick Action Chips: Near Me & All India
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
                         ActionChip(
-                          avatar: const Icon(Icons.my_location, size: 16, color: AppColorSchemes.gold),
+                          avatar: const Icon(Icons.navigation_rounded, size: 15, color: Color(0xFFD4AF5A)),
                           label: const Text('📍 Near Me'),
-                          backgroundColor: AppColorSchemes.navy,
-                          labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          backgroundColor: const Color(0xFF10233F),
+                          labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           onPressed: () {
                             debounceTimer?.cancel();
                             setState(() {
@@ -290,8 +362,12 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                         ),
                         const SizedBox(width: 8),
                         ActionChip(
-                          avatar: const Icon(Icons.public, size: 16, color: AppColorSchemes.navy),
+                          avatar: const Icon(Icons.public, size: 16, color: Color(0xFF6D28D9)),
                           label: const Text('All India 🇮🇳'),
+                          backgroundColor: Colors.white,
+                          labelStyle: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w700, fontSize: 12.5),
+                          side: const BorderSide(color: Color(0xFFE5E7EB)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                           onPressed: () {
                             debounceTimer?.cancel();
                             setState(() {
@@ -308,50 +384,61 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       ],
                     ),
                   ),
-                  const Divider(height: 24),
+                  const SizedBox(height: 16),
 
-                  // Search Results (Live Maps Suggestions) or State/District Drilldown
+                  // 4. Section Title or Search Results
+                  if (searchResults.isEmpty && locationSearchCtrl.text.trim().isEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8, left: 4),
+                      child: Text(
+                        'Popular Cities',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF4B5563),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // 5. Popular Cities List or Live Search Results
                   Expanded(
                     child: Builder(
                       builder: (context) {
                         if (isSearching && searchResults.isEmpty) {
                           return const Center(
-                            child: CircularProgressIndicator(color: AppColorSchemes.gold),
+                            child: CircularProgressIndicator(color: Color(0xFF6D28D9)),
                           );
                         }
 
                         if (searchResults.isNotEmpty) {
-                          return ListView.builder(
+                          return ListView.separated(
                             itemCount: searchResults.length,
+                            separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF3F4F6)),
                             itemBuilder: (context, idx) {
                               final item = searchResults[idx];
                               return ListTile(
-                                leading: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: AppColorSchemes.navy.withValues(alpha: 0.08),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.location_on,
-                                    color: AppColorSchemes.navy,
-                                    size: 20,
-                                  ),
+                                leading: const Icon(
+                                  Icons.location_on_outlined,
+                                  color: Color(0xFF6D28D9),
+                                  size: 22,
                                 ),
                                 title: Text(
                                   item.title,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF111827)),
                                 ),
                                 subtitle: Text(
                                   item.subtitle,
-                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                  maxLines: 2,
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 onTap: () {
                                   debounceTimer?.cancel();
                                   setState(() {
-                                    _selectedLocation = item.title;
+                                    _selectedLocation = (item.city != null && item.state != null)
+                                        ? '${item.city}, ${item.state}'
+                                        : item.title;
                                     _selectedCity = item.city ?? item.title;
                                     _selectedDistrict = item.district;
                                     _selectedState = item.state ?? 'All States';
@@ -372,27 +459,20 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                           return ListView(
                             children: [
                               ListTile(
-                                leading: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: AppColorSchemes.gold.withValues(alpha: 0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.place_rounded,
-                                    color: AppColorSchemes.navy,
-                                    size: 20,
-                                  ),
+                                leading: const Icon(
+                                  Icons.location_on_outlined,
+                                  color: Color(0xFF6D28D9),
+                                  size: 22,
                                 ),
                                 title: Text(
                                   'Find Salons in "$queryText"',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColorSchemes.navy),
+                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF111827)),
                                 ),
                                 subtitle: const Text(
-                                  'Search salons by this village, area, or locality name',
-                                  style: TextStyle(fontSize: 12),
+                                  'Search salons by this area or locality name',
+                                  style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
                                 ),
-                                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: AppColorSchemes.gold),
+                                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF9CA3AF)),
                                 onTap: () {
                                   debounceTimer?.cancel();
                                   setState(() {
@@ -406,124 +486,66 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                                   _loadData();
                                 },
                               ),
-                              if (searchResults.isEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 24),
-                                  child: Center(
-                                    child: Text(
-                                      'Tap above to search for salons in "$queryText"',
-                                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                                    ),
-                                  ),
-                                ),
                             ],
                           );
                         }
 
-                        if (modalSelectedState == null) {
-                          return ListView.builder(
-                            itemCount: allStates.length,
-                            itemBuilder: (context, idx) {
-                              final stateName = allStates[idx];
-                              final count = IndiaLocations.getDistrictsForState(stateName).length;
-                              return ListTile(
-                                leading: const Icon(Icons.flag_outlined, color: AppColorSchemes.navy),
-                                title: Text(stateName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                subtitle: Text('$count districts/cities'),
-                                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: AppColorSchemes.gold),
-                                onTap: () {
-                                  setModalState(() {
-                                    modalSelectedState = stateName;
-                                  });
-                                },
-                              );
-                            },
-                          );
-                        }
+                        // Default: Popular Cities List (Exact Match to Image 2)
+                        return ListView.builder(
+                          itemCount: popularCities.length,
+                          itemBuilder: (context, idx) {
+                            final item = popularCities[idx];
+                            final cityName = item['city']!;
+                            final stateName = item['state']!;
+                            final districtName = item['district'];
 
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.arrow_back),
-                                  onPressed: () =>
-                                      setModalState(() => modalSelectedState = null),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    modalSelectedState!,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    debounceTimer?.cancel();
-                                    final estCoords = LocationSuggestionService.getEstimatedCoordinates(
-                                      modalSelectedState!,
-                                      modalSelectedState!,
-                                    );
-                                    setState(() {
-                                      _selectedState = modalSelectedState!;
-                                      _selectedLocation = 'All Cities';
-                                      _selectedCity = null;
-                                      _selectedDistrict = null;
-                                      _selectedPincode = null;
-                                      _userLat = estCoords.latitude;
-                                      _userLng = estCoords.longitude;
-                                    });
-                                    Navigator.of(ctx).pop();
-                                    _loadData();
-                                  },
-                                  style: TextButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                                  ),
-                                  child: const Text('View All', style: TextStyle(color: AppColorSchemes.gold, fontWeight: FontWeight.bold)),
-                                ),
-                              ],
-                            ),
-                            const Divider(),
-                            Expanded(
-                              child: ListView(
-                                children: IndiaLocations.getDistrictsForState(modalSelectedState!)
-                                    .map((district) {
-                                  return ListTile(
-                                    leading: const Icon(Icons.location_on_outlined, color: AppColorSchemes.navy),
-                                    title: Text(district),
-                                    onTap: () {
-                                      debounceTimer?.cancel();
-                                      final estCoords = LocationSuggestionService.getEstimatedCoordinates(
-                                        district,
-                                        modalSelectedState!,
-                                      );
-                                      final resolvedDistrict = IndiaLocations.resolveDistrictForCity(
-                                        district,
-                                        modalSelectedState!,
-                                      ) ?? district;
-                                      setState(() {
-                                        _selectedState = modalSelectedState!;
-                                        _selectedLocation = district;
-                                        _selectedCity = district;
-                                        _selectedDistrict = resolvedDistrict;
-                                        _selectedPincode = null;
-                                        _userLat = estCoords.latitude;
-                                        _userLng = estCoords.longitude;
-                                      });
-                                      Navigator.of(ctx).pop();
-                                      _loadData();
-                                    },
-                                  );
-                                }).toList(),
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              leading: const Icon(
+                                Icons.apartment_rounded,
+                                color: Color(0xFF6D28D9),
+                                size: 24,
                               ),
-                            ),
-                          ],
+                              title: Text(
+                                cityName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                  color: Color(0xFF111827),
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              subtitle: Text(
+                                stateName,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
+                              onTap: () {
+                                debounceTimer?.cancel();
+                                final estCoords = LocationSuggestionService.getEstimatedCoordinates(
+                                  cityName,
+                                  stateName,
+                                );
+                                final resolvedDistrict = districtName ??
+                                    IndiaLocations.resolveDistrictForCity(cityName, stateName) ??
+                                    cityName;
+                                setState(() {
+                                  _selectedState = stateName;
+                                  _selectedLocation = '$cityName, $stateName';
+                                  _selectedCity = cityName;
+                                  _selectedDistrict = resolvedDistrict;
+                                  _selectedPincode = null;
+                                  _userLat = estCoords.latitude;
+                                  _userLng = estCoords.longitude;
+                                });
+                                Navigator.of(ctx).pop();
+                                _loadData();
+                              },
+                            );
+                          },
                         );
                       },
                     ),
@@ -624,7 +646,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
   // ── 1. Top Header Widget ───────────────────────────────────────────────────
   Widget _buildTopHeader(BuildContext context) {
-    final auth = AuthScope.of(context, listen: false);
+    final auth = AuthScope.of(context); // Listen to real-time auth/profile changes
     final user = auth.currentUser;
     final avatar = user?.avatarUrl;
     final fullName = user?.fullName?.trim();
@@ -715,7 +737,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               ),
               const SizedBox(width: 10),
 
-              // Profile Avatar (Dark navy circular button)
+              // Profile Avatar (Dark navy circular button showing customer's actual profile photo)
               GestureDetector(
                 onTap: () {
                   setState(() => _currentTabIndex = 4);
@@ -734,15 +756,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       ),
                     ],
                   ),
-                  child: avatar != null && avatar.isNotEmpty
-                      ? ClipOval(
-                          child: _buildAvatarImage(avatar),
-                        )
-                      : const Icon(
-                          Icons.person,
-                          size: 20,
-                          color: Color(0xFFD4AF5A),
-                        ),
+                  child: ClipOval(
+                    child: _buildAvatarImage(avatar),
+                  ),
                 ),
               ),
             ],
@@ -752,17 +768,49 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     );
   }
 
-  Widget _buildAvatarImage(String path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) {
+  Widget _buildAvatarImage(String? path) {
+    if (path == null || path.trim().isEmpty) {
+      return const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A));
+    }
+    final trimmed = path.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return Image.network(
-        path,
+        trimmed,
+        key: ValueKey(trimmed),
         width: 40,
         height: 40,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A)),
+        errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A)),
       );
+    } else if (trimmed.startsWith('data:image')) {
+      try {
+        final base64Str = trimmed.split(',').last;
+        final bytes = base64Decode(base64Str);
+        return Image.memory(
+          bytes,
+          key: ValueKey(trimmed.hashCode),
+          width: 40,
+          height: 40,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A)),
+        );
+      } catch (_) {
+        return const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A));
+      }
+    } else {
+      final file = File(trimmed);
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          key: ValueKey(trimmed),
+          width: 40,
+          height: 40,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A)),
+        );
+      }
+      return const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A));
     }
-    return const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A));
   }
 
   void _openSearchScreen({String? query, String? category}) {

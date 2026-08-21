@@ -207,7 +207,39 @@ class SalonRepository {
     }
   }
 
-  /// Fetches real registered salons from database.
+  /// Static in-memory cache of evaluated salons for instant frame-1 rendering
+  static List<Salon> _cachedCustomerSalons = [];
+
+  /// Synchronously retrieve cached salons for zero-latency frame 1 UI display
+  List<Salon> getCachedSalons({
+    String? state,
+    String? city,
+    String? district,
+    String? pincode,
+    String? search,
+    String? category,
+    String sortBy = 'nearest',
+    double userLat = 18.5204,
+    double userLng = 73.8567,
+    double? maxRadiusKm,
+  }) {
+    if (_cachedCustomerSalons.isEmpty) return [];
+    return _filterAndSortSalons(
+      _cachedCustomerSalons,
+      state: state,
+      city: city,
+      district: district,
+      pincode: pincode,
+      search: search,
+      category: category,
+      sortBy: sortBy,
+      userLat: userLat,
+      userLng: userLng,
+      maxRadiusKm: maxRadiusKm,
+    );
+  }
+
+  /// Fetches real registered salons from database with high-performance parallel batch querying.
   /// SUPABASE DATABASE IS THE SINGLE SOURCE OF TRUTH FOR CUSTOMER DISCOVERY.
   Future<List<Salon>> fetchSalons({
     String? state,
@@ -229,31 +261,40 @@ class SalonRepository {
 
     if (activeClient != null) {
       try {
-        final response = await activeClient
-            .from('salons')
-            .select('*')
-            .not('owner_id', 'is', null)
-            .order('created_at', ascending: false);
+        // Parallel batch fetch for both salons and all services in ONE single roundtrip
+        final results = await Future.wait([
+          activeClient
+              .from('salons')
+              .select('*')
+              .not('owner_id', 'is', null)
+              .order('created_at', ascending: false),
+          activeClient
+              .from('services')
+              .select('*')
+              .order('name', ascending: true),
+        ]);
 
-        for (final raw in (response as List)) {
-          final map = Map<String, dynamic>.from(raw as Map);
-          final salonId = map['id'] as String;
-          final salonName = (map['name'] as String? ?? '').trim();
-          if (salonName.isEmpty) continue;
+        final salonsResponse = (results[0] as List);
+        final servicesResponse = (results[1] as List);
 
-          // Fetch fresh services for this salon
-          List<SalonService> services = [];
+        final servicesBySalonId = <String, List<SalonService>>{};
+        for (final raw in servicesResponse) {
           try {
-            final svcRows = await activeClient
-                .from('services')
-                .select('*')
-                .eq('salon_id', salonId)
-                .order('name', ascending: true);
-            services = (svcRows as List)
-                .map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
-                .toList();
+            final map = Map<String, dynamic>.from(raw as Map);
+            final sId = map['salon_id'] as String?;
+            if (sId != null && sId.isNotEmpty) {
+              servicesBySalonId.putIfAbsent(sId, () => []).add(SalonService.fromJson(map));
+            }
           } catch (_) {}
+        }
 
+        for (final raw in salonsResponse) {
+          final map = Map<String, dynamic>.from(raw as Map);
+          final salonId = map['id'] as String?;
+          final salonName = (map['name'] as String? ?? '').trim();
+          if (salonId == null || salonName.isEmpty) continue;
+
+          final services = servicesBySalonId[salonId] ?? [];
           final salon = Salon.fromJson(
             map,
             services: services,
@@ -262,6 +303,9 @@ class SalonRepository {
           );
           dbSalons.add(salon);
         }
+
+        // Store into static cache for instant future loads
+        _cachedCustomerSalons = List<Salon>.from(dbSalons);
       } catch (e) {
         databaseError = e.toString();
         debugPrint('[SalonRepository] fetchSalons database query error: $e');
@@ -278,8 +322,45 @@ class SalonRepository {
           : _ownerSalonsCache.values.toList();
     }
 
+    final sorted = _filterAndSortSalons(
+      dbSalons,
+      state: state,
+      city: city,
+      district: district,
+      pincode: pincode,
+      search: search,
+      category: category,
+      sortBy: sortBy,
+      userLat: userLat,
+      userLng: userLng,
+      maxRadiusKm: maxRadiusKm,
+    );
+
+    debugPrint(
+      '[SalonDB][CUSTOMER_FETCH] state = ${state ?? "null"}, district = ${district ?? "null"}, '
+      'city = ${city ?? "null"}, search = "${search ?? ""}", rowsReturned = ${sorted.length}, '
+      'databaseError = $databaseError',
+    );
+
+    return sorted;
+  }
+
+  /// Internal high-performance helper to evaluate distance, filters, and sort orders
+  List<Salon> _filterAndSortSalons(
+    List<Salon> sourceSalons, {
+    String? state,
+    String? city,
+    String? district,
+    String? pincode,
+    String? search,
+    String? category,
+    String sortBy = 'nearest',
+    double userLat = 18.5204,
+    double userLng = 73.8567,
+    double? maxRadiusKm,
+  }) {
     // 1. Calculate distances for all candidate salons
-    var evaluated = dbSalons.map((s) {
+    var evaluated = sourceSalons.map((s) {
       final dist = s.calculateDistance(userLat, userLng);
       return s.copyWith(distanceKm: dist);
     }).toList();
@@ -397,15 +478,7 @@ class SalonRepository {
     }
 
     final catFiltered = _filterByCategory(filtered, category);
-    final sorted = _sortSalons(catFiltered, sortBy);
-
-    debugPrint(
-      '[SalonDB][CUSTOMER_FETCH] state = ${state ?? "null"}, district = ${district ?? "null"}, '
-      'city = ${city ?? "null"}, search = "${search ?? ""}", rowsReturned = ${sorted.length}, '
-      'databaseError = $databaseError',
-    );
-
-    return sorted;
+    return _sortSalons(catFiltered, sortBy);
   }
 
   /// Fetches a single salon by ID or Owner ID directly from Supabase, including fresh services
