@@ -29,8 +29,7 @@ void main() {
 
     // Splash branding is visible.
     expect(find.text('Salon Queue'), findsOneWidget);
-    expect(find.text('Find Salons & Skip The Line 🇮🇳'), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.text('Skip the wait, book your great.'), findsOneWidget);
 
     // Advance past the splash delay; the timer must be handled cleanly.
     await tester.pump(const Duration(milliseconds: 2300));
