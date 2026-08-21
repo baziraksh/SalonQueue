@@ -5,7 +5,6 @@ import 'package:salon_queue/features/auth/services/auth_service.dart';
 import 'package:salon_queue/features/customer/screens/customer_entry_screen.dart';
 import 'package:salon_queue/features/customer/screens/customer_search_screen.dart';
 import 'package:salon_queue/features/salon/data/salon_repository.dart';
-import 'package:salon_queue/shared/models/salon.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

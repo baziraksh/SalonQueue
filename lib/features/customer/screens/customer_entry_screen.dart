@@ -587,7 +587,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               // ── 3. Active Queue Card (if active) ───────────────────────
               if (_activeTicket != null && (_activeTicket!.isWaiting || _activeTicket!.isInChair)) ...[
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                   child: ActiveQueueCard(
                     ticket: _activeTicket!,
                     onTap: () {
@@ -604,17 +604,17 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               // ── 4. Promotional Banner (Orange → Pink → Purple) ─────────
               _buildPromotionalBanner(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
               // ── 5. Nearby Salons (Horizontal Scroll) ───────────────────
               _buildNearbySalonsSection(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
               // ── 6. Popular Services (Horizontal Icons) ─────────────────
               _buildPopularServicesSection(),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -633,7 +633,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
         : 'Rakesh';
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -646,19 +646,19 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 Text(
                   'Hi, $firstName 👋',
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF111827),
-                    letterSpacing: -0.4,
+                    letterSpacing: -0.3,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 const Text(
                   'Find and book the best salons',
                   style: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF6B7280),
                   ),
@@ -675,8 +675,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
             children: [
               // Notification Bell (White circular button with border & shadow)
               Container(
-                width: 44,
-                height: 44,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -684,7 +684,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 10,
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                   ],
@@ -696,11 +696,11 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     isLabelVisible: _unreadNotifsCount > 0,
                     backgroundColor: const Color(0xFFE91E63),
                     textColor: Colors.white,
-                    textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 9.5),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 9),
                     child: const Icon(
                       Icons.notifications_none_rounded,
                       color: Color(0xFF111827),
-                      size: 22,
+                      size: 20,
                     ),
                   ),
                   tooltip: 'Notifications',
@@ -713,7 +713,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
 
               // Profile Avatar (Dark navy circular button)
               GestureDetector(
@@ -721,8 +721,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   setState(() => _currentTabIndex = 4);
                 },
                 child: Container(
-                  width: 44,
-                  height: 44,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: const Color(0xFF10233F),
                     shape: BoxShape.circle,
@@ -740,7 +740,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                         )
                       : const Icon(
                           Icons.person,
-                          size: 22,
+                          size: 20,
                           color: Color(0xFFD4AF5A),
                         ),
                 ),
@@ -756,13 +756,13 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return Image.network(
         path,
-        width: 44,
-        height: 44,
+        width: 40,
+        height: 40,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => const Icon(Icons.person, size: 22, color: Color(0xFFD4AF5A)),
+        errorBuilder: (_, _, _) => const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A)),
       );
     }
-    return const Icon(Icons.person, size: 22, color: Color(0xFFD4AF5A));
+    return const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A));
   }
 
   void _openSearchScreen({String? query, String? category}) {
@@ -782,27 +782,27 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     return GestureDetector(
       onTap: () => _openSearchScreen(),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        height: 54,
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+        height: 46,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(23),
           border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 14,
-              offset: const Offset(0, 3),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
           children: [
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             const Icon(
               Icons.search_rounded,
               color: Color(0xFF6B7280),
-              size: 22,
+              size: 20,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -812,7 +812,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 decoration: const InputDecoration(
                   hintText: 'Search salon, services or location',
                   hintStyle: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w400,
                     color: Color(0xFF9CA3AF),
                   ),
@@ -829,8 +829,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               onTap: showAllIndiaLocationSelector,
               borderRadius: BorderRadius.circular(20),
               child: Container(
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.all(6),
                 decoration: const BoxDecoration(
                   color: Color(0xFFF3F4F6),
                   shape: BoxShape.circle,
@@ -838,7 +838,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 child: const Icon(
                   Icons.tune_rounded,
                   color: Color(0xFF111827),
-                  size: 18,
+                  size: 16,
                 ),
               ),
             ),
@@ -851,8 +851,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   // ── 3. Promotional Banner ──────────────────────────────────────────────────
   Widget _buildPromotionalBanner() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      height: 200,
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      height: 145,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
@@ -864,12 +864,12 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFE91E63).withValues(alpha: 0.35),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
+            color: const Color(0xFFE91E63).withValues(alpha: 0.3),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -878,45 +878,49 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
         children: [
           // Left Content
           Positioned(
-            left: 22,
-            top: 18,
-            bottom: 18,
-            right: 145,
+            left: 18,
+            top: 14,
+            bottom: 14,
+            right: 140,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Skip the Wait',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    height: 1.15,
-                    letterSpacing: -0.3,
-                  ),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Skip the Wait',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        height: 1.15,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    Text(
+                      'Book Your',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        height: 1.15,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    Text(
+                      'Slot Now',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        height: 1.15,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ],
                 ),
-                const Text(
-                  'Book Your',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    height: 1.15,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const Text(
-                  'Slot Now',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    height: 1.15,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 12),
                 ElevatedButton(
                   onPressed: () {
                     if (_salons.isNotEmpty) {
@@ -933,15 +937,16 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF111827),
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    minimumSize: const Size(0, 32),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   child: const Text(
                     'Book Now',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF111827),
                     ),
@@ -951,20 +956,20 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
             ),
           ),
 
-          // Right Salon Chair Visual
+          // Right Salon Chair Visual (Exact match to Image 1)
           Positioned(
-            right: 4,
-            bottom: 4,
-            top: 8,
+            right: 6,
+            bottom: 2,
+            top: 2,
             width: 140,
             child: Image.asset(
               'assets/images/salon_chair.png',
-              height: 185,
               fit: BoxFit.contain,
+              alignment: Alignment.bottomRight,
               errorBuilder: (context, error, stackTrace) => const Center(
                 child: Icon(
                   Icons.chair_rounded,
-                  size: 80,
+                  size: 70,
                   color: Colors.white,
                 ),
               ),
@@ -989,7 +994,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               const Text(
                 'Nearby Salons',
                 style: TextStyle(
-                  fontSize: 19,
+                  fontSize: 17,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF111827),
                   letterSpacing: -0.3,
@@ -1003,7 +1008,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   child: Text(
                     'See all',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF6D28D9),
                     ),
@@ -1013,12 +1018,12 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
 
         // Horizontal List of Salon Cards
         if (_isLoading)
           const SizedBox(
-            height: 210,
+            height: 165,
             child: Center(
               child: CircularProgressIndicator(color: Color(0xFF6D28D9)),
             ),
@@ -1027,7 +1032,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
           _buildEmptyNearbySalons()
         else
           SizedBox(
-            height: 215,
+            height: 165,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1059,17 +1064,17 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
         ).then((_) => _loadData());
       },
       child: Container(
-        width: 185,
-        margin: const EdgeInsets.only(right: 14),
+        width: 165,
+        margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFF1F3F5)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -1080,18 +1085,18 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                   child: Container(
-                    height: 120,
+                    height: 100,
                     width: double.infinity,
                     color: const Color(0xFF1E293B),
                     child: _buildSalonCardImage(salon.effectiveCoverImage),
                   ),
                 ),
-                // Heart Favorite Button
+                // Heart Favorite Button on bottom-right of image (Matching Image 1)
                 Positioned(
-                  bottom: 8,
-                  right: 8,
+                  bottom: 6,
+                  right: 6,
                   child: GestureDetector(
                     onTap: () {
                       setState(() {
@@ -1103,22 +1108,22 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       });
                     },
                     child: Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 6,
+                            blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
                         ],
                       ),
                       child: Icon(
-                        isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        isFav ? Icons.favorite_rounded : Icons.favorite_rounded,
                         color: const Color(0xFFEF4444),
-                        size: 16,
+                        size: 13,
                       ),
                     ),
                   ),
@@ -1128,14 +1133,14 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
             // Card Body
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     salon.name,
                     style: const TextStyle(
-                      fontSize: 14.5,
+                      fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF111827),
                       letterSpacing: -0.2,
@@ -1143,16 +1148,16 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 16),
-                      const SizedBox(width: 3),
+                      const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 15),
+                      const SizedBox(width: 2),
                       Flexible(
                         child: Text(
                           '$rating ($reviews)',
                           style: const TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF111827),
                           ),
@@ -1160,11 +1165,11 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 4),
                       Text(
                         distanceStr,
                         style: const TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF6B7280),
                         ),
@@ -1185,7 +1190,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
         return Image.network(
           imagePath,
-          height: 120,
+          height: 100,
           width: double.infinity,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => _buildFallbackSalonImage(),
@@ -1196,7 +1201,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
           final bytes = base64Decode(base64Str);
           return Image.memory(
             bytes,
-            height: 120,
+            height: 100,
             width: double.infinity,
             fit: BoxFit.cover,
           );
@@ -1210,7 +1215,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
   Widget _buildFallbackSalonImage() {
     return Container(
-      height: 120,
+      height: 100,
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -1227,7 +1232,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
         child: Icon(
           Icons.storefront_rounded,
           color: Color(0xFFD4AF5A),
-          size: 36,
+          size: 32,
         ),
       ),
     );
@@ -1235,25 +1240,25 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
   Widget _buildEmptyNearbySalons() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFE5E7EB)),
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
                 color: Color(0xFFEDE9FE),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.storefront_outlined, color: Color(0xFF6D28D9), size: 24),
+              child: const Icon(Icons.storefront_outlined, color: Color(0xFF6D28D9), size: 20),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1262,14 +1267,14 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     'No Salons in this View',
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      fontSize: 14,
+                      fontSize: 13,
                       color: Color(0xFF111827),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Change location or clear search to find salons.',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
                   ),
                 ],
               ),
@@ -1302,7 +1307,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               const Text(
                 'Popular Services',
                 style: TextStyle(
-                  fontSize: 19,
+                  fontSize: 17,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF111827),
                   letterSpacing: -0.3,
@@ -1316,7 +1321,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   child: Text(
                     'See all',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF6D28D9),
                     ),
@@ -1326,7 +1331,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
 
         // Horizontal Row of 5 Service Icons
         Padding(
@@ -1349,39 +1354,39 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 58,
-                      height: 58,
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
                         color: isSelected
                             ? const Color(0xFF6D28D9)
-                            : const Color(0xFFF3E8FF), // Light purple / lavender
-                        borderRadius: BorderRadius.circular(18),
+                            : const Color(0xFFF3E8FF), // Light pastel purple
+                        borderRadius: BorderRadius.circular(15),
                         border: Border.all(
                           color: isSelected
                               ? const Color(0xFF6D28D9)
                               : const Color(0xFFE9D5FF),
-                          width: 1.2,
+                          width: 1.0,
                         ),
                         boxShadow: [
                           if (isSelected)
                             BoxShadow(
                               color: const Color(0xFF6D28D9).withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
                             ),
                         ],
                       ),
                       child: Icon(
                         icon,
                         color: isSelected ? Colors.white : const Color(0xFF6D28D9),
-                        size: 24,
+                        size: 21,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 5),
                     Text(
                       name,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                         color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFF111827),
                       ),
