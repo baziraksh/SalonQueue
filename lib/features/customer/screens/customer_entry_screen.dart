@@ -7,14 +7,11 @@ import '../../../shared/data/india_locations.dart';
 import '../../../shared/models/queue_ticket.dart';
 import '../../../shared/models/salon.dart';
 import '../../../shared/widgets/active_queue_card.dart';
-import '../../../shared/widgets/benefit_item.dart';
 import '../../../shared/widgets/salon_card.dart';
 import '../../../shared/widgets/service_card.dart';
 import '../../auth/services/auth_scope.dart';
 import 'customer_history_screen.dart';
 import 'customer_profile_screen.dart';
-import 'easy_booking_screen.dart';
-import 'security_privacy_screen.dart';
 import '../../notifications/data/notification_repository.dart';
 import '../../notifications/models/app_notification.dart';
 import '../../notifications/screens/customer_notifications_screen.dart';
@@ -64,7 +61,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   StreamSubscription<List<AppNotification>>? _notifSubscription;
   StreamSubscription<List<Salon>>? _salonsSub;
 
-  bool _isRealtimeOnlyFilter = false;
+  final bool _isRealtimeOnlyFilter = false;
   bool _isVerifiedOnlyFilter = false;
 
   final List<Map<String, String>> _categories = [
@@ -640,11 +637,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               // ── 3. Search & Filter Card ────────────────────────────────
               _buildSearchFilterCard(),
 
-              // ── 4. Quick Benefits ──────────────────────────────────────
-              _buildQuickBenefits(),
-
-              // ── 5. Active Queue Card (if active) ───────────────────────
-              if (_activeTicket != null && (_activeTicket!.isWaiting || _activeTicket!.isInChair))
+              // ── 4. Active Queue Card (if active) ───────────────────────
+              if (_activeTicket != null && (_activeTicket!.isWaiting || _activeTicket!.isInChair)) ...[
                 ActiveQueueCard(
                   ticket: _activeTicket!,
                   onTap: () {
@@ -655,10 +649,11 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     ).then((_) => _loadData());
                   },
                 ),
+                const SizedBox(height: 16),
+              ] else
+                const SizedBox(height: 8),
 
-              const SizedBox(height: 16),
-
-              // ── 6. Popular Services Section ────────────────────────────
+              // ── 5. Popular Services Section ────────────────────────────
               _buildPopularServicesSection(),
 
               const SizedBox(height: 20),
@@ -851,88 +846,111 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     final auth = AuthScope.of(context, listen: false);
     final user = auth.currentUser;
     final avatar = user?.avatarUrl;
+    final firstName = user?.fullName != null && user!.fullName!.trim().isNotEmpty
+        ? user.fullName!.trim().split(' ').first
+        : null;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left: Salon Queue Logo & Name
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: AppColorSchemes.navy,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColorSchemes.gold, width: 1.2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColorSchemes.navy.withValues(alpha: 0.15),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+          // Left: Brand Logo & Personalized Greeting
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColorSchemes.navy,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColorSchemes.gold, width: 1.2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColorSchemes.navy.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.content_cut, color: AppColorSchemes.gold, size: 18),
                 ),
-                child: const Icon(Icons.content_cut, color: AppColorSchemes.gold, size: 18),
-              ),
-              const SizedBox(width: 9),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'SALON QUEUE',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: AppColorSchemes.navy,
-                      letterSpacing: 1.1,
-                    ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'SALON QUEUE',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: AppColorSchemes.navy,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        firstName != null ? 'Hi, $firstName 👋' : AppConstants.appTaglineShort,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColorSchemes.gold,
+                          letterSpacing: 0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                  const Text(
-                    AppConstants.appTaglineShort,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppColorSchemes.gold,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
 
           // Right: Notification Bell (with Badge) & Customer Profile Avatar
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                icon: Badge.count(
-                  count: _unreadNotifsCount,
-                  isLabelVisible: _unreadNotifsCount > 0,
-                  backgroundColor: AppColorSchemes.gold,
-                  textColor: AppColorSchemes.navy,
-                  textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
-                  child: const Icon(
-                    Icons.notifications_outlined,
-                    color: AppColorSchemes.navy,
-                    size: 25,
-                  ),
-                ),
-                tooltip: 'Notifications',
-                visualDensity: VisualDensity.compact,
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const CustomerNotificationsScreen(),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                  ).then((_) => _loadNotifications());
-                },
+                  ],
+                ),
+                child: IconButton(
+                  icon: Badge.count(
+                    count: _unreadNotifsCount,
+                    isLabelVisible: _unreadNotifsCount > 0,
+                    backgroundColor: AppColorSchemes.gold,
+                    textColor: AppColorSchemes.navy,
+                    textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
+                    child: const Icon(
+                      Icons.notifications_outlined,
+                      color: AppColorSchemes.navy,
+                      size: 22,
+                    ),
+                  ),
+                  tooltip: 'Notifications',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CustomerNotificationsScreen(),
+                      ),
+                    ).then((_) => _loadNotifications());
+                  },
+                ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 8),
               GestureDetector(
                 onTap: () {
                   setState(() => _currentTabIndex = 4);
@@ -941,16 +959,23 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColorSchemes.gold, width: 1.5),
+                    border: Border.all(color: AppColorSchemes.gold, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColorSchemes.gold.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: CircleAvatar(
-                    radius: 15,
+                    radius: 17,
                     backgroundColor: AppColorSchemes.navy,
                     child: avatar != null && avatar.isNotEmpty
                         ? ClipOval(
                             child: _buildAvatarImage(avatar),
                           )
-                        : const Icon(Icons.person, size: 18, color: AppColorSchemes.gold),
+                        : const Icon(Icons.person, size: 20, color: AppColorSchemes.gold),
                   ),
                 ),
               ),
@@ -970,108 +995,173 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return Image.network(
         path,
-        width: 30,
-        height: 30,
+        width: 34,
+        height: 34,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => const Icon(Icons.person, size: 18, color: AppColorSchemes.gold),
+        errorBuilder: (_, _, _) => const Icon(Icons.person, size: 20, color: AppColorSchemes.gold),
       );
     }
-    return const Icon(Icons.person, size: 18, color: AppColorSchemes.gold);
+    return const Icon(Icons.person, size: 20, color: AppColorSchemes.gold);
   }
 
   // ── 2. Hero Section ────────────────────────────────────────────────────────
   Widget _buildHeroSection() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(22),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
-            AppColorSchemes.navy,
-            Color(0xFF1B2E46),
-            Color(0xFF243B55),
+            Color(0xFF0D1B2A),
+            Color(0xFF14243A),
+            Color(0xFF1F3652),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColorSchemes.gold.withValues(alpha: 0.35),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColorSchemes.navy.withValues(alpha: 0.3),
-            blurRadius: 18,
+            blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Row(
+      child: Stack(
         children: [
-          // Left headline text
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Find a Salon.',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    height: 1.15,
-                  ),
-                ),
-                const Text(
-                  'Check the Queue.',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    height: 1.15,
-                  ),
-                ),
-                const Text(
-                  'Get Served.',
-                  style: TextStyle(
-                    color: AppColorSchemes.gold,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Live queue updates from salons near you.',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 12,
-                    height: 1.3,
-                  ),
-                ),
-              ],
+          Positioned(
+            right: -25,
+            top: -25,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColorSchemes.gold.withValues(alpha: 0.08),
+              ),
             ),
           ),
+          Row(
+            children: [
+              // Left headline text & live tracker pill
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColorSchemes.gold.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColorSchemes.gold.withValues(alpha: 0.6), width: 1),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.bolt, color: AppColorSchemes.gold, size: 13),
+                          SizedBox(width: 4),
+                          Text(
+                            'LIVE QUEUE TRACKER',
+                            style: TextStyle(
+                              color: AppColorSchemes.goldLight,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Find a Salon.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                        height: 1.15,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const Text(
+                      'Check the Queue.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                        height: 1.15,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const Text(
+                      'Get Served.',
+                      style: TextStyle(
+                        color: AppColorSchemes.gold,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                        height: 1.15,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Live queue updates from salons near you.',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-          // Right decorative graphic
-          Expanded(
-            flex: 2,
-            child: Container(
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColorSchemes.gold.withValues(alpha: 0.5),
-                  width: 2,
+              // Right decorative salon chair / store badge
+              Expanded(
+                flex: 2,
+                child: Center(
+                  child: Container(
+                    width: 84,
+                    height: 84,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColorSchemes.gold.withValues(alpha: 0.25),
+                          AppColorSchemes.navyLight.withValues(alpha: 0.4),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColorSchemes.gold,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColorSchemes.gold.withValues(alpha: 0.2),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.storefront_rounded,
+                        color: AppColorSchemes.gold,
+                        size: 40,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.storefront_rounded,
-                  color: AppColorSchemes.gold,
-                  size: 48,
-                ),
-              ),
-            ),
+            ],
           ),
         ],
       ),
@@ -1082,15 +1172,15 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   Widget _buildSearchFilterCard() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: const Color(0xFFE8EEF5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
             offset: const Offset(0, 4),
           ),
         ],
@@ -1103,15 +1193,22 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
             onTap: _showAllIndiaLocationSelector,
             borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
               decoration: BoxDecoration(
-                color: AppColorSchemes.ivory,
+                color: const Color(0xFFF6F8FB),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.location_on, color: AppColorSchemes.gold, size: 20),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColorSchemes.gold.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.location_on, color: AppColorSchemes.gold, size: 16),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -1120,12 +1217,13 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                         Text(
                           'LOCATION',
                           style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
                             color: Colors.grey.shade600,
-                            letterSpacing: 0.5,
+                            letterSpacing: 0.6,
                           ),
                         ),
+                        const SizedBox(height: 1),
                         Text(
                           _selectedLocation == 'All India'
                               ? 'All India 🇮🇳'
@@ -1134,7 +1232,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                                   : '$_selectedLocation, $_selectedState'),
                           style: const TextStyle(
                             fontSize: 13,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
                             color: AppColorSchemes.charcoal,
                           ),
                           maxLines: 1,
@@ -1143,7 +1241,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       ],
                     ),
                   ),
-                  const Icon(Icons.keyboard_arrow_down_rounded, color: AppColorSchemes.navy),
+                  const Icon(Icons.keyboard_arrow_down_rounded, color: AppColorSchemes.navy, size: 20),
                 ],
               ),
             ),
@@ -1155,12 +1253,22 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
           TextField(
             controller: _searchController,
             onChanged: (_) => _loadData(),
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: AppColorSchemes.charcoal,
+            ),
             decoration: InputDecoration(
               hintText: 'Search salon, haircut, facial...',
-              prefixIcon: const Icon(Icons.search, color: AppColorSchemes.navy),
+              hintStyle: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade400,
+              ),
+              prefixIcon: const Icon(Icons.search, color: AppColorSchemes.navy, size: 20),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear),
+                      icon: const Icon(Icons.clear, size: 18),
                       onPressed: () {
                         _searchController.clear();
                         _loadData();
@@ -1168,7 +1276,20 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     )
                   : null,
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              fillColor: AppColorSchemes.ivory,
+              filled: true,
+              fillColor: const Color(0xFFF6F8FB),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColorSchemes.navy, width: 1.5),
+              ),
             ),
           ),
 
@@ -1236,100 +1357,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     );
   }
 
-  // ── 4. Quick Benefits Grid ─────────────────────────────────────────────────
-  Widget _buildQuickBenefits() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: BenefitItem(
-              icon: Icons.timer_outlined,
-              title: 'Real-time Queue',
-              subtitle: 'Live wait times',
-              isSelected: _isRealtimeOnlyFilter,
-              onTap: () {
-                setState(() {
-                  _isRealtimeOnlyFilter = !_isRealtimeOnlyFilter;
-                  if (_isRealtimeOnlyFilter) _sortBy = 'rush';
-                });
-                _loadData();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      _isRealtimeOnlyFilter
-                          ? 'Showing salons with active live queue tracking.'
-                          : 'Showing all nearby salons.',
-                    ),
-                    duration: const Duration(seconds: 2),
-                    backgroundColor: AppColorSchemes.navy,
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: BenefitItem(
-              icon: Icons.verified_outlined,
-              title: 'Verified Salons',
-              subtitle: 'Trusted & rated',
-              isSelected: _isVerifiedOnlyFilter,
-              onTap: () {
-                setState(() {
-                  _isVerifiedOnlyFilter = !_isVerifiedOnlyFilter;
-                });
-                _loadData();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      _isVerifiedOnlyFilter
-                          ? 'Showing verified salons only.'
-                          : 'Showing all nearby salons.',
-                    ),
-                    duration: const Duration(seconds: 2),
-                    backgroundColor: AppColorSchemes.navy,
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: BenefitItem(
-              icon: Icons.touch_app_outlined,
-              title: 'Easy Booking',
-              subtitle: 'Join in 1 tap',
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const EasyBookingScreen(),
-                  ),
-                ).then((_) => _loadData());
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: BenefitItem(
-              icon: Icons.shield_outlined,
-              title: 'Secure & Safe',
-              subtitle: 'Data protected',
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const SecurityPrivacyScreen(),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── 6. Popular Services Horizontal Scroll ──────────────────────────────────
+  // ── 4. Popular Services Horizontal Scroll ──────────────────────────────────
   Widget _buildPopularServicesSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

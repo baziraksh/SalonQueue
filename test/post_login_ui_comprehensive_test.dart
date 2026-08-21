@@ -81,11 +81,12 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
       expect(find.text('FIND SALONS'), findsOneWidget);
 
-      // 4 Functional Cards
-      expect(find.text('Real-time Queue'), findsOneWidget);
-      expect(find.text('Verified Salons'), findsOneWidget);
-      expect(find.text('Easy Booking'), findsOneWidget);
-      expect(find.text('Secure & Safe'), findsOneWidget);
+      // 4 Quick Benefits Cards are removed from Customer Home
+      expect(find.text('Real-time Queue'), findsNothing);
+      expect(find.text('Verified Salons'), findsNothing);
+      expect(find.text('Easy Booking'), findsNothing);
+      expect(find.text('Secure & Safe'), findsNothing);
+      expect(find.text('Popular Services'), findsOneWidget);
     });
   });
 
