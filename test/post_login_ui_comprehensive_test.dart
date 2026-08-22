@@ -238,12 +238,15 @@ void main() {
 
       // Redesigned Reference Menu Items
       expect(find.text('My Bookings'), findsOneWidget);
-      expect(find.text('My Profile'), findsOneWidget);
+      expect(find.text('Favorite Salons'), findsOneWidget);
       expect(find.text('My Wallet'), findsOneWidget);
       expect(find.text('My Reviews'), findsOneWidget);
+      expect(find.text('Email'), findsOneWidget);
+      expect(find.text('ananya@example.com'), findsOneWidget);
       expect(find.text('Notifications'), findsOneWidget);
       expect(find.text('Help & Support'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('Invite Friends'), findsOneWidget);
       expect(find.text('Logout'), findsOneWidget);
     });
   });

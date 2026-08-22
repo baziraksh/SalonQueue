@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/routing/app_router.dart';
 import '../../auth/data/auth_repository.dart';
@@ -8,11 +9,12 @@ import '../../auth/services/auth_scope.dart';
 import '../../notifications/screens/customer_notifications_screen.dart';
 import '../../support/screens/support_center_screen.dart';
 import 'customer_history_screen.dart';
+import 'favorite_salons_screen.dart';
 import 'security_privacy_screen.dart';
 
 /// Customer Profile Screen
-/// Redesigned to EXACTLY match the target reference screenshot with vibrant gradient header,
-/// rounded customer avatar, pencil edit button, and clean white menu list.
+/// Clean, compact modern UI with gradient header and white background.
+/// Real authenticated customer info (Name, Phone, Email, Avatar) with no empty purple dead zones.
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({super.key});
 
@@ -394,6 +396,120 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     );
   }
 
+  void _handleInviteFriends() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF3E8FF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.card_giftcard_rounded,
+                color: Color(0xFF6D28D9),
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Invite Friends & Skip Lines',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Share Salon Queue with your friends so they can join live queues and book tokens without waiting!',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF6B7280), fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'SALONQUEUE2026',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF6D28D9),
+                      fontSize: 15,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () {
+                      Clipboard.setData(const ClipboardData(text: 'SALONQUEUE2026'));
+                      Navigator.of(ctx).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Referral code copied to clipboard!'),
+                          backgroundColor: Color(0xFF6D28D9),
+                        ),
+                      );
+                    },
+                    child: const Row(
+                      children: [
+                        Icon(Icons.copy_rounded, size: 16, color: Color(0xFF6D28D9)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Copy',
+                          style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6D28D9), fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Clipboard.setData(const ClipboardData(
+                    text: 'Join me on Salon Queue to skip waiting lines and book salon tokens instantly! Download now: https://salonqueue.app/join',
+                  ));
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Invite link copied to clipboard! Share it with your friends.'),
+                      backgroundColor: Color(0xFF6D28D9),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.share_rounded, size: 18),
+                label: const Text('Share Invite Link', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6D28D9),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleLogout() async {
     final auth = AuthScope.of(context, listen: false);
     final confirm = await showDialog<bool>(
@@ -433,21 +549,21 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     final auth = AuthScope.of(context);
     final user = auth.currentUser;
 
+    // Real authenticated customer data
     final name = user?.fullName?.isNotEmpty == true ? user!.fullName! : 'Valued Customer';
-    final phone = user?.phone?.isNotEmpty == true
-        ? user!.phone!
-        : (user?.email?.isNotEmpty == true ? user!.email! : '+91 98765 43210');
+    final phone = user?.phone?.isNotEmpty == true ? user!.phone! : '+91 98765 43210';
+    final email = user?.email?.isNotEmpty == true ? user!.email! : 'customer@example.com';
     final avatar = user?.avatarUrl;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF6D28D9), // Matches gradient bottom edge
+      backgroundColor: Colors.white, // Eliminates any empty purple dead zones completely
       body: SingleChildScrollView(
         child: Column(
           children: [
             // ── 1. TOP PROFILE HEADER (Gradient with avatar, name, phone & pencil edit button) ──
             Container(
               width: double.infinity,
-              padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 16, 20, 28),
+              padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 16, 20, 24),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -526,7 +642,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     ),
                   ),
 
-                  // Edit / Pencil Button on Right (Matching Reference Screenshot)
+                  // Edit / Pencil Button on Right (Opens Edit Profile)
                   GestureDetector(
                     onTap: _handleEditProfile,
                     child: Container(
@@ -547,16 +663,13 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               ),
             ),
 
-            // ── 2. WHITE MENU LIST (Matching Reference Screenshot EXACTLY) ───
+            // ── 2. WHITE MENU LIST (Compact, Clean & Flowing Naturally) ────────
             Container(
               width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
+              color: Colors.white,
               child: Column(
                 children: [
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
 
                   // 1. My Bookings
                   _buildMenuItem(
@@ -570,11 +683,15 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   ),
                   _buildDivider(),
 
-                  // 2. My Profile
+                  // 2. Favorite Salons
                   _buildMenuItem(
-                    icon: Icons.person_outline_rounded,
-                    title: 'My Profile',
-                    onTap: _handleEditProfile,
+                    icon: Icons.favorite_outline_rounded,
+                    title: 'Favorite Salons',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const FavoriteSalonsScreen()),
+                      );
+                    },
                   ),
                   _buildDivider(),
 
@@ -594,7 +711,24 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   ),
                   _buildDivider(),
 
-                  // 5. Notifications
+                  // 5. Email (Real Authenticated User Email)
+                  _buildMenuItem(
+                    icon: Icons.mail_outline_rounded,
+                    title: 'Email',
+                    subtitle: email,
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: email));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Email copied to clipboard!'),
+                          backgroundColor: Color(0xFF6D28D9),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDivider(),
+
+                  // 6. Notifications
                   _buildMenuItem(
                     icon: Icons.notifications_none_rounded,
                     title: 'Notifications',
@@ -606,7 +740,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   ),
                   _buildDivider(),
 
-                  // 6. Help & Support
+                  // 7. Help & Support
                   _buildMenuItem(
                     icon: Icons.help_outline_rounded,
                     title: 'Help & Support',
@@ -620,7 +754,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   ),
                   _buildDivider(),
 
-                  // 7. Settings
+                  // 8. Settings
                   _buildMenuItem(
                     icon: Icons.settings_outlined,
                     title: 'Settings',
@@ -632,7 +766,16 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   ),
                   _buildDivider(),
 
-                  // 8. Logout
+                  // 9. Invite Friends
+                  _buildMenuItem(
+                    icon: Icons.share_outlined,
+                    title: 'Invite Friends',
+                    subtitle: 'Share Salon Queue with your friends',
+                    onTap: _handleInviteFriends,
+                  ),
+                  _buildDivider(),
+
+                  // 10. Logout
                   _buildMenuItem(
                     icon: Icons.logout_rounded,
                     title: 'Logout',
@@ -640,7 +783,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     onTap: _handleLogout,
                   ),
 
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -654,26 +797,46 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   Widget _buildMenuItem({
     required IconData icon,
     required String title,
+    String? subtitle,
     required VoidCallback onTap,
     Color iconColor = const Color(0xFF6D28D9),
   }) {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         child: Row(
           children: [
             Icon(icon, color: iconColor, size: 22),
             const SizedBox(width: 18),
             Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827),
-                  letterSpacing: -0.2,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF111827),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  if (subtitle != null && subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
               ),
             ),
             const Icon(
