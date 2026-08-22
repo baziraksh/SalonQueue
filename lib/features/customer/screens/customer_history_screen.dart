@@ -1,11 +1,18 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../shared/models/queue_ticket.dart';
+import '../../../shared/models/salon.dart';
 import '../../auth/services/auth_scope.dart';
 import '../../queue/data/queue_repository.dart';
+import '../../queue/screens/customer_queue_screen.dart';
+import '../../salon/data/salon_repository.dart';
 
-/// Screen displaying customer's past visits, completed services, and digital token history.
+/// Screen displaying customer's Bookings (Upcoming & Completed)
+/// Redesigned to match the reference booking page design with modern cards and tabs.
 class CustomerHistoryScreen extends StatefulWidget {
-  const CustomerHistoryScreen({super.key});
+  final VoidCallback? onBack;
+
+  const CustomerHistoryScreen({super.key, this.onBack});
 
   @override
   State<CustomerHistoryScreen> createState() => _CustomerHistoryScreenState();
@@ -13,7 +20,11 @@ class CustomerHistoryScreen extends StatefulWidget {
 
 class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
   final QueueRepository _queueRepo = QueueRepository();
-  List<QueueTicket> _history = [];
+  final SalonRepository _salonRepo = SalonRepository();
+
+  int _selectedTabIndex = 0; // 0 = Upcoming, 1 = Completed
+  List<QueueTicket> _allTickets = [];
+  final Map<String, Salon> _salonMap = {};
   bool _isLoading = true;
 
   @override
@@ -23,147 +34,591 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
   }
 
   Future<void> _loadHistory() async {
-    setState(() => _isLoading = true);
+    if (_allTickets.isEmpty) {
+      setState(() => _isLoading = true);
+    }
+
     final auth = AuthScope.of(context, listen: false);
     final userId = auth.currentUser?.id ?? '';
 
-    final list = await _queueRepo.fetchCustomerHistory(userId);
-    if (!mounted) return;
-    setState(() {
-      _history = list;
-      _isLoading = false;
-    });
+    try {
+      final list = await _queueRepo.fetchCustomerHistory(userId);
+
+      // Fetch salon details for unique salon IDs
+      final salonIds = list.map((t) => t.salonId).toSet();
+      for (final sId in salonIds) {
+        if (!_salonMap.containsKey(sId)) {
+          final salon = await _salonRepo.fetchSalonById(sId);
+          if (salon != null) {
+            _salonMap[sId] = salon;
+          }
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _allTickets = list;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   String _formatDate(DateTime dt) {
-    final months = [
+    const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
     final period = dt.hour >= 12 ? 'PM' : 'AM';
     final min = dt.minute.toString().padLeft(2, '0');
-    return '${dt.day} ${months[dt.month - 1]}, $hour:$min $period';
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year} • $hour:$min $period';
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final upcomingTickets = _allTickets
+        .where((t) => t.status == QueueStatus.waiting || t.status == QueueStatus.inChair)
+        .toList();
+    final completedTickets = _allTickets
+        .where((t) => t.status != QueueStatus.waiting && t.status != QueueStatus.inChair)
+        .toList();
+
+    final currentList = _selectedTabIndex == 0 ? upcomingTickets : completedTickets;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Queue & Visit History'),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadHistory,
-              child: _history.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.history_toggle_off, size: 64, color: Colors.grey.shade400),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No past visits yet',
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text('Your past salon tokens and grooming history will appear here.'),
-                        ],
-                      ),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── 1. Top Header ──────────────────────────────────────────────
+            _buildTopHeader(),
+
+            // ── 2. Booking Tabs (Upcoming / Completed) ────────────────────
+            _buildTabs(
+              upcomingCount: upcomingTickets.length,
+              completedCount: completedTickets.length,
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── 3. Cards List / Empty State ────────────────────────────────
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Color(0xFF6D28D9)),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _history.length,
-                      itemBuilder: (context, idx) {
-                        final ticket = _history[idx];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF14243A).withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        ticket.formattedToken,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          color: Color(0xFF14243A),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        _formatDate(ticket.createdAt),
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: ticket.status.color.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        ticket.status.label,
-                                        style: TextStyle(
-                                          color: ticket.status.color,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                const Divider(height: 1),
-                                const SizedBox(height: 10),
-                                Text(
-                                  ticket.serviceNames.join(', '),
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Duration: ~${ticket.totalDurationMinutes} mins',
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                    Text(
-                                      '₹${ticket.totalPrice.toStringAsFixed(0)}',
-                                      style: theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                  : RefreshIndicator(
+                      color: const Color(0xFF6D28D9),
+                      onRefresh: _loadHistory,
+                      child: currentList.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 24),
+                              itemCount: currentList.length,
+                              itemBuilder: (context, idx) {
+                                final ticket = currentList[idx];
+                                return _buildBookingCard(
+                                  ticket,
+                                  isUpcoming: _selectedTabIndex == 0,
+                                );
+                              },
                             ),
-                          ),
-                        );
-                      },
                     ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── 1. Top Header ──────────────────────────────────────────────────────────
+  Widget _buildTopHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Circular Back Button
+          GestureDetector(
+            onTap: () {
+              if (widget.onBack != null) {
+                widget.onBack!();
+              } else if (Navigator.canPop(context)) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Color(0xFF111827),
+                size: 18,
+              ),
+            ),
+          ),
+
+          // Centered Title
+          const Text(
+            'My Bookings',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF111827),
+              letterSpacing: -0.3,
+            ),
+          ),
+
+          // Spacer to balance
+          const SizedBox(width: 42, height: 42),
+        ],
+      ),
+    );
+  }
+
+  // ── 2. Booking Tabs (Upcoming vs Completed) ────────────────────────────────
+  Widget _buildTabs({required int upcomingCount, required int completedCount}) {
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildTabItem(title: 'Upcoming', index: 0, count: upcomingCount),
+          _buildTabItem(title: 'Completed', index: 1, count: completedCount),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabItem({required String title, required int index, required int count}) {
+    final isSelected = _selectedTabIndex == index;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTabIndex = index),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFF6B7280),
+                ),
+              ),
+            ),
+            // Bottom Indicator
+            Container(
+              height: 3,
+              width: 100,
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF6D28D9) : Colors.transparent,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── 3. Booking Card (Exact layout matching Reference Screenshot) ───────────
+  Widget _buildBookingCard(QueueTicket ticket, {required bool isUpcoming}) {
+    final salon = _salonMap[ticket.salonId];
+    final salonName = (salon != null && salon.name.isNotEmpty)
+        ? salon.name
+        : (ticket.customerName.isNotEmpty ? 'Salon' : 'Salon Queue');
+    final serviceTitle = ticket.serviceNames.isNotEmpty
+        ? ticket.serviceNames.join(', ')
+        : 'Haircut & Styling';
+    final formattedDateTime = _formatDate(ticket.createdAt);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1F3F5), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // 1. Salon Image on the Left with rounded corners
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: 86,
+              height: 86,
+              color: const Color(0xFF1E293B),
+              child: _buildSalonImage(salon?.effectiveCoverImage),
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // 2. Middle & Right Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top line: Salon Name + Status Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        salonName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF111827),
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isUpcoming ? const Color(0xFFF3E8FF) : const Color(0xFFDCFCE7),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        isUpcoming ? 'Upcoming' : 'Completed',
+                        style: TextStyle(
+                          color: isUpcoming ? const Color(0xFF6D28D9) : const Color(0xFF15803D),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+
+                // Middle: Service Name
+                Text(
+                  serviceTitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF6B7280),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+
+                // Bottom line: Booking Date/Time + View Button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        formattedDateTime,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF374151),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => _viewTicketDetails(ticket, salon),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3E8FF),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Text(
+                          'View',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF6D28D9),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSalonImage(String? imagePath) {
+    if (imagePath != null && imagePath.isNotEmpty) {
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return Image.network(
+          imagePath,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildFallbackSalonImage(),
+        );
+      } else if (imagePath.startsWith('data:image')) {
+        try {
+          final base64Str = imagePath.split(',').last;
+          final bytes = base64Decode(base64Str);
+          return Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+          );
+        } catch (_) {
+          return _buildFallbackSalonImage();
+        }
+      }
+    }
+    return _buildFallbackSalonImage();
+  }
+
+  Widget _buildFallbackSalonImage() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1E293B), Color(0xFF334155)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.storefront_rounded,
+          color: Color(0xFFD4AF5A),
+          size: 28,
+        ),
+      ),
+    );
+  }
+
+  // ── 4. View Ticket Details Action ──────────────────────────────────────────
+  void _viewTicketDetails(QueueTicket ticket, Salon? salon) {
+    if (ticket.status == QueueStatus.waiting || ticket.status == QueueStatus.inChair) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CustomerQueueScreen(ticket: ticket, salon: salon),
+        ),
+      ).then((_) => _loadHistory());
+    } else {
+      _showCompletedTicketSummary(ticket, salon);
+    }
+  }
+
+  void _showCompletedTicketSummary(QueueTicket ticket, Salon? salon) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  salon?.name ?? 'Salon Visit Receipt',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Token Number', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                      Text(
+                        ticket.formattedToken,
+                        style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF6D28D9), fontSize: 14),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Status', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                      Text(
+                        ticket.status.label,
+                        style: TextStyle(fontWeight: FontWeight.w700, color: ticket.status.color, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Services', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                      Expanded(
+                        child: Text(
+                          ticket.serviceNames.join(', '),
+                          textAlign: TextAlign.end,
+                          style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF111827), fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total Amount', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                      Text(
+                        '₹${ticket.totalPrice.toStringAsFixed(0)}',
+                        style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF111827), fontSize: 15),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6D28D9),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── 5. Empty State ─────────────────────────────────────────────────────────
+  Widget _buildEmptyState() {
+    final isUpcoming = _selectedTabIndex == 0;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF3E8FF),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isUpcoming ? Icons.calendar_today_rounded : Icons.history_rounded,
+                size: 38,
+                color: const Color(0xFF6D28D9),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isUpcoming ? 'No Upcoming Bookings' : 'No Completed Bookings',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF111827),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              isUpcoming
+                  ? 'Your active tokens and scheduled salon slots will appear here.'
+                  : 'Your past salon visits and completed tickets will appear here.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF6B7280),
+                height: 1.4,
+              ),
+            ),
+            if (isUpcoming) ...[
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  if (widget.onBack != null) {
+                    widget.onBack!();
+                  } else if (Navigator.canPop(context)) {
+                    Navigator.of(context).pop();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6D28D9),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Explore Salons',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

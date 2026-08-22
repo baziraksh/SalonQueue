@@ -598,7 +598,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   Widget _buildCurrentTabBody(BuildContext context) {
     switch (_currentTabIndex) {
       case 1: // Bookings / History Tab
-        return const CustomerHistoryScreen();
+        return CustomerHistoryScreen(
+          onBack: () => setState(() => _currentTabIndex = 0),
+        );
       case 3: // My Queue Tab
         return _buildMyQueueTab();
       case 4: // Profile Tab
