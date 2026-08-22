@@ -232,19 +232,19 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('My Profile & Account'), findsOneWidget);
       expect(find.text('Ananya Roy'), findsAtLeast(1));
-      expect(find.text('ananya@example.com'), findsAtLeast(1));
       expect(find.text('+91 98765 43210'), findsOneWidget);
+      expect(find.byIcon(Icons.mode_edit_outline_rounded), findsOneWidget);
 
-      // Shortcuts
-      expect(find.text('My Queue'), findsOneWidget);
-      expect(find.text('Booking & Queue History'), findsOneWidget);
-      expect(find.text('Favorite Salons'), findsOneWidget);
+      // Redesigned Reference Menu Items
+      expect(find.text('My Bookings'), findsOneWidget);
+      expect(find.text('My Profile'), findsOneWidget);
+      expect(find.text('My Wallet'), findsOneWidget);
+      expect(find.text('My Reviews'), findsOneWidget);
       expect(find.text('Notifications'), findsOneWidget);
-      expect(find.text('Security & Privacy'), findsOneWidget);
-      expect(find.text('Help & Support Center'), findsOneWidget);
-      expect(find.text('Sign Out'), findsOneWidget);
+      expect(find.text('Help & Support'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('Logout'), findsOneWidget);
     });
   });
 
