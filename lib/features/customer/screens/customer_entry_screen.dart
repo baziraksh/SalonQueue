@@ -1710,292 +1710,276 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   // ── OTHER TABS (My Queue, Favorites) ──────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /// My Queue Tab (Index 2)
+  /// My Queue Tab (Index 3)
   Widget _buildMyQueueTab() {
     if (_activeTicket != null && (_activeTicket!.isWaiting || _activeTicket!.isInChair)) {
       return CustomerQueueScreen(
         ticket: _activeTicket!,
         salon: _latestTicketSalon,
+        onBack: () => setState(() => _currentTabIndex = 0),
       );
     }
 
-    if (_latestTicket != null && _latestTicket!.isCompleted) {
-      final salonName = (_latestTicketSalon?.name != null && _latestTicketSalon!.name.isNotEmpty)
-          ? _latestTicketSalon!.name
-          : 'Salon';
-      final salonAddress = _latestTicketSalon?.address ?? '';
+    final hasRecent = _latestTicket != null && _latestTicket!.isCompleted;
+    final salonName = (_latestTicketSalon?.name != null && _latestTicketSalon!.name.isNotEmpty)
+        ? _latestTicketSalon!.name
+        : 'Salon Queue';
+    final salonAddress = _latestTicketSalon?.address ?? 'Grooming Lounge';
 
-      return SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-              Row(
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Top Header ──────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'My Queue & Recent Token',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColorSchemes.charcoal),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const CustomerHistoryScreen()),
-                      ).then((_) => _loadData());
-                    },
-                    icon: const Icon(Icons.history_rounded, size: 16, color: AppColorSchemes.navy),
-                    label: const Text('All History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Recent Completed Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF14243A), Color(0xFF1E3650)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: const Color(0xFF2E7D32).withValues(alpha: 0.6), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF14243A).withValues(alpha: 0.25),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(16),
+                  GestureDetector(
+                    onTap: () => setState(() => _currentTabIndex = 0),
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                          child: const Text(
-                            'RECENT TOKEN',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.1,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2E7D32),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Text(
-                            'COMPLETED',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _latestTicket!.formattedToken,
-                              style: const TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              salonName,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              salonAddress,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Icon(Icons.check_circle_rounded, color: Color(0xFF4CAF50), size: 44),
-                      ],
-                    ),
-
-                    const Divider(color: Colors.white24, height: 28),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Services: ${_latestTicket!.serviceNames.join(", ")}',
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                        Text(
-                          '₹${_latestTicket!.totalPrice.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            color: Color(0xFFC9A45C),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => CustomerQueueScreen(
-                                    ticket: _latestTicket!,
-                                    salon: _latestTicketSalon,
-                                  ),
-                                ),
-                              ).then((_) => _loadData());
-                            },
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.white54),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: const Text('View Token Details'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => setState(() => _currentTabIndex = 0),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColorSchemes.gold,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: const Text('Book Next Visit'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Action Banner
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(18.0),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColorSchemes.navy.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.storefront_rounded, color: AppColorSchemes.navy, size: 28),
+                        ],
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Ready for another grooming?',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Browse top-rated salons nearby and join queues with zero wait time.',
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                            ),
-                          ],
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Color(0xFF111827),
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                  const Column(
+                    children: [
+                      Text(
+                        'My Queue',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF111827),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      Text(
+                        'Track your live queue status',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF6B7280),
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(width: 42, height: 42),
+                ],
               ),
-            ],
-          ),
-        ),
-      );
-    }
+            ),
 
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppColorSchemes.navy.withValues(alpha: 0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.confirmation_number_outlined, size: 64, color: AppColorSchemes.navy),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                children: [
+                  // ── Empty Active Queue Card ─────────────────────────────────
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(28.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFF1F3F5), width: 1.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF3E8FF),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.confirmation_number_outlined,
+                            size: 40,
+                            color: Color(0xFF6D28D9),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        const Text(
+                          'No Active Queue',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'You\'re not currently waiting in any salon queue. Discover salons and book tokens in 1 tap!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: () => setState(() => _currentTabIndex = 0),
+                          icon: const Icon(Icons.search_rounded, size: 18),
+                          label: const Text('Find a Salon', style: TextStyle(fontWeight: FontWeight.w700)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6D28D9),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── Recent Completed Visit / Token (if exists) ─────────────
+                  if (hasRecent) ...[
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Recent Token',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const CustomerHistoryScreen()),
+                            ).then((_) => _loadData());
+                          },
+                          icon: const Icon(Icons.history_rounded, size: 16, color: Color(0xFF6D28D9)),
+                          label: const Text(
+                            'All History',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: Color(0xFF6D28D9),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFF1F3F5), width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _latestTicket!.formattedToken,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF111827),
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Text(
+                                  'Completed',
+                                  style: TextStyle(
+                                    color: Color(0xFF15803D),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            salonName,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF111827),
+                            ),
+                          ),
+                          Text(
+                            salonAddress,
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                          ),
+                          const Divider(height: 20, color: Color(0xFFF3F4F6)),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Services: ${_latestTicket!.serviceNames.join(", ")}',
+                                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+                              ),
+                              Text(
+                                '₹${_latestTicket!.totalPrice.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  color: Color(0xFF6D28D9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 32),
+                ],
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'No Active Queue Ticket',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColorSchemes.charcoal),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'You have not joined any salon queue yet. Search nearby salons on the Home tab and join a queue in 1 tap!',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.4),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () => setState(() => _currentTabIndex = 0),
-                icon: const Icon(Icons.search, size: 18),
-                label: const Text('EXPLORE SALONS'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColorSchemes.gold,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
