@@ -109,10 +109,7 @@ class SalonCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColorSchemes.gold.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColorSchemes.gold,
-                  width: 1.5,
-                ),
+                border: Border.all(color: AppColorSchemes.gold, width: 1.5),
               ),
               child: const Icon(
                 Icons.content_cut,
@@ -214,7 +211,9 @@ class SalonCard extends StatelessWidget {
               Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(21)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(21),
+                    ),
                     child: _buildCoverImage(salon.effectiveCoverImage),
                   ),
 
@@ -222,7 +221,9 @@ class SalonCard extends StatelessWidget {
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(21)),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(21),
+                        ),
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -241,12 +242,15 @@ class SalonCard extends StatelessWidget {
                     top: 12,
                     left: 12,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: isOpen
                             ? (rush == RushLevel.low
-                                ? AppColorSchemes.available
-                                : AppColorSchemes.moderate)
+                                  ? AppColorSchemes.available
+                                  : AppColorSchemes.moderate)
                             : AppColorSchemes.busy,
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
@@ -273,8 +277,10 @@ class SalonCard extends StatelessWidget {
                             !isOpen
                                 ? 'CLOSED'
                                 : (rush == RushLevel.low
-                                    ? 'AVAILABLE NOW'
-                                    : (rush == RushLevel.moderate ? 'MODERATE RUSH' : 'HIGH RUSH')),
+                                      ? 'AVAILABLE NOW'
+                                      : (rush == RushLevel.moderate
+                                            ? 'MODERATE RUSH'
+                                            : 'HIGH RUSH')),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -293,7 +299,10 @@ class SalonCard extends StatelessWidget {
                       bottom: 10,
                       left: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.75),
                           borderRadius: BorderRadius.circular(10),
@@ -327,7 +336,10 @@ class SalonCard extends StatelessWidget {
                       bottom: 10,
                       right: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.75),
                           borderRadius: BorderRadius.circular(10),
@@ -336,7 +348,11 @@ class SalonCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.photo_library_outlined, size: 12, color: Colors.white),
+                            const Icon(
+                              Icons.photo_library_outlined,
+                              size: 12,
+                              color: Colors.white,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '${salon.galleryImages.length} photos',
@@ -363,7 +379,9 @@ class SalonCard extends StatelessWidget {
                       child: IconButton(
                         icon: Icon(
                           isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: isFavorite ? const Color(0xFFEF4444) : Colors.white,
+                          color: isFavorite
+                              ? const Color(0xFFEF4444)
+                              : Colors.white,
                           size: 20,
                         ),
                         visualDensity: VisualDensity.compact,
@@ -413,7 +431,10 @@ class SalonCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFFBEB),
                             borderRadius: BorderRadius.circular(8),
@@ -422,7 +443,11 @@ class SalonCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.star, color: Color(0xFFF59E0B), size: 14),
+                              const Icon(
+                                Icons.star,
+                                color: Color(0xFFF59E0B),
+                                size: 14,
+                              ),
                               const SizedBox(width: 3),
                               Text(
                                 (salon.rating > 0 && salon.reviewCount > 0)
@@ -444,7 +469,8 @@ class SalonCard extends StatelessWidget {
                     // Owner information & Location address
                     Row(
                       children: [
-                        if (salon.ownerAvatarUrl != null || salon.ownerName != null) ...[
+                        if (salon.ownerAvatarUrl != null ||
+                            salon.ownerName != null) ...[
                           _buildOwnerAvatar(salon.ownerAvatarUrl),
                           const SizedBox(width: 6),
                           Text(
@@ -455,7 +481,10 @@ class SalonCard extends StatelessWidget {
                               color: AppColorSchemes.navy,
                             ),
                           ),
-                          const Text(' • ', style: TextStyle(color: Colors.grey)),
+                          const Text(
+                            ' • ',
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         ],
                         const Icon(
                           Icons.location_on_outlined,
@@ -559,7 +588,9 @@ class SalonCard extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          shadowColor: AppColorSchemes.gold.withValues(alpha: 0.4),
+                          shadowColor: AppColorSchemes.gold.withValues(
+                            alpha: 0.4,
+                          ),
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,

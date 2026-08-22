@@ -79,9 +79,9 @@ class SupabaseConfig {
 
     final hostname = AppConfig.supabaseHostname;
     try {
-      final addresses = await InternetAddress.lookup(hostname).timeout(
-        const Duration(seconds: 4),
-      );
+      final addresses = await InternetAddress.lookup(
+        hostname,
+      ).timeout(const Duration(seconds: 4));
       final reachable =
           addresses.isNotEmpty && addresses.first.rawAddress.isNotEmpty;
 

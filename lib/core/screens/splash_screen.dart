@@ -47,17 +47,13 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _titleFadeAnim;
   late Animation<Offset> _titleSlideAnim;
 
-  // Step 6: Tagline
-  late Animation<double> _taglineFadeAnim;
-  late Animation<Offset> _taglineSlideAnim;
-
-  // Step 7: Subtle Breathing Pulse
+  // Step 6: Subtle Breathing Pulse
   late Animation<double> _pulseScaleAnim;
 
-  // Step 8: Progress Bar (0.0 -> 1.0)
+  // Step 7: Progress Bar (0.0 -> 1.0)
   late Animation<double> _progressAnim;
 
-  // Step 9: Final Fade Out Transition
+  // Step 8: Final Fade Out Transition
   late Animation<double> _exitFadeAnim;
 
   bool _isNavigating = false;
@@ -68,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2800),
+      duration: const Duration(milliseconds: 1600),
     );
 
     // ── Animation Curve Intervals ───────────────────────────────────────────
@@ -110,80 +106,73 @@ class _SplashScreenState extends State<SplashScreen>
       parent: _controller,
       curve: const Interval(0.42, 0.55, curve: Curves.easeIn),
     );
-    _chairScaleAnim = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.90, end: 1.04)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 60,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.04, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 40,
-      ),
-    ]).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.45, 0.65),
-      ),
-    );
+    _chairScaleAnim =
+        TweenSequence<double>([
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 0.90,
+              end: 1.04,
+            ).chain(CurveTween(curve: Curves.easeOut)),
+            weight: 60,
+          ),
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 1.04,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.easeInOut)),
+            weight: 40,
+          ),
+        ]).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.45, 0.65),
+          ),
+        );
 
     // Step 5: Brand text "Salon Queue" (0.55 -> 0.75)
     _titleFadeAnim = CurvedAnimation(
       parent: _controller,
       curve: const Interval(0.55, 0.72, curve: Curves.easeOut),
     );
-    _titleSlideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.25),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.55, 0.75, curve: Curves.easeOutCubic),
-      ),
-    );
+    _titleSlideAnim =
+        Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.55, 0.75, curve: Curves.easeOutCubic),
+          ),
+        );
 
-    // Step 6: Tagline "Skip the wait, book your great." (0.65 -> 0.82)
-    _taglineFadeAnim = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.65, 0.80, curve: Curves.easeOut),
-    );
-    _taglineSlideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.20),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.65, 0.82, curve: Curves.easeOutCubic),
-      ),
-    );
+    // Step 6: Subtle Breathing Pulse (0.70 -> 1.0)
+    _pulseScaleAnim =
+        TweenSequence<double>([
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 1.0,
+              end: 1.016,
+            ).chain(CurveTween(curve: Curves.easeInOut)),
+            weight: 50,
+          ),
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 1.016,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.easeInOut)),
+            weight: 50,
+          ),
+        ]).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.70, 0.95),
+          ),
+        );
 
-    // Step 7: Subtle Breathing Pulse (0.70 -> 1.0)
-    _pulseScaleAnim = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.016)
-            .chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 50,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.016, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 50,
-      ),
-    ]).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.70, 0.95),
-      ),
-    );
-
-    // Step 8: Progress Indicator (0.68 -> 0.96)
+    // Step 7: Progress Indicator (0.60 -> 0.96)
     _progressAnim = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.68, 0.96, curve: Curves.easeInOutCubic),
+      curve: const Interval(0.60, 0.96, curve: Curves.easeInOutCubic),
     );
 
-    // Step 9: Smooth exit fade (0.95 -> 1.0)
+    // Step 8: Smooth exit fade (0.95 -> 1.0)
     _exitFadeAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _controller,
@@ -220,11 +209,9 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Ensure minimum smooth splash animation time has elapsed
     final elapsed = DateTime.now().difference(startTime).inMilliseconds;
-    const minSplashDuration = 1000;
+    const minSplashDuration = 800;
     if (elapsed < minSplashDuration) {
-      await Future.delayed(
-        Duration(milliseconds: minSplashDuration - elapsed),
-      );
+      await Future.delayed(Duration(milliseconds: minSplashDuration - elapsed));
     }
 
     if (!mounted || _isNavigating) return;
@@ -293,14 +280,14 @@ class _SplashScreenState extends State<SplashScreen>
                                   ShaderMask(
                                     shaderCallback: (bounds) =>
                                         const LinearGradient(
-                                      colors: [
-                                        Color(0xFFFF4500),
-                                        Color(0xFFE91E63),
-                                        Color(0xFF8B2FC9),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ).createShader(bounds),
+                                          colors: [
+                                            Color(0xFFFF4500),
+                                            Color(0xFFE91E63),
+                                            Color(0xFF8B2FC9),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ).createShader(bounds),
                                     child: const Text(
                                       'Salon Queue',
                                       style: TextStyle(
@@ -308,24 +295,6 @@ class _SplashScreenState extends State<SplashScreen>
                                         fontWeight: FontWeight.w900,
                                         color: Colors.white,
                                         letterSpacing: -0.4,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-
-                                  // Step 6: Tagline
-                                  FadeTransition(
-                                    opacity: _taglineFadeAnim,
-                                    child: SlideTransition(
-                                      position: _taglineSlideAnim,
-                                      child: const Text(
-                                        'Skip the wait, book your great.',
-                                        style: TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w500,
-                                          color: Color(0xFF6B7280),
-                                          letterSpacing: 0.1,
-                                        ),
                                       ),
                                     ),
                                   ),
@@ -447,17 +416,17 @@ class _SplashScreenState extends State<SplashScreen>
                   borderRadius: BorderRadius.circular(cornerRadius),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFE91E63).withValues(
-                        alpha: 0.38 * _iconGlowAnim.value,
-                      ),
+                      color: const Color(
+                        0xFFE91E63,
+                      ).withValues(alpha: 0.38 * _iconGlowAnim.value),
                       blurRadius: 32,
                       spreadRadius: 2,
                       offset: const Offset(0, 12),
                     ),
                     BoxShadow(
-                      color: const Color(0xFFFF5722).withValues(
-                        alpha: 0.20 * _iconGlowAnim.value,
-                      ),
+                      color: const Color(
+                        0xFFFF5722,
+                      ).withValues(alpha: 0.20 * _iconGlowAnim.value),
                       blurRadius: 20,
                       offset: const Offset(-4, 6),
                     ),
@@ -468,7 +437,8 @@ class _SplashScreenState extends State<SplashScreen>
             // Step 2: Gradient Outline being drawn
             if (_outlineFadeAnim.value > 0 && _iconFillFadeAnim.value < 1.0)
               Opacity(
-                opacity: _outlineFadeAnim.value * (1.0 - _iconFillFadeAnim.value),
+                opacity:
+                    _outlineFadeAnim.value * (1.0 - _iconFillFadeAnim.value),
                 child: CustomPaint(
                   size: const Size(iconSize, iconSize),
                   painter: _GradientRoundedRectBorderPainter(
@@ -482,13 +452,12 @@ class _SplashScreenState extends State<SplashScreen>
             // Step 2b: Faint Chair Preview inside outline before full fill
             if (_outlineFadeAnim.value > 0 && _iconFillFadeAnim.value < 0.6)
               Opacity(
-                opacity: (0.28 * _outlineFadeAnim.value) *
+                opacity:
+                    (0.28 * _outlineFadeAnim.value) *
                     (1.0 - _iconFillFadeAnim.value),
                 child: const CustomPaint(
                   size: Size(50, 50),
-                  painter: _SalonChairVectorPainter(
-                    color: Color(0xFFE91E63),
-                  ),
+                  painter: _SalonChairVectorPainter(color: Color(0xFFE91E63)),
                 ),
               ),
 
@@ -614,11 +583,7 @@ class _GradientRoundedRectBorderPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          Color(0xFFFF5E36),
-          Color(0xFFE91E63),
-          Color(0xFF8B2FC9),
-        ],
+        colors: [Color(0xFFFF5E36), Color(0xFFE91E63), Color(0xFF8B2FC9)],
       ).createShader(rect);
 
     canvas.drawPath(extractedPath, paint);

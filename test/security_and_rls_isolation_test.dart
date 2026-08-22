@@ -27,8 +27,6 @@ void main() {
       role: AppRole.customer,
     );
 
-
-
     const ownerB = AppUser(
       id: 'owner-uuid-bbbb-2222',
       email: 'ownerB@example.com',
@@ -90,127 +88,143 @@ void main() {
       NotificationRepository.clearCache();
     });
 
-    test('TEST 1: Customer A and Customer B have strict queue ticket privacy', () async {
-      final queueRepo = QueueRepository();
+    test(
+      'TEST 1: Customer A and Customer B have strict queue ticket privacy',
+      () async {
+        final queueRepo = QueueRepository();
 
-      // Customer A joins Salon A
-      final ticketA = await queueRepo.joinQueue(
-        salonId: salonA.id,
-        customerId: customerA.id,
-        customerName: customerA.fullName ?? 'Customer Alice',
-        selectedServices: [serviceA],
-      );
+        // Customer A joins Salon A
+        final ticketA = await queueRepo.joinQueue(
+          salonId: salonA.id,
+          customerId: customerA.id,
+          customerName: customerA.fullName ?? 'Customer Alice',
+          selectedServices: [serviceA],
+        );
 
-      // Customer B joins Salon B
-      final ticketB = await queueRepo.joinQueue(
-        salonId: salonB.id,
-        customerId: customerB.id,
-        customerName: customerB.fullName ?? 'Customer Bob',
-        selectedServices: [serviceB],
-      );
+        // Customer B joins Salon B
+        final ticketB = await queueRepo.joinQueue(
+          salonId: salonB.id,
+          customerId: customerB.id,
+          customerName: customerB.fullName ?? 'Customer Bob',
+          selectedServices: [serviceB],
+        );
 
-      // Customer A queries own active ticket
-      final activeA = await queueRepo.fetchActiveTicketForCustomer(customerA.id);
-      expect(activeA, isNotNull);
-      expect(activeA!.id, equals(ticketA.id));
-      expect(activeA.customerId, equals(customerA.id));
-      expect(activeA.customerName, equals('Customer Alice'));
+        // Customer A queries own active ticket
+        final activeA = await queueRepo.fetchActiveTicketForCustomer(
+          customerA.id,
+        );
+        expect(activeA, isNotNull);
+        expect(activeA!.id, equals(ticketA.id));
+        expect(activeA.customerId, equals(customerA.id));
+        expect(activeA.customerName, equals('Customer Alice'));
 
-      // Customer B queries own active ticket
-      final activeB = await queueRepo.fetchActiveTicketForCustomer(customerB.id);
-      expect(activeB, isNotNull);
-      expect(activeB!.id, equals(ticketB.id));
-      expect(activeB.customerId, equals(customerB.id));
-      expect(activeB.customerName, equals('Customer Bob'));
+        // Customer B queries own active ticket
+        final activeB = await queueRepo.fetchActiveTicketForCustomer(
+          customerB.id,
+        );
+        expect(activeB, isNotNull);
+        expect(activeB!.id, equals(ticketB.id));
+        expect(activeB.customerId, equals(customerB.id));
+        expect(activeB.customerName, equals('Customer Bob'));
 
-      // Customer A must not see Customer B's history
-      final historyA = await queueRepo.fetchCustomerHistory(customerA.id);
-      expect(historyA.every((t) => t.customerId == customerA.id), isTrue);
-      expect(historyA.any((t) => t.customerId == customerB.id), isFalse);
-    });
+        // Customer A must not see Customer B's history
+        final historyA = await queueRepo.fetchCustomerHistory(customerA.id);
+        expect(historyA.every((t) => t.customerId == customerA.id), isTrue);
+        expect(historyA.any((t) => t.customerId == customerB.id), isFalse);
+      },
+    );
 
-    test('TEST 2: Owner A and Owner B have strict salon and queue isolation', () async {
-      final queueRepo = QueueRepository();
+    test(
+      'TEST 2: Owner A and Owner B have strict salon and queue isolation',
+      () async {
+        final queueRepo = QueueRepository();
 
-      await queueRepo.joinQueue(
-        salonId: salonA.id,
-        customerId: customerA.id,
-        customerName: customerA.fullName ?? 'Customer Alice',
-        selectedServices: [serviceA],
-      );
+        await queueRepo.joinQueue(
+          salonId: salonA.id,
+          customerId: customerA.id,
+          customerName: customerA.fullName ?? 'Customer Alice',
+          selectedServices: [serviceA],
+        );
 
-      await queueRepo.joinQueue(
-        salonId: salonB.id,
-        customerId: customerB.id,
-        customerName: customerB.fullName ?? 'Customer Bob',
-        selectedServices: [serviceB],
-      );
+        await queueRepo.joinQueue(
+          salonId: salonB.id,
+          customerId: customerB.id,
+          customerName: customerB.fullName ?? 'Customer Bob',
+          selectedServices: [serviceB],
+        );
 
-      // Owner A checks live queue for Salon A
-      final queueSalonA = await queueRepo.fetchLiveQueueForSalon(salonA.id);
-      expect(queueSalonA.length, equals(1));
-      expect(queueSalonA.first.salonId, equals(salonA.id));
-      expect(queueSalonA.first.customerName, equals('Customer Alice'));
+        // Owner A checks live queue for Salon A
+        final queueSalonA = await queueRepo.fetchLiveQueueForSalon(salonA.id);
+        expect(queueSalonA.length, equals(1));
+        expect(queueSalonA.first.salonId, equals(salonA.id));
+        expect(queueSalonA.first.customerName, equals('Customer Alice'));
 
-      // Owner B checks live queue for Salon B
-      final queueSalonB = await queueRepo.fetchLiveQueueForSalon(salonB.id);
-      expect(queueSalonB.length, equals(1));
-      expect(queueSalonB.first.salonId, equals(salonB.id));
-      expect(queueSalonB.first.customerName, equals('Customer Bob'));
-    });
+        // Owner B checks live queue for Salon B
+        final queueSalonB = await queueRepo.fetchLiveQueueForSalon(salonB.id);
+        expect(queueSalonB.length, equals(1));
+        expect(queueSalonB.first.salonId, equals(salonB.id));
+        expect(queueSalonB.first.customerName, equals('Customer Bob'));
+      },
+    );
 
-    test('TEST 3: Customer can cancel own ticket and status reflects accurately', () async {
-      final queueRepo = QueueRepository();
+    test(
+      'TEST 3: Customer can cancel own ticket and status reflects accurately',
+      () async {
+        final queueRepo = QueueRepository();
 
-      final ticket = await queueRepo.joinQueue(
-        salonId: salonA.id,
-        customerId: customerA.id,
-        customerName: customerA.fullName ?? 'Customer Alice',
-        selectedServices: [serviceA],
-      );
+        final ticket = await queueRepo.joinQueue(
+          salonId: salonA.id,
+          customerId: customerA.id,
+          customerName: customerA.fullName ?? 'Customer Alice',
+          selectedServices: [serviceA],
+        );
 
-      expect(ticket.isWaiting, isTrue);
+        expect(ticket.isWaiting, isTrue);
 
-      // Customer cancels
-      await queueRepo.cancelTicket(ticket.id);
+        // Customer cancels
+        await queueRepo.cancelTicket(ticket.id);
 
-      final updated = await queueRepo.fetchTicketById(ticket.id);
-      expect(updated, isNotNull);
-      expect(updated!.status, equals(QueueStatus.cancelled));
-      expect(updated.isCancelled, isTrue);
-    });
+        final updated = await queueRepo.fetchTicketById(ticket.id);
+        expect(updated, isNotNull);
+        expect(updated!.status, equals(QueueStatus.cancelled));
+        expect(updated.isCancelled, isTrue);
+      },
+    );
 
-    test('TEST 4: Notifications are strictly isolated between recipient users', () async {
-      final notifRepo = NotificationRepository();
+    test(
+      'TEST 4: Notifications are strictly isolated between recipient users',
+      () async {
+        final notifRepo = NotificationRepository();
 
-      // Send notif to Customer A
-      await notifRepo.createNotification(
-        ownerId: customerA.id,
-        title: 'Turn Arrived',
-        message: 'Please take Chair #1',
-        type: NotificationType.customerCalled,
-      );
+        // Send notif to Customer A
+        await notifRepo.createNotification(
+          ownerId: customerA.id,
+          title: 'Turn Arrived',
+          message: 'Please take Chair #1',
+          type: NotificationType.customerCalled,
+        );
 
-      // Send notif to Owner B
-      await notifRepo.createNotification(
-        ownerId: ownerB.id,
-        title: 'New Booking',
-        message: 'New walkin queued',
-        type: NotificationType.customerJoined,
-      );
+        // Send notif to Owner B
+        await notifRepo.createNotification(
+          ownerId: ownerB.id,
+          title: 'New Booking',
+          message: 'New walkin queued',
+          type: NotificationType.customerJoined,
+        );
 
-      // Verify Customer A reads only Customer A notifications
-      final notifsA = await notifRepo.fetchNotifications(customerA.id);
-      expect(notifsA.length, equals(1));
-      expect(notifsA.first.ownerId, equals(customerA.id));
-      expect(notifsA.first.title, equals('Turn Arrived'));
+        // Verify Customer A reads only Customer A notifications
+        final notifsA = await notifRepo.fetchNotifications(customerA.id);
+        expect(notifsA.length, equals(1));
+        expect(notifsA.first.ownerId, equals(customerA.id));
+        expect(notifsA.first.title, equals('Turn Arrived'));
 
-      // Verify Owner B reads only Owner B notifications
-      final notifsB = await notifRepo.fetchNotifications(ownerB.id);
-      expect(notifsB.length, equals(1));
-      expect(notifsB.first.ownerId, equals(ownerB.id));
-      expect(notifsB.first.title, equals('New Booking'));
-    });
+        // Verify Owner B reads only Owner B notifications
+        final notifsB = await notifRepo.fetchNotifications(ownerB.id);
+        expect(notifsB.length, equals(1));
+        expect(notifsB.first.ownerId, equals(ownerB.id));
+        expect(notifsB.first.title, equals('New Booking'));
+      },
+    );
 
     test('TEST 5: Support tickets are strictly isolated per user', () async {
       final supportRepo = SupportRepository();
@@ -248,7 +262,9 @@ void main() {
       // Path format: owners/<userId>/profile/...
       bool isOwnerAllowedStoragePath(String path, String userId) {
         final segments = path.split('/');
-        if (segments.length >= 3 && segments[0] == 'owners' && segments[1] == userId) {
+        if (segments.length >= 3 &&
+            segments[0] == 'owners' &&
+            segments[1] == userId) {
           return true;
         }
         if (segments.length >= 2 && segments[0] == userId) {

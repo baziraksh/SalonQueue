@@ -62,15 +62,18 @@ void main() {
       await salonRepo.updateOwnerProfile(
         salonId: salonA.id,
         ownerName: 'Rakesh Owner A',
-        ownerAvatarUrl: 'https://storage.supabase.co/avatars/owners/$ownerAId/profile/avatar_1.jpg',
+        ownerAvatarUrl:
+            'https://storage.supabase.co/avatars/owners/$ownerAId/profile/avatar_1.jpg',
       );
       await salonRepo.updateCoverImage(
         salonId: salonA.id,
-        coverImageUrl: 'https://storage.supabase.co/avatars/owners/$ownerAId/cover/cover_1.jpg',
+        coverImageUrl:
+            'https://storage.supabase.co/avatars/owners/$ownerAId/cover/cover_1.jpg',
       );
       await salonRepo.addGalleryImage(
         salonId: salonA.id,
-        imageUrl: 'https://storage.supabase.co/avatars/owners/$ownerAId/gallery/style_1.jpg',
+        imageUrl:
+            'https://storage.supabase.co/avatars/owners/$ownerAId/gallery/style_1.jpg',
       );
 
       // Verify Account A has its data
@@ -93,68 +96,74 @@ void main() {
       expect(salonB.galleryImages, isEmpty);
     });
 
-    test('TEST 2: Account Switch cycle preserves each account\'s isolated state', () async {
-      final salonRepo = SalonRepository(client: null);
-      const ownerAId = 'owner-A';
-      const ownerBId = 'owner-B';
+    test(
+      'TEST 2: Account Switch cycle preserves each account\'s isolated state',
+      () async {
+        final salonRepo = SalonRepository(client: null);
+        const ownerAId = 'owner-A';
+        const ownerBId = 'owner-B';
 
-      // Setup Account A
-      final salonA = await salonRepo.fetchOwnerSalon(ownerAId);
-      await salonRepo.updateStoreInfo(
-        salonId: salonA!.id,
-        name: 'Account A Deluxe Spa',
-        description: 'Exclusive to A',
-        phone: '1111111111',
-      );
-      await salonRepo.updateCoverImage(
-        salonId: salonA.id,
-        coverImageUrl: 'https://example.com/coverA.jpg',
-      );
+        // Setup Account A
+        final salonA = await salonRepo.fetchOwnerSalon(ownerAId);
+        await salonRepo.updateStoreInfo(
+          salonId: salonA!.id,
+          name: 'Account A Deluxe Spa',
+          description: 'Exclusive to A',
+          phone: '1111111111',
+        );
+        await salonRepo.updateCoverImage(
+          salonId: salonA.id,
+          coverImageUrl: 'https://example.com/coverA.jpg',
+        );
 
-      // Setup Account B
-      final salonB = await salonRepo.fetchOwnerSalon(ownerBId);
-      await salonRepo.updateStoreInfo(
-        salonId: salonB!.id,
-        name: 'Account B Modern Cuts',
-        description: 'Exclusive to B',
-        phone: '2222222222',
-      );
+        // Setup Account B
+        final salonB = await salonRepo.fetchOwnerSalon(ownerBId);
+        await salonRepo.updateStoreInfo(
+          salonId: salonB!.id,
+          name: 'Account B Modern Cuts',
+          description: 'Exclusive to B',
+          phone: '2222222222',
+        );
 
-      // Verify Account A is isolated
-      final checkA = await salonRepo.fetchOwnerSalon(ownerAId);
-      expect(checkA!.name, equals('Account A Deluxe Spa'));
-      expect(checkA.coverImageUrl, equals('https://example.com/coverA.jpg'));
+        // Verify Account A is isolated
+        final checkA = await salonRepo.fetchOwnerSalon(ownerAId);
+        expect(checkA!.name, equals('Account A Deluxe Spa'));
+        expect(checkA.coverImageUrl, equals('https://example.com/coverA.jpg'));
 
-      // Verify Account B is isolated
-      final checkB = await salonRepo.fetchOwnerSalon(ownerBId);
-      expect(checkB!.name, equals('Account B Modern Cuts'));
-      expect(checkB.coverImageUrl, isNull);
-    });
+        // Verify Account B is isolated
+        final checkB = await salonRepo.fetchOwnerSalon(ownerBId);
+        expect(checkB!.name, equals('Account B Modern Cuts'));
+        expect(checkB.coverImageUrl, isNull);
+      },
+    );
 
-    test('TEST 3: Storage path generation uses strict user-specific paths', () async {
-      final authRepo = AuthRepository(client: null);
-      const userId = 'user-test-789';
-      final dummyBytes = Uint8List.fromList([1, 2, 3, 4, 5]);
+    test(
+      'TEST 3: Storage path generation uses strict user-specific paths',
+      () async {
+        final authRepo = AuthRepository(client: null);
+        const userId = 'user-test-789';
+        final dummyBytes = Uint8List.fromList([1, 2, 3, 4, 5]);
 
-      // When client is null or offline, uploads return Data URIs or isolated URLs
-      final avatarUrl = await authRepo.uploadOwnerProfilePhoto(
-        userId: userId,
-        imageBytes: dummyBytes,
-      );
-      expect(avatarUrl, isNotEmpty);
+        // When client is null or offline, uploads return Data URIs or isolated URLs
+        final avatarUrl = await authRepo.uploadOwnerProfilePhoto(
+          userId: userId,
+          imageBytes: dummyBytes,
+        );
+        expect(avatarUrl, isNotEmpty);
 
-      final coverUrl = await authRepo.uploadOwnerCoverPhoto(
-        userId: userId,
-        imageBytes: dummyBytes,
-      );
-      expect(coverUrl, isNotEmpty);
+        final coverUrl = await authRepo.uploadOwnerCoverPhoto(
+          userId: userId,
+          imageBytes: dummyBytes,
+        );
+        expect(coverUrl, isNotEmpty);
 
-      final galleryUrl = await authRepo.uploadOwnerGalleryPhoto(
-        userId: userId,
-        imageBytes: dummyBytes,
-      );
-      expect(galleryUrl, isNotEmpty);
-    });
+        final galleryUrl = await authRepo.uploadOwnerGalleryPhoto(
+          userId: userId,
+          imageBytes: dummyBytes,
+        );
+        expect(galleryUrl, isNotEmpty);
+      },
+    );
 
     test('TEST 4: AuthService.signOut clears all repository caches', () async {
       final repo = MockIsolatedAuthRepository(
@@ -182,54 +191,55 @@ void main() {
   });
 
   group('Customer Real-Time Queue Updates Tests', () {
-    testWidgets('TEST 5: SalonDetailsScreen renders dynamic live queue metrics', (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'TEST 5: SalonDetailsScreen renders dynamic live queue metrics',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      final testSalon = Salon(
-        id: 'salon-live-1',
-        ownerId: 'owner-live-1',
-        name: 'Royal Hair Studio',
-        address: '100 Main St',
-        city: 'Pune',
-        activeChairs: 4,
-        isQueueOpen: true,
-        waitingCount: 2,
-        estWaitMinutes: 15,
-        services: [
-          const SalonService(
-            id: 's1',
-            salonId: 'salon-live-1',
-            name: 'Haircut',
-            category: 'Hair',
-            price: 150,
-            durationMinutes: 20,
+        final testSalon = Salon(
+          id: 'salon-live-1',
+          ownerId: 'owner-live-1',
+          name: 'Royal Hair Studio',
+          address: '100 Main St',
+          city: 'Pune',
+          activeChairs: 4,
+          isQueueOpen: true,
+          waitingCount: 2,
+          estWaitMinutes: 15,
+          services: [
+            const SalonService(
+              id: 's1',
+              salonId: 'salon-live-1',
+              name: 'Haircut',
+              category: 'Hair',
+              price: 150,
+              durationMinutes: 20,
+            ),
+          ],
+        );
+
+        final authService = AuthService(null);
+
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: MaterialApp(home: SalonDetailsScreen(salon: testSalon)),
           ),
-        ],
-      );
+        );
 
-      final authService = AuthService(null);
+        await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        AuthScope(
-          service: authService,
-          child: MaterialApp(
-            home: SalonDetailsScreen(salon: testSalon),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      // Verify Live Rush and Metric Cards are present
-      expect(find.text('Royal Hair Studio'), findsOneWidget);
-      expect(find.text('In Queue'), findsOneWidget);
-      expect(find.text('Serving'), findsOneWidget);
-      expect(find.text('Est. Wait'), findsOneWidget);
-      expect(find.text('Chairs'), findsOneWidget);
-      expect(find.text('Hair'), findsWidgets);
-    });
+        // Verify Live Rush and Metric Cards are present
+        expect(find.text('Royal Hair Studio'), findsOneWidget);
+        expect(find.text('In Queue'), findsOneWidget);
+        expect(find.text('Serving'), findsOneWidget);
+        expect(find.text('Est. Wait'), findsOneWidget);
+        expect(find.text('Chairs'), findsOneWidget);
+        expect(find.text('Hair'), findsWidgets);
+      },
+    );
   });
 }

@@ -6,7 +6,8 @@ class AppConstants {
   static const String appName = 'Salon Queue';
 
   /// App tagline / subtitle
-  static const String appTagline = 'Live Crowd & Queue Tracker Across India 🇮🇳';
+  static const String appTagline =
+      'Live Crowd & Queue Tracker Across India 🇮🇳';
 
   /// Short tagline for header
   static const String appTaglineShort = 'Your Time. Your Style.';

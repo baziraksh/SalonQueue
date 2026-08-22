@@ -7,11 +7,7 @@ class ActiveQueueCard extends StatelessWidget {
   final QueueTicket ticket;
   final VoidCallback onTap;
 
-  const ActiveQueueCard({
-    super.key,
-    required this.ticket,
-    required this.onTap,
-  });
+  const ActiveQueueCard({super.key, required this.ticket, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -21,10 +17,7 @@ class ActiveQueueCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            AppColorSchemes.navy,
-            AppColorSchemes.navyLight,
-          ],
+          colors: [AppColorSchemes.navy, AppColorSchemes.navyLight],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -57,10 +50,7 @@ class ActiveQueueCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColorSchemes.gold,
-                      width: 2,
-                    ),
+                    border: Border.all(color: AppColorSchemes.gold, width: 2),
                   ),
                   child: const Icon(
                     Icons.confirmation_number_outlined,

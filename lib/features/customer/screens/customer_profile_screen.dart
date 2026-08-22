@@ -41,7 +41,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           children: [
             Icon(Icons.edit_rounded, color: Color(0xFF6D28D9)),
             SizedBox(width: 8),
-            Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Color(0xFF111827))),
+            Text(
+              'Edit Profile',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                color: Color(0xFF111827),
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -51,11 +58,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               controller: nameCtrl,
               decoration: InputDecoration(
                 labelText: 'Full Name',
-                prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF6D28D9)),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                prefixIcon: const Icon(
+                  Icons.person_outline,
+                  color: Color(0xFF6D28D9),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: Color(0xFF6D28D9), width: 1.5),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF6D28D9),
+                    width: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -65,11 +80,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 labelText: 'Phone Number',
-                prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF6D28D9)),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                prefixIcon: const Icon(
+                  Icons.phone_outlined,
+                  color: Color(0xFF6D28D9),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: Color(0xFF6D28D9), width: 1.5),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF6D28D9),
+                    width: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -78,7 +101,13 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF6B7280),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -87,9 +116,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               foregroundColor: Colors.white,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Save Changes',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -132,26 +166,54 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             children: [
               const Text(
                 'Change Profile Photo',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: Color(0xFF111827)),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17,
+                  color: Color(0xFF111827),
+                ),
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.camera_alt_rounded, color: Color(0xFF6D28D9)),
-                title: const Text('Take a Photo', style: TextStyle(fontWeight: FontWeight.w700)),
+                leading: const Icon(
+                  Icons.camera_alt_rounded,
+                  color: Color(0xFF6D28D9),
+                ),
+                title: const Text(
+                  'Take a Photo',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
                 onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library_rounded, color: Color(0xFF6D28D9)),
-                title: const Text('Choose from Gallery', style: TextStyle(fontWeight: FontWeight.w700)),
+                leading: const Icon(
+                  Icons.photo_library_rounded,
+                  color: Color(0xFF6D28D9),
+                ),
+                title: const Text(
+                  'Choose from Gallery',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
                 onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
               ),
               if (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
                 ListTile(
-                  leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                  title: const Text('Remove Photo', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700)),
+                  leading: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.red,
+                  ),
+                  title: const Text(
+                    'Remove Photo',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   onTap: () async {
                     Navigator.of(ctx).pop(null);
-                    await _authRepo.deleteProfileImage(userId: user.id, photoUrl: user.avatarUrl);
+                    await _authRepo.deleteProfileImage(
+                      userId: user.id,
+                      photoUrl: user.avatarUrl,
+                    );
                     await auth.updateProfile(avatarUrl: '');
                     auth.updateCurrentUserAvatar(null);
                     if (mounted) setState(() {});
@@ -166,7 +228,12 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     if (source == null) return;
 
     try {
-      final picked = await _picker.pickImage(source: source, imageQuality: 85, maxWidth: 800, maxHeight: 800);
+      final picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 800,
+        maxHeight: 800,
+      );
       if (picked != null) {
         setState(() => _isUploadingPhoto = true);
         final bytes = await picked.readAsBytes();
@@ -191,9 +258,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isUploadingPhoto = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not update photo: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not update photo: $e')));
       }
     }
   }
@@ -224,7 +291,11 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       try {
         final base64Str = trimmed.split(',').last;
         final bytes = base64Decode(base64Str);
-        return Image.memory(bytes, key: ValueKey(trimmed.hashCode), fit: BoxFit.cover);
+        return Image.memory(
+          bytes,
+          key: ValueKey(trimmed.hashCode),
+          fit: BoxFit.cover,
+        );
       } catch (_) {
         return Container(
           color: const Color(0xFFF3E8FF),
@@ -265,7 +336,11 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               children: [
                 const Text(
                   'My Salon Wallet',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close_rounded),
@@ -295,11 +370,28 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Available Balance', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  Text(
+                    'Available Balance',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
                   SizedBox(height: 6),
-                  Text('₹250.00', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                  Text(
+                    '₹250.00',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   SizedBox(height: 8),
-                  Text('✨ 150 Queue Loyalty Coins', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text(
+                    '✨ 150 Queue Loyalty Coins',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -312,10 +404,15 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D28D9),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   elevation: 0,
                 ),
-                child: const Text('Add Money / Redeem', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                child: const Text(
+                  'Add Money / Redeem',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
               ),
             ),
           ],
@@ -342,7 +439,11 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               children: [
                 const Text(
                   'My Salon Reviews',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close_rounded),
@@ -366,9 +467,22 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Your Feedback Matters', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF111827))),
+                        Text(
+                          'Your Feedback Matters',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
                         SizedBox(height: 2),
-                        Text('Rate your salon visits to help others find the best grooming spots.', style: TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
+                        Text(
+                          'Rate your salon visits to help others find the best grooming spots.',
+                          style: TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -384,10 +498,15 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D28D9),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   elevation: 0,
                 ),
-                child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
               ),
             ),
           ],
@@ -424,13 +543,21 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             const SizedBox(height: 16),
             const Text(
               'Invite Friends & Skip Lines',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF111827),
+              ),
             ),
             const SizedBox(height: 6),
             const Text(
               'Share Salon Queue with your friends so they can join live queues and book tokens without waiting!',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF6B7280), fontSize: 13, height: 1.4),
+              style: TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 20),
             Container(
@@ -454,7 +581,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   ),
                   InkWell(
                     onTap: () {
-                      Clipboard.setData(const ClipboardData(text: 'SALONQUEUE2026'));
+                      Clipboard.setData(
+                        const ClipboardData(text: 'SALONQUEUE2026'),
+                      );
                       Navigator.of(ctx).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -465,11 +594,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     },
                     child: const Row(
                       children: [
-                        Icon(Icons.copy_rounded, size: 16, color: Color(0xFF6D28D9)),
+                        Icon(
+                          Icons.copy_rounded,
+                          size: 16,
+                          color: Color(0xFF6D28D9),
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'Copy',
-                          style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6D28D9), fontSize: 13),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF6D28D9),
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -483,23 +620,33 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               height: 48,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  Clipboard.setData(const ClipboardData(
-                    text: 'Join me on Salon Queue to skip waiting lines and book salon tokens instantly! Download now: https://salonqueue.app/join',
-                  ));
+                  Clipboard.setData(
+                    const ClipboardData(
+                      text:
+                          'Join me on Salon Queue to skip waiting lines and book salon tokens instantly! Download now: https://salonqueue.app/join',
+                    ),
+                  );
                   Navigator.of(ctx).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Invite link copied to clipboard! Share it with your friends.'),
+                      content: Text(
+                        'Invite link copied to clipboard! Share it with your friends.',
+                      ),
                       backgroundColor: Color(0xFF6D28D9),
                     ),
                   );
                 },
                 icon: const Icon(Icons.share_rounded, size: 18),
-                label: const Text('Share Invite Link', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                label: const Text(
+                  'Share Invite Link',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D28D9),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   elevation: 0,
                 ),
               ),
@@ -516,12 +663,26 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF111827))),
-        content: const Text('Are you sure you want to sign out of your account?'),
+        title: const Text(
+          'Sign Out',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF111827),
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to sign out of your account?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF6B7280),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -529,9 +690,14 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               backgroundColor: const Color(0xFFEF4444),
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -550,20 +716,32 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     final user = auth.currentUser;
 
     // Real authenticated customer data
-    final name = user?.fullName?.isNotEmpty == true ? user!.fullName! : 'Valued Customer';
-    final phone = user?.phone?.isNotEmpty == true ? user!.phone! : '+91 98765 43210';
-    final email = user?.email?.isNotEmpty == true ? user!.email! : 'customer@example.com';
+    final name = user?.fullName?.isNotEmpty == true
+        ? user!.fullName!
+        : 'Valued Customer';
+    final phone = user?.phone?.isNotEmpty == true
+        ? user!.phone!
+        : '+91 98765 43210';
+    final email = user?.email?.isNotEmpty == true
+        ? user!.email!
+        : 'customer@example.com';
     final avatar = user?.avatarUrl;
 
     return Scaffold(
-      backgroundColor: Colors.white, // Eliminates any empty purple dead zones completely
+      backgroundColor:
+          Colors.white, // Eliminates any empty purple dead zones completely
       body: SingleChildScrollView(
         child: Column(
           children: [
             // ── 1. TOP PROFILE HEADER (Gradient with avatar, name, phone & pencil edit button) ──
             Container(
               width: double.infinity,
-              padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 16, 20, 24),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                MediaQuery.of(context).padding.top + 16,
+                20,
+                24,
+              ),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -601,7 +779,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                             ? Container(
                                 color: Colors.white.withValues(alpha: 0.2),
                                 child: const Center(
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
                                 ),
                               )
                             : _buildAvatarWidget(avatar),
@@ -677,7 +858,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     title: 'My Bookings',
                     onTap: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const CustomerHistoryScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const CustomerHistoryScreen(),
+                        ),
                       );
                     },
                   ),
@@ -689,7 +872,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     title: 'Favorite Salons',
                     onTap: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const FavoriteSalonsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const FavoriteSalonsScreen(),
+                        ),
                       );
                     },
                   ),
@@ -734,7 +919,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     title: 'Notifications',
                     onTap: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const CustomerNotificationsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const CustomerNotificationsScreen(),
+                        ),
                       );
                     },
                   ),
@@ -747,7 +934,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => const SupportCenterScreen(isOwner: false),
+                          builder: (_) =>
+                              const SupportCenterScreen(isOwner: false),
                         ),
                       );
                     },
@@ -760,7 +948,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     title: 'Settings',
                     onTap: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SecurityPrivacyScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const SecurityPrivacyScreen(),
+                        ),
                       );
                     },
                   ),

@@ -32,12 +32,18 @@ class SupportRepository {
       try {
         final query = activeClient.from('support_tickets').select();
         final res = (userId.isNotEmpty && userId != 'guest-user')
-            ? await query.eq('user_id', userId).order('created_at', ascending: false)
+            ? await query
+                  .eq('user_id', userId)
+                  .order('created_at', ascending: false)
             : await query.order('created_at', ascending: false);
 
         if (res.isNotEmpty) {
           return (res as List)
-              .map((item) => SupportTicket.fromJson(Map<String, dynamic>.from(item as Map)))
+              .map(
+                (item) => SupportTicket.fromJson(
+                  Map<String, dynamic>.from(item as Map),
+                ),
+              )
               .toList();
         }
         return [];
@@ -46,7 +52,9 @@ class SupportRepository {
       }
     }
 
-    return _demoTickets.where((t) => t.userId == userId || userId.isEmpty).toList();
+    return _demoTickets
+        .where((t) => t.userId == userId || userId.isEmpty)
+        .toList();
   }
 
   /// Submits a new support request ticket
@@ -63,19 +71,25 @@ class SupportRepository {
 
     if (activeClient != null) {
       try {
-        final res = await activeClient.from('support_tickets').insert({
-          'user_id': userId,
-          'user_role': userRole,
-          'category': category,
-          'subject': subject,
-          'description': description,
-          'screenshot_url': screenshotUrl,
-          'status': 'open',
-          'created_at': now.toIso8601String(),
-          'updated_at': now.toIso8601String(),
-        }).select().single();
+        final res = await activeClient
+            .from('support_tickets')
+            .insert({
+              'user_id': userId,
+              'user_role': userRole,
+              'category': category,
+              'subject': subject,
+              'description': description,
+              'screenshot_url': screenshotUrl,
+              'status': 'open',
+              'created_at': now.toIso8601String(),
+              'updated_at': now.toIso8601String(),
+            })
+            .select()
+            .single();
 
-        debugPrint('[SupportRepository] createTicket remote insert success: $res');
+        debugPrint(
+          '[SupportRepository] createTicket remote insert success: $res',
+        );
         final ticket = SupportTicket.fromJson(Map<String, dynamic>.from(res));
 
         // In development/demo, simulate auto-resolution notification after a short delay
@@ -141,11 +155,14 @@ class SupportRepository {
     final activeClient = client;
     if (activeClient != null) {
       try {
-        await activeClient.from('support_tickets').update({
-          'status': statusStr,
-          'admin_response': ?adminResponse,
-          'updated_at': now.toIso8601String(),
-        }).eq('id', ticketId);
+        await activeClient
+            .from('support_tickets')
+            .update({
+              'status': statusStr,
+              'admin_response': ?adminResponse,
+              'updated_at': now.toIso8601String(),
+            })
+            .eq('id', ticketId);
       } catch (e) {
         debugPrint('[SupportRepository] updateTicketStatus error: $e');
       }
@@ -157,7 +174,9 @@ class SupportRepository {
         ownerId: ownerId,
         ticketId: ticketId,
         subject: subject,
-        resolutionMessage: adminResponse ?? 'Your support request has been resolved. Tap to view the resolution.',
+        resolutionMessage:
+            adminResponse ??
+            'Your support request has been resolved. Tap to view the resolution.',
       );
     }
   }
@@ -175,7 +194,8 @@ class SupportRepository {
         status: SupportTicketStatus.resolved,
         ownerId: userId,
         subject: subject,
-        adminResponse: 'Your inquiry has been investigated and configured successfully. Thank you for using SalonQueue!',
+        adminResponse:
+            'Your inquiry has been investigated and configured successfully. Thank you for using SalonQueue!',
       );
     });
   }

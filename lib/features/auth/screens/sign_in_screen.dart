@@ -8,10 +8,7 @@ import '../services/auth_scope.dart';
 /// Clean, modern and mobile-first Sign-In screen for Customer & Salon Owner roles.
 /// Features consistent deep navy borders (approx. 2px) for all fields in both focused and unfocused states.
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({
-    super.key,
-    this.requestedRole = AppRole.customer,
-  });
+  const SignInScreen({super.key, this.requestedRole = AppRole.customer});
 
   final AppRole requestedRole;
 
@@ -61,10 +58,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
     // On success, route to the role's dashboard.
     if (success && auth.currentUser != null) {
-      AppRouter.navigateToRoleHome(
-        context,
-        role: auth.currentUser!.role,
-      );
+      AppRouter.navigateToRoleHome(context, role: auth.currentUser!.role);
     }
   }
 
@@ -80,7 +74,11 @@ class _SignInScreenState extends State<SignInScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColorSchemes.navy, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColorSchemes.navy,
+            size: 20,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -96,7 +94,10 @@ class _SignInScreenState extends State<SignInScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 8.0,
+            ),
             child: Form(
               key: _formKey,
               child: Column(
@@ -143,29 +144,51 @@ class _SignInScreenState extends State<SignInScreen> {
                     decoration: InputDecoration(
                       labelText: 'Email',
                       hintText: 'you@example.com',
-                      prefixIcon: const Icon(Icons.mail_outline_rounded, color: AppColorSchemes.navy, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.mail_outline_rounded,
+                        color: AppColorSchemes.navy,
+                        size: 20,
+                      ),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.8),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 1.8,
+                        ),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 2.0),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 2.0,
+                        ),
                       ),
                     ),
                     keyboardType: TextInputType.emailAddress,
@@ -179,7 +202,11 @@ class _SignInScreenState extends State<SignInScreen> {
                     controller: _passwordController,
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColorSchemes.navy, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.lock_outline_rounded,
+                        color: AppColorSchemes.navy,
+                        size: 20,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
@@ -188,30 +215,50 @@ class _SignInScreenState extends State<SignInScreen> {
                           color: const Color(0xFF64748B),
                           size: 20,
                         ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.8),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 1.8,
+                        ),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 2.0),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 2.0,
+                        ),
                       ),
                     ),
                     obscureText: _obscurePassword,
@@ -229,7 +276,10 @@ class _SignInScreenState extends State<SignInScreen> {
                         requestedRole: widget.requestedRole,
                       ),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
@@ -249,13 +299,19 @@ class _SignInScreenState extends State<SignInScreen> {
                   ListenableBuilder(
                     listenable: AuthScope.of(context, listen: false),
                     builder: (context, _) {
-                      final error = AuthScope.of(context, listen: false).errorMessage;
+                      final error = AuthScope.of(
+                        context,
+                        listen: false,
+                      ).errorMessage;
                       if (error == null) return const SizedBox.shrink();
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFEF2F2),
                             borderRadius: BorderRadius.circular(12),
@@ -300,7 +356,9 @@ class _SignInScreenState extends State<SignInScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         elevation: 1.5,
-                        shadowColor: AppColorSchemes.navy.withValues(alpha: 0.25),
+                        shadowColor: AppColorSchemes.navy.withValues(
+                          alpha: 0.25,
+                        ),
                       ),
                       child: _submitting
                           ? const SizedBox(

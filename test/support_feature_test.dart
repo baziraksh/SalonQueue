@@ -30,23 +30,26 @@ void main() {
       }
     });
 
-    test('Owner FAQs contain all key queue management & profile categories', () {
-      final faqs = FaqData.ownerFaqs;
-      expect(faqs, isNotEmpty);
+    test(
+      'Owner FAQs contain all key queue management & profile categories',
+      () {
+        final faqs = FaqData.ownerFaqs;
+        expect(faqs, isNotEmpty);
 
-      final categories = faqs.map((f) => f.category).toSet();
-      expect(categories, contains('Queue Management'));
-      expect(categories, contains('Salon Profile'));
-      expect(categories, contains('Salon QR Code'));
-      expect(categories, contains('Business Analytics'));
-      expect(categories, contains('Account & Security'));
+        final categories = faqs.map((f) => f.category).toSet();
+        expect(categories, contains('Queue Management'));
+        expect(categories, contains('Salon Profile'));
+        expect(categories, contains('Salon QR Code'));
+        expect(categories, contains('Business Analytics'));
+        expect(categories, contains('Account & Security'));
 
-      for (final faq in faqs) {
-        expect(faq.question, isNotEmpty);
-        expect(faq.answer, isNotEmpty);
-        expect(faq.isOwner, isTrue);
-      }
-    });
+        for (final faq in faqs) {
+          expect(faq.question, isNotEmpty);
+          expect(faq.answer, isNotEmpty);
+          expect(faq.isOwner, isTrue);
+        }
+      },
+    );
 
     test('Create support ticket saves and retrieves user ticket', () async {
       const testUserId = 'test-user-123';

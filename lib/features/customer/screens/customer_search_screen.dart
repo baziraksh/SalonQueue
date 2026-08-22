@@ -96,14 +96,18 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   Future<void> _loadSalons() async {
     setState(() => _isLoading = true);
 
-    final isAllIndia = (_selectedLocation == 'All India' || _selectedLocation == 'All Cities');
-    final isAllStates = (_selectedState == 'All States' || _selectedState == 'All');
+    final isAllIndia =
+        (_selectedLocation == 'All India' || _selectedLocation == 'All Cities');
+    final isAllStates =
+        (_selectedState == 'All States' || _selectedState == 'All');
     final isNearMe = (_selectedLocation == 'Near Me');
 
     try {
       var list = await _salonRepo.fetchSalons(
         state: isAllStates ? null : _selectedState,
-        city: (isAllIndia || isNearMe) ? null : (_selectedCity ?? _selectedLocation.split(',').first.trim()),
+        city: (isAllIndia || isNearMe)
+            ? null
+            : (_selectedCity ?? _selectedLocation.split(',').first.trim()),
         district: _selectedDistrict,
         pincode: _selectedPincode,
         search: _searchController.text.trim(),
@@ -209,7 +213,10 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                       ),
                       child: const Text(
                         'Apply Filters',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
@@ -274,15 +281,21 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                 return;
               }
               setModalState(() => isSearching = true);
-              debounceTimer = Timer(const Duration(milliseconds: 300), () async {
-                final results = await LocationSuggestionService.searchLocationSuggestions(query);
-                if (modalCtx.mounted) {
-                  setModalState(() {
-                    searchResults = results;
-                    isSearching = false;
-                  });
-                }
-              });
+              debounceTimer = Timer(
+                const Duration(milliseconds: 300),
+                () async {
+                  final results =
+                      await LocationSuggestionService.searchLocationSuggestions(
+                        query,
+                      );
+                  if (modalCtx.mounted) {
+                    setModalState(() {
+                      searchResults = results;
+                      isSearching = false;
+                    });
+                  }
+                },
+              );
             }
 
             return Padding(
@@ -324,23 +337,40 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                     TextField(
                       controller: locationSearchCtrl,
                       decoration: InputDecoration(
-                        hintText: 'Search locality, street, city or PIN code...',
-                        hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
-                        prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF6D28D9)),
+                        hintText:
+                            'Search locality, street, city or PIN code...',
+                        hintStyle: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade400,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: Color(0xFF6D28D9),
+                        ),
                         filled: true,
                         fillColor: const Color(0xFFF9FAFB),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE5E7EB),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Color(0xFF6D28D9), width: 1.5),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF6D28D9),
+                            width: 1.5,
+                          ),
                         ),
                       ),
                       onChanged: performSearch,
@@ -353,10 +383,17 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                       child: Row(
                         children: [
                           ActionChip(
-                            avatar: const Icon(Icons.my_location, size: 16, color: Color(0xFFD4AF5A)),
+                            avatar: const Icon(
+                              Icons.my_location,
+                              size: 16,
+                              color: Color(0xFFD4AF5A),
+                            ),
                             label: const Text('📍 Near Me'),
                             backgroundColor: const Color(0xFF10233F),
-                            labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                            labelStyle: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
                             onPressed: () {
                               debounceTimer?.cancel();
                               setState(() {
@@ -375,7 +412,11 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                           ),
                           const SizedBox(width: 8),
                           ActionChip(
-                            avatar: const Icon(Icons.public, size: 16, color: Color(0xFF6D28D9)),
+                            avatar: const Icon(
+                              Icons.public,
+                              size: 16,
+                              color: Color(0xFF6D28D9),
+                            ),
                             label: const Text('All India 🇮🇳'),
                             onPressed: () {
                               debounceTimer?.cancel();
@@ -415,73 +456,126 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
 
                     Expanded(
                       child: isSearching
-                          ? const Center(child: CircularProgressIndicator(color: Color(0xFF6D28D9)))
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF6D28D9),
+                              ),
+                            )
                           : searchResults.isNotEmpty
-                              ? ListView.separated(
-                                  itemCount: searchResults.length,
-                                  separatorBuilder: (context, index) => const Divider(height: 1),
-                                  itemBuilder: (c, idx) {
-                                    final item = searchResults[idx];
-                                    return ListTile(
-                                      leading: const Icon(Icons.location_on_outlined, color: Color(0xFF6D28D9)),
-                                      title: Text(item.title, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-                                      subtitle: Text(item.subtitle, style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600)),
-                                      onTap: () {
-                                        debounceTimer?.cancel();
-                                        setState(() {
-                                          _selectedLocation = (item.city != null && item.state != null)
-                                              ? '${item.city}, ${item.state}'
-                                              : item.title;
-                                          _selectedCity = item.city ?? item.title;
-                                          _selectedDistrict = item.district;
-                                          _selectedState = item.state ?? _selectedState;
-                                          _selectedPincode = item.pincode;
-                                          _userLat = item.latitude;
-                                          _userLng = item.longitude;
-                                        });
-                                        Navigator.of(ctx).pop();
-                                        _loadSalons();
-                                      },
-                                    );
+                          ? ListView.separated(
+                              itemCount: searchResults.length,
+                              separatorBuilder: (context, index) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (c, idx) {
+                                final item = searchResults[idx];
+                                return ListTile(
+                                  leading: const Icon(
+                                    Icons.location_on_outlined,
+                                    color: Color(0xFF6D28D9),
+                                  ),
+                                  title: Text(
+                                    item.title,
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    item.subtitle,
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  onTap: () {
+                                    debounceTimer?.cancel();
+                                    setState(() {
+                                      _selectedLocation =
+                                          (item.city != null &&
+                                              item.state != null)
+                                          ? '${item.city}, ${item.state}'
+                                          : item.title;
+                                      _selectedCity = item.city ?? item.title;
+                                      _selectedDistrict = item.district;
+                                      _selectedState =
+                                          item.state ?? _selectedState;
+                                      _selectedPincode = item.pincode;
+                                      _userLat = item.latitude;
+                                      _userLng = item.longitude;
+                                    });
+                                    Navigator.of(ctx).pop();
+                                    _loadSalons();
                                   },
-                                )
-                              : ListView(
-                                  children: [
-                                    const Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 8),
-                                      child: Text(
-                                        'Popular Cities',
-                                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF6B7280)),
+                                );
+                              },
+                            )
+                          : ListView(
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  child: Text(
+                                    'Popular Cities',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13,
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                ),
+                                ..._popularIndianCities.map((city) {
+                                  return ListTile(
+                                    dense: true,
+                                    leading: const Icon(
+                                      Icons.location_city_rounded,
+                                      size: 20,
+                                      color: Color(0xFF6D28D9),
+                                    ),
+                                    title: Text(
+                                      city['name']!,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
                                       ),
                                     ),
-                                    ..._popularIndianCities.map((city) {
-                                      return ListTile(
-                                        dense: true,
-                                        leading: const Icon(Icons.location_city_rounded, size: 20, color: Color(0xFF6D28D9)),
-                                        title: Text(city['name']!, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                                        subtitle: Text(city['state']!, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                                        onTap: () {
-                                          debounceTimer?.cancel();
-                                          final cityName = city['name']!;
-                                          final stateName = city['state']!;
-                                          final estCoords = LocationSuggestionService.getEstimatedCoordinates(cityName, stateName);
-                                          final resolvedDistrict = IndiaLocations.resolveDistrictForCity(cityName, stateName) ?? cityName;
-                                          setState(() {
-                                            _selectedLocation = '$cityName, $stateName';
-                                            _selectedCity = cityName;
-                                            _selectedState = stateName;
-                                            _selectedDistrict = resolvedDistrict;
-                                            _selectedPincode = null;
-                                            _userLat = estCoords.latitude;
-                                            _userLng = estCoords.longitude;
-                                          });
-                                          Navigator.of(ctx).pop();
-                                          _loadSalons();
-                                        },
-                                      );
-                                    }),
-                                  ],
-                                ),
+                                    subtitle: Text(
+                                      city['state']!,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      debounceTimer?.cancel();
+                                      final cityName = city['name']!;
+                                      final stateName = city['state']!;
+                                      final estCoords =
+                                          LocationSuggestionService.getEstimatedCoordinates(
+                                            cityName,
+                                            stateName,
+                                          );
+                                      final resolvedDistrict =
+                                          IndiaLocations.resolveDistrictForCity(
+                                            cityName,
+                                            stateName,
+                                          ) ??
+                                          cityName;
+                                      setState(() {
+                                        _selectedLocation =
+                                            '$cityName, $stateName';
+                                        _selectedCity = cityName;
+                                        _selectedState = stateName;
+                                        _selectedDistrict = resolvedDistrict;
+                                        _selectedPincode = null;
+                                        _userLat = estCoords.latitude;
+                                        _userLng = estCoords.longitude;
+                                      });
+                                      Navigator.of(ctx).pop();
+                                      _loadSalons();
+                                    },
+                                  );
+                                }),
+                              ],
+                            ),
                     ),
                   ],
                 ),
@@ -518,22 +612,27 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
             Expanded(
               child: _isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(color: Color(0xFF6D28D9)),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF6D28D9),
+                      ),
                     )
                   : _salons.isEmpty
-                      ? _buildEmptyResultsView()
-                      : RefreshIndicator(
-                          color: const Color(0xFF6D28D9),
-                          onRefresh: _loadSalons,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            itemCount: _salons.length,
-                            itemBuilder: (context, idx) {
-                              final salon = _salons[idx];
-                              return _buildSearchResultCard(salon);
-                            },
-                          ),
+                  ? _buildEmptyResultsView()
+                  : RefreshIndicator(
+                      color: const Color(0xFF6D28D9),
+                      onRefresh: _loadSalons,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
                         ),
+                        itemCount: _salons.length,
+                        itemBuilder: (context, idx) {
+                          final salon = _salons[idx];
+                          return _buildSearchResultCard(salon);
+                        },
+                      ),
+                    ),
             ),
           ],
         ),
@@ -699,11 +798,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       child: Row(
         children: [
           const SizedBox(width: 14),
-          const Icon(
-            Icons.search_rounded,
-            color: Color(0xFF6B7280),
-            size: 22,
-          ),
+          const Icon(Icons.search_rounded, color: Color(0xFF6B7280), size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
@@ -732,7 +827,11 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
           ),
           if (_searchController.text.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF9CA3AF)),
+              icon: const Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: Color(0xFF9CA3AF),
+              ),
               onPressed: () {
                 _searchController.clear();
                 _loadSalons();
@@ -764,18 +863,25 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                         _loadSalons();
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: isSelected ? Colors.white : Colors.white,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFFE5E7EB),
+                            color: isSelected
+                                ? const Color(0xFF6D28D9)
+                                : const Color(0xFFE5E7EB),
                             width: isSelected ? 1.8 : 1.0,
                           ),
                           boxShadow: [
                             if (isSelected)
                               BoxShadow(
-                                color: const Color(0xFF6D28D9).withValues(alpha: 0.12),
+                                color: const Color(
+                                  0xFF6D28D9,
+                                ).withValues(alpha: 0.12),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -785,8 +891,12 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                           category,
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                            color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFF111827),
+                            fontWeight: isSelected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                            color: isSelected
+                                ? const Color(0xFF6D28D9)
+                                : const Color(0xFF111827),
                           ),
                         ),
                       ),
@@ -839,18 +949,24 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
         : '3.1 km';
 
     // Wait time: compute dynamically or use salon data
-    final waitMinutes = salon.estWaitMinutes > 0 ? salon.estWaitMinutes : (salon.waitingCount * 10 > 0 ? salon.waitingCount * 10 : 20);
+    final waitMinutes = salon.estWaitMinutes > 0
+        ? salon.estWaitMinutes
+        : (salon.waitingCount * 10 > 0 ? salon.waitingCount * 10 : 20);
     final waitStr = '$waitMinutes–${waitMinutes + 10} min wait';
 
-    final crowdCount = salon.waitingCount > 0 ? salon.waitingCount : (salon.activeChairs > 0 ? salon.activeChairs * 6 : 20);
+    final crowdCount = salon.waitingCount > 0
+        ? salon.waitingCount
+        : (salon.activeChairs > 0 ? salon.activeChairs * 6 : 20);
 
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => SalonDetailsScreen(salon: salon),
-          ),
-        ).then((_) => _loadSalons());
+        Navigator.of(context)
+            .push(
+              MaterialPageRoute(
+                builder: (_) => SalonDetailsScreen(salon: salon),
+              ),
+            )
+            .then((_) => _loadSalons());
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
@@ -887,7 +1003,10 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                   bottom: 6,
                   left: 6,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.65),
                       borderRadius: BorderRadius.circular(12),
@@ -895,7 +1014,11 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.people_alt_rounded, size: 12, color: Colors.white),
+                        const Icon(
+                          Icons.people_alt_rounded,
+                          size: 12,
+                          color: Colors.white,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '$crowdCount',
@@ -939,8 +1062,12 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                       GestureDetector(
                         onTap: () => _toggleFavorite(salon.id),
                         child: Icon(
-                          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                          color: isFav ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
+                          isFav
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          color: isFav
+                              ? const Color(0xFFEF4444)
+                              : const Color(0xFF9CA3AF),
                           size: 22,
                         ),
                       ),
@@ -952,7 +1079,11 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                   // Rating Row
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 18),
+                      const Icon(
+                        Icons.star_rounded,
+                        color: Color(0xFFF59E0B),
+                        size: 18,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '$rating ($reviews)',
@@ -1042,11 +1173,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       height: 110,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xFF1E293B),
-            Color(0xFF334155),
-            Color(0xFF475569),
-          ],
+          colors: [Color(0xFF1E293B), Color(0xFF334155), Color(0xFF475569)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1114,7 +1241,10 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text('Show All India Salons', style: TextStyle(fontWeight: FontWeight.w700)),
+              child: const Text(
+                'Show All India Salons',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ),

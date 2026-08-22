@@ -61,11 +61,14 @@ class AppConfig {
   static void validate() {
     if (supabaseUrl.trim().isEmpty) {
       throw StateError(
-          'SUPABASE_URL not set. Pass --dart-define=SUPABASE_URL=...');
+        'SUPABASE_URL not set. Pass --dart-define=SUPABASE_URL=...',
+      );
     }
     if (supabaseAnonKey.trim().isEmpty) {
-      throw StateError('SUPABASE_ANON_KEY not set. '
-          'Pass --dart-define=SUPABASE_ANON_KEY=...');
+      throw StateError(
+        'SUPABASE_ANON_KEY not set. '
+        'Pass --dart-define=SUPABASE_ANON_KEY=...',
+      );
     }
     if (!supabaseUrl.trim().startsWith('https://')) {
       throw StateError('SUPABASE_URL must start with https://');

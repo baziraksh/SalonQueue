@@ -27,9 +27,13 @@ class _ChairsTimingsScreenState extends State<ChairsTimingsScreen> {
   @override
   void initState() {
     super.initState();
-    _activeChairs = widget.salon.activeChairs > 0 ? widget.salon.activeChairs : 3;
+    _activeChairs = widget.salon.activeChairs > 0
+        ? widget.salon.activeChairs
+        : 3;
     _openTimeController = TextEditingController(text: widget.salon.openingTime);
-    _closeTimeController = TextEditingController(text: widget.salon.closingTime);
+    _closeTimeController = TextEditingController(
+      text: widget.salon.closingTime,
+    );
   }
 
   @override
@@ -46,7 +50,8 @@ class _ChairsTimingsScreenState extends State<ChairsTimingsScreen> {
 
     try {
       final auth = AuthScope.of(context, listen: false);
-      final effectiveOwnerId = (widget.salon.ownerId != null && widget.salon.ownerId!.isNotEmpty)
+      final effectiveOwnerId =
+          (widget.salon.ownerId != null && widget.salon.ownerId!.isNotEmpty)
           ? widget.salon.ownerId
           : auth.currentUser?.id;
 
@@ -71,9 +76,9 @@ class _ChairsTimingsScreenState extends State<ChairsTimingsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save settings: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save settings: $e')));
     }
   }
 
@@ -129,7 +134,11 @@ class _ChairsTimingsScreenState extends State<ChairsTimingsScreen> {
                             color: AppColorSchemes.navy.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.schedule_rounded, color: AppColorSchemes.navy, size: 22),
+                          child: const Icon(
+                            Icons.schedule_rounded,
+                            color: AppColorSchemes.navy,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         const Expanded(
@@ -146,7 +155,10 @@ class _ChairsTimingsScreenState extends State<ChairsTimingsScreen> {
                               ),
                               Text(
                                 'Manage concurrent barbers and store schedule',
-                                style: TextStyle(fontSize: 11, color: Colors.grey),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ],
                           ),
@@ -161,7 +173,10 @@ class _ChairsTimingsScreenState extends State<ChairsTimingsScreen> {
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Active Chairs / Stylists *',
-                        prefixIcon: Icon(Icons.event_seat_rounded, color: AppColorSchemes.navy),
+                        prefixIcon: Icon(
+                          Icons.event_seat_rounded,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
                       items: List.generate(20, (i) => i + 1)
                           .map(
@@ -189,8 +204,10 @@ class _ChairsTimingsScreenState extends State<ChairsTimingsScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Opening Time',
                               hintText: '08:30 AM',
-                              prefixIcon:
-                                  Icon(Icons.access_time_rounded, color: AppColorSchemes.navy),
+                              prefixIcon: Icon(
+                                Icons.access_time_rounded,
+                                color: AppColorSchemes.navy,
+                              ),
                             ),
                           ),
                         ),
@@ -201,8 +218,10 @@ class _ChairsTimingsScreenState extends State<ChairsTimingsScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Closing Time',
                               hintText: '09:30 PM',
-                              prefixIcon:
-                                  Icon(Icons.access_time_filled_rounded, color: AppColorSchemes.navy),
+                              prefixIcon: Icon(
+                                Icons.access_time_filled_rounded,
+                                color: AppColorSchemes.navy,
+                              ),
                             ),
                           ),
                         ),
@@ -224,7 +243,10 @@ class _ChairsTimingsScreenState extends State<ChairsTimingsScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.save_rounded, size: 20),
                   label: const Text(
@@ -234,7 +256,9 @@ class _ChairsTimingsScreenState extends State<ChairsTimingsScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorSchemes.navy,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),

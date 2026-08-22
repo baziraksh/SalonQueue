@@ -15,10 +15,12 @@ class CustomerNotificationsScreen extends StatefulWidget {
   final String? customerId;
 
   @override
-  State<CustomerNotificationsScreen> createState() => _CustomerNotificationsScreenState();
+  State<CustomerNotificationsScreen> createState() =>
+      _CustomerNotificationsScreenState();
 }
 
-class _CustomerNotificationsScreenState extends State<CustomerNotificationsScreen> {
+class _CustomerNotificationsScreenState
+    extends State<CustomerNotificationsScreen> {
   final NotificationRepository _notifRepo = NotificationRepository();
   List<AppNotification> _notifications = [];
   bool _isLoading = true;
@@ -89,7 +91,9 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
     final customerId = _getEffectiveCustomerId();
     await _notifRepo.markAllAsRead(customerId);
     setState(() {
-      _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
+      _notifications = _notifications
+          .map((n) => n.copyWith(isRead: true))
+          .toList();
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -149,7 +153,10 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
                       const SizedBox(height: 2),
                       Text(
                         notif.timeAgo,
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
@@ -210,8 +217,15 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
                   _handleDeleteNotification(notif.id);
                   Navigator.of(ctx).pop();
                 },
-                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                label: const Text('DELETE NOTIFICATION', style: TextStyle(color: Colors.red)),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: Colors.red,
+                ),
+                label: const Text(
+                  'DELETE NOTIFICATION',
+                  style: TextStyle(color: Colors.red),
+                ),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Colors.redAccent),
                   padding: const EdgeInsets.symmetric(vertical: 13),
@@ -289,58 +303,63 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: AppColorSchemes.gold),
+                    child: CircularProgressIndicator(
+                      color: AppColorSchemes.gold,
+                    ),
                   )
                 : filtered.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: AppColorSchemes.navy.withValues(alpha: 0.08),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.notifications_off_outlined,
-                                size: 48,
-                                color: AppColorSchemes.navy,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'No notifications yet',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColorSchemes.charcoal,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'You will be notified when your queue status changes.',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColorSchemes.navy.withValues(alpha: 0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.notifications_off_outlined,
+                            size: 48,
+                            color: AppColorSchemes.navy,
+                          ),
                         ),
-                      )
-                    : RefreshIndicator(
-                        color: AppColorSchemes.navy,
-                        onRefresh: _loadNotifications,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final notif = filtered[index];
-                            return _buildNotificationCard(notif);
-                          },
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No notifications yet',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColorSchemes.charcoal,
+                          ),
                         ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'You will be notified when your queue status changes.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    color: AppColorSchemes.navy,
+                    onRefresh: _loadNotifications,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
                       ),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final notif = filtered[index];
+                        return _buildNotificationCard(notif);
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -410,8 +429,9 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
                                 notif.title,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  fontWeight:
-                                      notif.isRead ? FontWeight.w600 : FontWeight.w800,
+                                  fontWeight: notif.isRead
+                                      ? FontWeight.w600
+                                      : FontWeight.w800,
                                   color: AppColorSchemes.charcoal,
                                 ),
                                 maxLines: 1,

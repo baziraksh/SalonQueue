@@ -19,28 +19,28 @@ enum QueueStatus {
   }
 
   String get dbName => switch (this) {
-        QueueStatus.waiting => 'WAITING',
-        QueueStatus.inChair => 'IN_CHAIR',
-        QueueStatus.completed => 'COMPLETED',
-        QueueStatus.cancelled => 'CANCELLED',
-        QueueStatus.skipped => 'SKIPPED',
-      };
+    QueueStatus.waiting => 'WAITING',
+    QueueStatus.inChair => 'IN_CHAIR',
+    QueueStatus.completed => 'COMPLETED',
+    QueueStatus.cancelled => 'CANCELLED',
+    QueueStatus.skipped => 'SKIPPED',
+  };
 
   String get label => switch (this) {
-        QueueStatus.waiting => 'In Waiting Line',
-        QueueStatus.inChair => 'Currently In Chair',
-        QueueStatus.completed => 'Completed',
-        QueueStatus.cancelled => 'Cancelled',
-        QueueStatus.skipped => 'Skipped',
-      };
+    QueueStatus.waiting => 'In Waiting Line',
+    QueueStatus.inChair => 'Currently In Chair',
+    QueueStatus.completed => 'Completed',
+    QueueStatus.cancelled => 'Cancelled',
+    QueueStatus.skipped => 'Skipped',
+  };
 
   Color get color => switch (this) {
-        QueueStatus.waiting => const Color(0xFFE65100), // Orange
-        QueueStatus.inChair => const Color(0xFF6750A4), // Purple
-        QueueStatus.completed => const Color(0xFF2E7D32), // Green
-        QueueStatus.cancelled => const Color(0xFFC62828), // Red
-        QueueStatus.skipped => const Color(0xFF757575), // Grey
-      };
+    QueueStatus.waiting => const Color(0xFFE65100), // Orange
+    QueueStatus.inChair => const Color(0xFF6750A4), // Purple
+    QueueStatus.completed => const Color(0xFF2E7D32), // Green
+    QueueStatus.cancelled => const Color(0xFFC62828), // Red
+    QueueStatus.skipped => const Color(0xFF757575), // Grey
+  };
 }
 
 /// Represents a digital queue ticket for a customer at a salon.
@@ -90,7 +90,9 @@ class QueueTicket {
   factory QueueTicket.fromJson(Map<String, dynamic> json) {
     List<String> services = [];
     if (json['service_names'] is List) {
-      services = (json['service_names'] as List).map((e) => e.toString()).toList();
+      services = (json['service_names'] as List)
+          .map((e) => e.toString())
+          .toList();
     }
 
     return QueueTicket(

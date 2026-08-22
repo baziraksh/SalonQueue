@@ -48,7 +48,8 @@ class QrValidationResult {
   factory QrValidationResult.invalidFormat([String? customMessage]) {
     return QrValidationResult._(
       status: QrValidationStatus.invalidFormat,
-      errorMessage: customMessage ??
+      errorMessage:
+          customMessage ??
           'Invalid QR Code format. Please scan a valid SalonQueue QR code.',
     );
   }
@@ -162,7 +163,8 @@ class QrPayloadService {
           if (uri.host == 'salon' || uri.host == 'queue') {
             final seg = uri.pathSegments;
             if (seg.isNotEmpty) return seg.first;
-            final queryId = uri.queryParameters['salon_id'] ??
+            final queryId =
+                uri.queryParameters['salon_id'] ??
                 uri.queryParameters['salonId'] ??
                 uri.queryParameters['id'];
             if (queryId != null && queryId.isNotEmpty) return queryId;
@@ -188,7 +190,8 @@ class QrPayloadService {
       try {
         final decoded = jsonDecode(trimmed);
         if (decoded is Map<String, dynamic>) {
-          final id = decoded['salonId'] ??
+          final id =
+              decoded['salonId'] ??
               decoded['salon_id'] ??
               decoded['id'] ??
               decoded['queueId'] ??
@@ -235,15 +238,22 @@ class QrPayloadService {
               return QrValidationResult.unsupportedVersion();
             }
 
-            final salonId = decoded['salonId']?.toString().trim() ??
+            final salonId =
+                decoded['salonId']?.toString().trim() ??
                 decoded['salon_id']?.toString().trim();
-            final queueId = (decoded['queueId'] ?? decoded['queue_id'] ?? salonId)
-                ?.toString()
-                .trim();
+            final queueId =
+                (decoded['queueId'] ?? decoded['queue_id'] ?? salonId)
+                    ?.toString()
+                    .trim();
             final signature = decoded['signature']?.toString().trim();
 
-            if (salonId == null || salonId.isEmpty || queueId == null || queueId.isEmpty) {
-              return QrValidationResult.invalidFormat('Missing salon identifier in QR code.');
+            if (salonId == null ||
+                salonId.isEmpty ||
+                queueId == null ||
+                queueId.isEmpty) {
+              return QrValidationResult.invalidFormat(
+                'Missing salon identifier in QR code.',
+              );
             }
 
             if (signature == null || signature.isEmpty) {
@@ -262,9 +272,13 @@ class QrPayloadService {
             }
 
             targetSalonId = salonId;
-          } else if (type == 'salon' || type == 'queue' || decoded.containsKey('salon_id') || decoded.containsKey('salonId')) {
+          } else if (type == 'salon' ||
+              type == 'queue' ||
+              decoded.containsKey('salon_id') ||
+              decoded.containsKey('salonId')) {
             // B) Standard JSON payload: {"type": "salon", "salon_id": "..."}
-            targetSalonId = decoded['salon_id']?.toString().trim() ??
+            targetSalonId =
+                decoded['salon_id']?.toString().trim() ??
                 decoded['salonId']?.toString().trim() ??
                 decoded['id']?.toString().trim();
           } else {
@@ -284,7 +298,8 @@ class QrPayloadService {
           if (uri.pathSegments.isNotEmpty) {
             targetSalonId = uri.pathSegments.first;
           } else {
-            targetSalonId = uri.queryParameters['salon_id'] ??
+            targetSalonId =
+                uri.queryParameters['salon_id'] ??
                 uri.queryParameters['salonId'] ??
                 uri.queryParameters['id'];
           }

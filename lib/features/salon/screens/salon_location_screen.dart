@@ -31,7 +31,9 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedState = widget.salon.state.isNotEmpty ? widget.salon.state : 'Maharashtra';
+    _selectedState = widget.salon.state.isNotEmpty
+        ? widget.salon.state
+        : 'Maharashtra';
     final districts = IndiaLocations.getDistrictsForState(_selectedState);
     _selectedDistrict = districts.contains(widget.salon.district)
         ? widget.salon.district
@@ -39,7 +41,9 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
 
     _cityController = TextEditingController(text: widget.salon.city);
     _addressController = TextEditingController(text: widget.salon.address);
-    _pincodeController = TextEditingController(text: widget.salon.pincode ?? '');
+    _pincodeController = TextEditingController(
+      text: widget.salon.pincode ?? '',
+    );
   }
 
   @override
@@ -57,7 +61,8 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
 
     try {
       final auth = AuthScope.of(context, listen: false);
-      final effectiveOwnerId = (widget.salon.ownerId != null && widget.salon.ownerId!.isNotEmpty)
+      final effectiveOwnerId =
+          (widget.salon.ownerId != null && widget.salon.ownerId!.isNotEmpty)
           ? widget.salon.ownerId
           : auth.currentUser?.id;
 
@@ -101,9 +106,9 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update location: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update location: $e')));
     }
   }
 
@@ -161,7 +166,11 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                             color: AppColorSchemes.navy.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.location_on_rounded, color: AppColorSchemes.navy, size: 22),
+                          child: const Icon(
+                            Icons.location_on_rounded,
+                            color: AppColorSchemes.navy,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         const Expanded(
@@ -178,7 +187,10 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                               ),
                               Text(
                                 'State, district, city/village, area & PIN code',
-                                style: TextStyle(fontSize: 11, color: Colors.grey),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ],
                           ),
@@ -193,20 +205,30 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'State *',
-                        prefixIcon: Icon(Icons.map_outlined, color: AppColorSchemes.navy),
+                        prefixIcon: Icon(
+                          Icons.map_outlined,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
                       items: IndiaLocations.getAllStates().map((state) {
                         return DropdownMenuItem<String>(
                           value: state,
-                          child: Text(state, overflow: TextOverflow.ellipsis, maxLines: 1),
+                          child: Text(
+                            state,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         );
                       }).toList(),
                       onChanged: (val) {
                         if (val != null && val != _selectedState) {
                           setState(() {
                             _selectedState = val;
-                            final newDistricts = IndiaLocations.getDistrictsForState(val);
-                            _selectedDistrict = newDistricts.isNotEmpty ? newDistricts.first : '';
+                            final newDistricts =
+                                IndiaLocations.getDistrictsForState(val);
+                            _selectedDistrict = newDistricts.isNotEmpty
+                                ? newDistricts.first
+                                : '';
                           });
                         }
                       },
@@ -219,22 +241,34 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            initialValue: districtList.contains(_selectedDistrict)
+                            initialValue:
+                                districtList.contains(_selectedDistrict)
                                 ? _selectedDistrict
-                                : (districtList.isNotEmpty ? districtList.first : null),
+                                : (districtList.isNotEmpty
+                                      ? districtList.first
+                                      : null),
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'District *',
-                              prefixIcon: Icon(Icons.holiday_village_outlined, color: AppColorSchemes.navy),
+                              prefixIcon: Icon(
+                                Icons.holiday_village_outlined,
+                                color: AppColorSchemes.navy,
+                              ),
                             ),
                             items: districtList.map((district) {
                               return DropdownMenuItem<String>(
                                 value: district,
-                                child: Text(district, overflow: TextOverflow.ellipsis, maxLines: 1),
+                                child: Text(
+                                  district,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
                               );
                             }).toList(),
                             onChanged: (val) {
-                              if (val != null) setState(() => _selectedDistrict = val);
+                              if (val != null) {
+                                setState(() => _selectedDistrict = val);
+                              }
                             },
                           ),
                         ),
@@ -245,10 +279,14 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                             decoration: const InputDecoration(
                               labelText: 'City / Village / Area *',
                               hintText: 'e.g. Banarpal / Angul / Turanga',
-                              prefixIcon: Icon(Icons.apartment_outlined, color: AppColorSchemes.navy),
+                              prefixIcon: Icon(
+                                Icons.apartment_outlined,
+                                color: AppColorSchemes.navy,
+                              ),
                             ),
-                            validator: (v) =>
-                                (v == null || v.trim().isEmpty) ? 'Enter city or village' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Enter city or village'
+                                : null,
                           ),
                         ),
                       ],
@@ -260,11 +298,16 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                       controller: _addressController,
                       decoration: const InputDecoration(
                         labelText: 'Street Address & Locality *',
-                        hintText: 'e.g. Near Bus Stand, Main Road, Turanga Village',
-                        prefixIcon: Icon(Icons.pin_drop_outlined, color: AppColorSchemes.navy),
+                        hintText:
+                            'e.g. Near Bus Stand, Main Road, Turanga Village',
+                        prefixIcon: Icon(
+                          Icons.pin_drop_outlined,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Enter street or village address' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Enter street or village address'
+                          : null,
                     ),
                     const SizedBox(height: 14),
 
@@ -275,7 +318,10 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                       decoration: const InputDecoration(
                         labelText: 'PIN Code',
                         hintText: '759122',
-                        prefixIcon: Icon(Icons.local_post_office_outlined, color: AppColorSchemes.navy),
+                        prefixIcon: Icon(
+                          Icons.local_post_office_outlined,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
                     ),
                   ],
@@ -294,7 +340,10 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.save_rounded, size: 20),
                   label: const Text(
@@ -304,7 +353,9 @@ class _SalonLocationScreenState extends State<SalonLocationScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorSchemes.navy,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),

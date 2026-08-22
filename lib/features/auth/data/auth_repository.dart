@@ -155,9 +155,12 @@ class AuthRepository {
     try {
       // 1. Attempt pre-auth metadata cleanup to prevent oversized GoTrue JWTs
       try {
-        await activeClient.rpc('clean_user_metadata_for_login', params: {
-          'user_email': email.trim().toLowerCase(),
-        }).timeout(const Duration(seconds: 3));
+        await activeClient
+            .rpc(
+              'clean_user_metadata_for_login',
+              params: {'user_email': email.trim().toLowerCase()},
+            )
+            .timeout(const Duration(seconds: 3));
       } catch (_) {}
 
       final response = await activeClient.auth.signInWithPassword(
@@ -219,10 +222,7 @@ class AuthRepository {
   }
 
   /// Sends a password reset email via Supabase Auth.
-  Future<bool> resetPasswordForEmail(
-    String email, {
-    String? redirectTo,
-  }) async {
+  Future<bool> resetPasswordForEmail(String email, {String? redirectTo}) async {
     final activeClient = client;
     if (activeClient == null) {
       throw AuthException(
@@ -266,8 +266,9 @@ class AuthRepository {
     }
 
     try {
-      await activeClient.auth
-          .updateUser(supabase.UserAttributes(password: newPassword));
+      await activeClient.auth.updateUser(
+        supabase.UserAttributes(password: newPassword),
+      );
     } on supabase.AuthException catch (e) {
       throw AuthException(_translateAuthError(e.message));
     } catch (e) {
@@ -297,7 +298,9 @@ class AuthRepository {
     try {
       profile = await _fetchProfile(user.id);
     } catch (e) {
-      debugPrint('[AuthRepository] Profile fetch error (will use user metadata fallback): $e');
+      debugPrint(
+        '[AuthRepository] Profile fetch error (will use user metadata fallback): $e',
+      );
     }
 
     debugPrint('[AuthRepository] PROFILE ROLE FIELD: ${profile?['role']}');
@@ -306,13 +309,16 @@ class AuthRepository {
     if (roleValue == null ||
         (roleValue != 'CUSTOMER' && roleValue != 'SALON_OWNER')) {
       // Fallback to userMetadata persisted inside Supabase session JWT
-      final metaRole = user.userMetadata?['role'] as String? ??
+      final metaRole =
+          user.userMetadata?['role'] as String? ??
           user.appMetadata['role'] as String?;
       if (metaRole != null &&
           (metaRole.toUpperCase() == 'CUSTOMER' ||
               metaRole.toUpperCase() == 'SALON_OWNER')) {
         roleValue = metaRole.toUpperCase();
-        debugPrint('[AuthRepository] Using userMetadata role fallback: $roleValue');
+        debugPrint(
+          '[AuthRepository] Using userMetadata role fallback: $roleValue',
+        );
         unawaited(_ensureProfile(user.id, role: roleValue));
       }
     }
@@ -327,10 +333,12 @@ class AuthRepository {
     return AppUser(
       id: user.id,
       email: user.email,
-      fullName: profile?['full_name'] as String? ??
+      fullName:
+          profile?['full_name'] as String? ??
           user.userMetadata?['full_name'] as String?,
       phone: profile?['phone'] as String?,
-      avatarUrl: profile?['avatar_url'] as String? ??
+      avatarUrl:
+          profile?['avatar_url'] as String? ??
           user.userMetadata?['avatar_url'] as String?,
       role: AppRole.fromDb(roleValue),
     );
@@ -351,7 +359,8 @@ class AuthRepository {
     for (final entry in metadata.entries) {
       final key = entry.key;
       final val = entry.value;
-      if (!allowedKeys.contains(key) || (val is String && (val.startsWith('data:') || val.length > 200))) {
+      if (!allowedKeys.contains(key) ||
+          (val is String && (val.startsWith('data:') || val.length > 200))) {
         cleanedData[key] = null;
         needsCleanup = true;
       }
@@ -430,16 +439,19 @@ class AuthRepository {
     if (activeClient != null) {
       // 1. Try 'salon_images' bucket
       try {
-        await activeClient.storage.from('salon_images').uploadBinary(
-          bucketPath,
-          imageBytes,
-          fileOptions: supabase.FileOptions(
-            upsert: true,
-            contentType: contentType,
-          ),
-        );
-        final publicUrl =
-            activeClient.storage.from('salon_images').getPublicUrl(bucketPath);
+        await activeClient.storage
+            .from('salon_images')
+            .uploadBinary(
+              bucketPath,
+              imageBytes,
+              fileOptions: supabase.FileOptions(
+                upsert: true,
+                contentType: contentType,
+              ),
+            );
+        final publicUrl = activeClient.storage
+            .from('salon_images')
+            .getPublicUrl(bucketPath);
         if (publicUrl.isNotEmpty) {
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           return '$publicUrl?t=$timestamp';
@@ -452,16 +464,19 @@ class AuthRepository {
 
       // 2. Try 'avatars' bucket
       try {
-        await activeClient.storage.from('avatars').uploadBinary(
-          bucketPath,
-          imageBytes,
-          fileOptions: supabase.FileOptions(
-            upsert: true,
-            contentType: contentType,
-          ),
-        );
-        final publicUrl =
-            activeClient.storage.from('avatars').getPublicUrl(bucketPath);
+        await activeClient.storage
+            .from('avatars')
+            .uploadBinary(
+              bucketPath,
+              imageBytes,
+              fileOptions: supabase.FileOptions(
+                upsert: true,
+                contentType: contentType,
+              ),
+            );
+        final publicUrl = activeClient.storage
+            .from('avatars')
+            .getPublicUrl(bucketPath);
         if (publicUrl.isNotEmpty) {
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           return '$publicUrl?t=$timestamp';
@@ -579,8 +594,9 @@ class AuthRepository {
           final pathSegments = uri.pathSegments;
           final avatarsIdx = pathSegments.indexOf('avatars');
           if (avatarsIdx != -1 && avatarsIdx < pathSegments.length - 1) {
-            final extractedName =
-                pathSegments.sublist(avatarsIdx + 1).join('/');
+            final extractedName = pathSegments
+                .sublist(avatarsIdx + 1)
+                .join('/');
             if (extractedName.isNotEmpty &&
                 !fileNamesToRemove.contains(extractedName)) {
               fileNamesToRemove.add(extractedName);
@@ -598,10 +614,13 @@ class AuthRepository {
 
     // 2. Clear avatar_url column in profiles table
     try {
-      await activeClient.from('profiles').update({
-        'avatar_url': null,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      }).eq('id', userId);
+      await activeClient
+          .from('profiles')
+          .update({
+            'avatar_url': null,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', userId);
     } catch (dbErr) {
       debugPrint('[AuthRepository] Database avatar_url clear error: $dbErr');
       rethrow;
@@ -637,7 +656,8 @@ class AuthRepository {
       final metaUpdates = <String, dynamic>{};
       if (fullName != null) metaUpdates['full_name'] = fullName;
       if (phone != null) metaUpdates['phone'] = phone;
-      metaUpdates['avatar_url'] = null; // Guarantee avatar is never in JWT claims
+      metaUpdates['avatar_url'] =
+          null; // Guarantee avatar is never in JWT claims
 
       if (metaUpdates.isNotEmpty) {
         try {

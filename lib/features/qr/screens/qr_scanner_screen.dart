@@ -47,7 +47,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_scannerController.value.isInitialized) return;
 
-    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
       _scannerController.stop();
     } else if (state == AppLifecycleState.resumed) {
       _scannerController.start();
@@ -181,9 +182,14 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorSchemes.navy,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: const Text('Scan Again', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Scan Again',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
@@ -217,10 +223,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             ),
             Text(
               'Scan a salon QR code to check in',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColorSchemes.goldLight,
-              ),
+              style: TextStyle(fontSize: 11, color: AppColorSchemes.goldLight),
             ),
           ],
         ),
@@ -238,7 +241,11 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             },
           ),
           IconButton(
-            icon: const Icon(Icons.flip_camera_ios_rounded, color: Colors.white70, size: 20),
+            icon: const Icon(
+              Icons.flip_camera_ios_rounded,
+              color: Colors.white70,
+              size: 20,
+            ),
             tooltip: 'Switch Camera',
             onPressed: () => _scannerController.switchCamera(),
           ),
@@ -311,7 +318,10 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                     animation: _laserController,
                     builder: (context, _) {
                       return Align(
-                        alignment: Alignment(0.0, (_laserController.value * 2) - 1),
+                        alignment: Alignment(
+                          0.0,
+                          (_laserController.value * 2) - 1,
+                        ),
                         child: Container(
                           width: scanAreaSize - 16,
                           height: 3,
@@ -327,7 +337,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColorSchemes.gold.withValues(alpha: 0.8),
+                                color: AppColorSchemes.gold.withValues(
+                                  alpha: 0.8,
+                                ),
                                 blurRadius: 10,
                                 spreadRadius: 2,
                               ),
@@ -384,7 +396,11 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.qr_code_scanner_rounded, color: AppColorSchemes.gold, size: 18),
+                  Icon(
+                    Icons.qr_code_scanner_rounded,
+                    color: AppColorSchemes.gold,
+                    size: 18,
+                  ),
                   SizedBox(width: 8),
                   Text(
                     'Align the QR code inside the frame',
@@ -409,7 +425,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: AppColorSchemes.gold.withValues(alpha: 0.4)),
+                border: Border.all(
+                  color: AppColorSchemes.gold.withValues(alpha: 0.4),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.25),
@@ -425,7 +443,10 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                     height: 48,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppColorSchemes.navy, AppColorSchemes.navyLight],
+                        colors: [
+                          AppColorSchemes.navy,
+                          AppColorSchemes.navyLight,
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -490,7 +511,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               top: BorderSide(color: cornerColor, width: markerThickness),
               left: BorderSide(color: cornerColor, width: markerThickness),
             ),
-            borderRadius: BorderRadius.only(topLeft: Radius.circular(borderRadius)),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(borderRadius),
+            ),
           ),
         ),
       ),
@@ -505,7 +528,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               top: BorderSide(color: cornerColor, width: markerThickness),
               right: BorderSide(color: cornerColor, width: markerThickness),
             ),
-            borderRadius: BorderRadius.only(topRight: Radius.circular(borderRadius)),
+            borderRadius: BorderRadius.only(
+              topRight: Radius.circular(borderRadius),
+            ),
           ),
         ),
       ),
@@ -520,7 +545,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               bottom: BorderSide(color: cornerColor, width: markerThickness),
               left: BorderSide(color: cornerColor, width: markerThickness),
             ),
-            borderRadius: BorderRadius.only(bottomLeft: Radius.circular(borderRadius)),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(borderRadius),
+            ),
           ),
         ),
       ),
@@ -535,7 +562,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               bottom: BorderSide(color: cornerColor, width: markerThickness),
               right: BorderSide(color: cornerColor, width: markerThickness),
             ),
-            borderRadius: BorderRadius.only(bottomRight: Radius.circular(borderRadius)),
+            borderRadius: BorderRadius.only(
+              bottomRight: Radius.circular(borderRadius),
+            ),
           ),
         ),
       ),
@@ -591,8 +620,13 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorSchemes.gold,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
           ],

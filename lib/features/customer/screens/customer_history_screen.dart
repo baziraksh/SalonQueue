@@ -67,8 +67,18 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
 
   String _formatDate(DateTime dt) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
     final period = dt.hour >= 12 ? 'PM' : 'AM';
@@ -79,13 +89,23 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final upcomingTickets = _allTickets
-        .where((t) => t.status == QueueStatus.waiting || t.status == QueueStatus.inChair)
+        .where(
+          (t) =>
+              t.status == QueueStatus.waiting ||
+              t.status == QueueStatus.inChair,
+        )
         .toList();
     final completedTickets = _allTickets
-        .where((t) => t.status != QueueStatus.waiting && t.status != QueueStatus.inChair)
+        .where(
+          (t) =>
+              t.status != QueueStatus.waiting &&
+              t.status != QueueStatus.inChair,
+        )
         .toList();
 
-    final currentList = _selectedTabIndex == 0 ? upcomingTickets : completedTickets;
+    final currentList = _selectedTabIndex == 0
+        ? upcomingTickets
+        : completedTickets;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -107,7 +127,9 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
             Expanded(
               child: _isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(color: Color(0xFF6D28D9)),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF6D28D9),
+                      ),
                     )
                   : RefreshIndicator(
                       color: const Color(0xFF6D28D9),
@@ -207,7 +229,11 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
     );
   }
 
-  Widget _buildTabItem({required String title, required int index, required int count}) {
+  Widget _buildTabItem({
+    required String title,
+    required int index,
+    required int count,
+  }) {
     final isSelected = _selectedTabIndex == index;
 
     return Expanded(
@@ -223,7 +249,9 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFF6B7280),
+                  color: isSelected
+                      ? const Color(0xFF6D28D9)
+                      : const Color(0xFF6B7280),
                 ),
               ),
             ),
@@ -232,7 +260,9 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
               height: 3,
               width: 100,
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF6D28D9) : Colors.transparent,
+                color: isSelected
+                    ? const Color(0xFF6D28D9)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -308,15 +338,22 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: isUpcoming ? const Color(0xFFF3E8FF) : const Color(0xFFDCFCE7),
+                        color: isUpcoming
+                            ? const Color(0xFFF3E8FF)
+                            : const Color(0xFFDCFCE7),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         isUpcoming ? 'Upcoming' : 'Completed',
                         style: TextStyle(
-                          color: isUpcoming ? const Color(0xFF6D28D9) : const Color(0xFF15803D),
+                          color: isUpcoming
+                              ? const Color(0xFF6D28D9)
+                              : const Color(0xFF15803D),
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
@@ -359,7 +396,10 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
                     GestureDetector(
                       onTap: () => _viewTicketDetails(ticket, salon),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3E8FF),
                           borderRadius: BorderRadius.circular(16),
@@ -390,16 +430,14 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
         return Image.network(
           imagePath,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildFallbackSalonImage(),
+          errorBuilder: (context, error, stackTrace) =>
+              _buildFallbackSalonImage(),
         );
       } else if (imagePath.startsWith('data:image')) {
         try {
           final base64Str = imagePath.split(',').last;
           final bytes = base64Decode(base64Str);
-          return Image.memory(
-            bytes,
-            fit: BoxFit.cover,
-          );
+          return Image.memory(bytes, fit: BoxFit.cover);
         } catch (_) {
           return _buildFallbackSalonImage();
         }
@@ -429,12 +467,15 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
 
   // ── 4. View Ticket Details Action ──────────────────────────────────────────
   void _viewTicketDetails(QueueTicket ticket, Salon? salon) {
-    if (ticket.status == QueueStatus.waiting || ticket.status == QueueStatus.inChair) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => CustomerQueueScreen(ticket: ticket, salon: salon),
-        ),
-      ).then((_) => _loadHistory());
+    if (ticket.status == QueueStatus.waiting ||
+        ticket.status == QueueStatus.inChair) {
+      Navigator.of(context)
+          .push(
+            MaterialPageRoute(
+              builder: (_) => CustomerQueueScreen(ticket: ticket, salon: salon),
+            ),
+          )
+          .then((_) => _loadHistory());
     } else {
       _showCompletedTicketSummary(ticket, salon);
     }
@@ -483,34 +524,19 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Token Number', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                      const Text(
+                        'Token Number',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 13,
+                        ),
+                      ),
                       Text(
                         ticket.formattedToken,
-                        style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF6D28D9), fontSize: 14),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Status', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
-                      Text(
-                        ticket.status.label,
-                        style: TextStyle(fontWeight: FontWeight.w700, color: ticket.status.color, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Services', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
-                      Expanded(
-                        child: Text(
-                          ticket.serviceNames.join(', '),
-                          textAlign: TextAlign.end,
-                          style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF111827), fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF6D28D9),
+                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -519,10 +545,65 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Total Amount', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                      const Text(
+                        'Status',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        ticket.status.label,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: ticket.status.color,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Services',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 13,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          ticket.serviceNames.join(', '),
+                          textAlign: TextAlign.end,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Total Amount',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 13,
+                        ),
+                      ),
                       Text(
                         '₹${ticket.totalPrice.toStringAsFixed(0)}',
-                        style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF111827), fontSize: 15),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF111827),
+                          fontSize: 15,
+                        ),
                       ),
                     ],
                   ),
@@ -538,10 +619,15 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D28D9),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   elevation: 0,
                 ),
-                child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
               ),
             ),
           ],
@@ -567,7 +653,9 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                isUpcoming ? Icons.calendar_today_rounded : Icons.history_rounded,
+                isUpcoming
+                    ? Icons.calendar_today_rounded
+                    : Icons.history_rounded,
                 size: 38,
                 color: const Color(0xFF6D28D9),
               ),
@@ -606,8 +694,13 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D28D9),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   elevation: 0,
                 ),
                 child: const Text(

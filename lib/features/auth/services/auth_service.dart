@@ -118,7 +118,9 @@ class AuthService extends ChangeNotifier {
 
     // Proactively purge historical bloated tokens (> 2000 bytes) that cause HTTP 431 header overflows
     if (session != null && session.accessToken.length > 2000) {
-      _logForDebug('Detected oversized JWT token (${session.accessToken.length} bytes). Purging bloated session...');
+      _logForDebug(
+        'Detected oversized JWT token (${session.accessToken.length} bytes). Purging bloated session...',
+      );
       try {
         await repo.signOut();
       } catch (_) {}
@@ -159,8 +161,13 @@ class AuthService extends ChangeNotifier {
         );
       } on Exception catch (e) {
         final errStr = e.toString();
-        if (errStr.contains('431') || errStr.contains('400') || errStr.contains('Header') || errStr.contains('Too Large')) {
-          _logForDebug('Detected HTTP header/cookie overflow ($errStr). Clearing bloated local session.');
+        if (errStr.contains('431') ||
+            errStr.contains('400') ||
+            errStr.contains('Header') ||
+            errStr.contains('Too Large')) {
+          _logForDebug(
+            'Detected HTTP header/cookie overflow ($errStr). Clearing bloated local session.',
+          );
           try {
             await repo.signOut();
           } catch (_) {}
@@ -301,10 +308,7 @@ class AuthService extends ChangeNotifier {
     }
 
     try {
-      final user = await repo.signIn(
-        email: email,
-        password: password,
-      );
+      final user = await repo.signIn(email: email, password: password);
 
       // TEMP DEBUG — log the stored role from DB
       _logForDebug('signIn stored role=${user.role}, requested=$requestedRole');
@@ -317,12 +321,13 @@ class AuthService extends ChangeNotifier {
         _status = AuthStatus.unauthenticated;
         _errorMessage = user.role == AppRole.salonOwner
             ? 'This account is registered as a Salon Owner. '
-                'Please use Salon Owner login.'
+                  'Please use Salon Owner login.'
             : 'This account is registered as a Customer. '
-                'Please use Customer login.';
+                  'Please use Customer login.';
         _preserveError = false;
         _logForDebug(
-            'Sign-in role mismatch: requested=$requestedRole stored=${user.role}');
+          'Sign-in role mismatch: requested=$requestedRole stored=${user.role}',
+        );
         notifyListeners();
         return false;
       }
@@ -415,7 +420,8 @@ class AuthService extends ChangeNotifier {
 
     // The recovery session must be active before a password can be updated.
     if (!_recoveryPending && !repo.hasSession) {
-      _errorMessage = 'Your password reset link is invalid or has expired. '
+      _errorMessage =
+          'Your password reset link is invalid or has expired. '
           'Please request a new one.';
       notifyListeners();
       return false;

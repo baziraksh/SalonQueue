@@ -59,8 +59,14 @@ class QueueRepository {
     String? notes,
   }) async {
     final client = this.client;
-    final totalPrice = selectedServices.fold<double>(0.0, (sum, s) => sum + s.price);
-    final totalDuration = selectedServices.fold<int>(0, (sum, s) => sum + s.durationMinutes);
+    final totalPrice = selectedServices.fold<double>(
+      0.0,
+      (sum, s) => sum + s.price,
+    );
+    final totalDuration = selectedServices.fold<int>(
+      0,
+      (sum, s) => sum + s.durationMinutes,
+    );
     final serviceNames = selectedServices.map((s) => s.name).toList();
 
     if (client == null) {
@@ -105,7 +111,9 @@ class QueueRepository {
       } else if (response is List && response.isNotEmpty) {
         ticketMap = Map<String, dynamic>.from(response.first as Map);
       } else {
-        throw Exception('Invalid response received from join_queue_atomic: $response');
+        throw Exception(
+          'Invalid response received from join_queue_atomic: $response',
+        );
       }
 
       final ticket = QueueTicket.fromJson(ticketMap);
@@ -134,8 +142,10 @@ class QueueRepository {
     if (client == null) {
       try {
         return _inMemoryTickets.firstWhere(
-          (t) => (t.customerId == customerId || t.customerId == null) &&
-                 (t.status == QueueStatus.waiting || t.status == QueueStatus.inChair),
+          (t) =>
+              (t.customerId == customerId || t.customerId == null) &&
+              (t.status == QueueStatus.waiting ||
+                  t.status == QueueStatus.inChair),
         );
       } catch (_) {
         return null;
@@ -156,17 +166,26 @@ class QueueRepository {
     } catch (e) {
       if (AppConfig.isSupabaseConfigured) {
         try {
-          final uri = Uri.parse('${AppConfig.supabaseUrl}/rest/v1/queue_tickets?customer_id=eq.$customerId&status=in.(WAITING,IN_CHAIR)&order=created_at.desc&limit=1');
-          final req = await _directHttpClient.getUrl(uri).timeout(const Duration(seconds: 4));
+          final uri = Uri.parse(
+            '${AppConfig.supabaseUrl}/rest/v1/queue_tickets?customer_id=eq.$customerId&status=in.(WAITING,IN_CHAIR)&order=created_at.desc&limit=1',
+          );
+          final req = await _directHttpClient
+              .getUrl(uri)
+              .timeout(const Duration(seconds: 4));
           req.headers.set('apikey', AppConfig.supabaseAnonKey);
-          req.headers.set('Authorization', 'Bearer ${AppConfig.supabaseAnonKey}');
+          req.headers.set(
+            'Authorization',
+            'Bearer ${AppConfig.supabaseAnonKey}',
+          );
           req.headers.set('Accept', 'application/json');
           final res = await req.close().timeout(const Duration(seconds: 4));
           if (res.statusCode == 200) {
             final body = await res.transform(utf8.decoder).join();
             final list = jsonDecode(body) as List<dynamic>;
             if (list.isNotEmpty) {
-              return QueueTicket.fromJson(Map<String, dynamic>.from(list.first as Map));
+              return QueueTicket.fromJson(
+                Map<String, dynamic>.from(list.first as Map),
+              );
             }
           }
         } catch (_) {}
@@ -174,8 +193,10 @@ class QueueRepository {
 
       try {
         return _inMemoryTickets.firstWhere(
-          (t) => (t.customerId == customerId || t.customerId == null) &&
-                 (t.status == QueueStatus.waiting || t.status == QueueStatus.inChair),
+          (t) =>
+              (t.customerId == customerId || t.customerId == null) &&
+              (t.status == QueueStatus.waiting ||
+                  t.status == QueueStatus.inChair),
         );
       } catch (_) {
         return null;
@@ -191,10 +212,11 @@ class QueueRepository {
   Future<QueueTicket?> fetchLatestTicketForCustomer(String customerId) async {
     final client = this.client;
     if (client == null) {
-      final list = _inMemoryTickets
-          .where((t) => t.customerId == customerId || t.customerId == null)
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final list =
+          _inMemoryTickets
+              .where((t) => t.customerId == customerId || t.customerId == null)
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list.isNotEmpty ? list.first : null;
     }
 
@@ -207,25 +229,32 @@ class QueueRepository {
           .limit(1);
 
       if (res.isNotEmpty) {
-        return QueueTicket.fromJson(Map<String, dynamic>.from(res.first as Map));
+        return QueueTicket.fromJson(
+          Map<String, dynamic>.from(res.first as Map),
+        );
       }
-      final list = _inMemoryTickets
-          .where((t) => t.customerId == customerId || t.customerId == null)
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final list =
+          _inMemoryTickets
+              .where((t) => t.customerId == customerId || t.customerId == null)
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list.isNotEmpty ? list.first : null;
     } catch (e) {
       debugPrint('[QueueRepository] fetchLatestTicketForCustomer error: $e');
-      final list = _inMemoryTickets
-          .where((t) => t.customerId == customerId || t.customerId == null)
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final list =
+          _inMemoryTickets
+              .where((t) => t.customerId == customerId || t.customerId == null)
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list.isNotEmpty ? list.first : null;
     }
   }
 
   /// Fetches all completed tickets for a salon (for Analytics & Revenue calculations)
-  Future<List<QueueTicket>> fetchCompletedTicketsForSalon(String salonId, {DateTime? since}) async {
+  Future<List<QueueTicket>> fetchCompletedTicketsForSalon(
+    String salonId, {
+    DateTime? since,
+  }) async {
     final client = this.client;
     List<QueueTicket> list = [];
     if (client != null) {
@@ -237,7 +266,9 @@ class QueueRepository {
             .eq('status', 'COMPLETED');
 
         list = (res as List)
-            .map((r) => QueueTicket.fromJson(Map<String, dynamic>.from(r as Map)))
+            .map(
+              (r) => QueueTicket.fromJson(Map<String, dynamic>.from(r as Map)),
+            )
             .toList();
       } catch (e) {
         debugPrint('[QueueRepository] fetchCompletedTicketsForSalon error: $e');
@@ -246,12 +277,16 @@ class QueueRepository {
 
     if (list.isEmpty) {
       list = _inMemoryTickets
-          .where((t) => t.salonId == salonId && t.status == QueueStatus.completed)
+          .where(
+            (t) => t.salonId == salonId && t.status == QueueStatus.completed,
+          )
           .toList();
     }
 
     if (since != null) {
-      return list.where((t) => t.completedAt != null && t.completedAt!.isAfter(since)).toList();
+      return list
+          .where((t) => t.completedAt != null && t.completedAt!.isAfter(since))
+          .toList();
     }
     return list;
   }
@@ -323,15 +358,15 @@ class QueueRepository {
       controller = StreamController<QueueTicket?>(
         onListen: () {
           final initial = _inMemoryTickets.cast<QueueTicket?>().firstWhere(
-                (t) => t?.id == ticketId,
-                orElse: () => null,
-              );
+            (t) => t?.id == ticketId,
+            orElse: () => null,
+          );
           controller.add(initial);
           sub = _localQueueStreamController.stream.listen((all) {
             final found = all.cast<QueueTicket?>().firstWhere(
-                  (t) => t?.id == ticketId,
-                  orElse: () => null,
-                );
+              (t) => t?.id == ticketId,
+              orElse: () => null,
+            );
             controller.add(found);
           });
         },
@@ -357,8 +392,9 @@ class QueueRepository {
           });
     } catch (e) {
       debugPrint('[QueueRepository] streamTicket fallback: $e');
-      return Stream.periodic(const Duration(seconds: 2))
-          .asyncMap((_) => fetchTicketById(ticketId));
+      return Stream.periodic(
+        const Duration(seconds: 2),
+      ).asyncMap((_) => fetchTicketById(ticketId));
     }
   }
 
@@ -369,8 +405,10 @@ class QueueRepository {
       return Stream.periodic(const Duration(seconds: 2), (_) {
         try {
           return _inMemoryTickets.firstWhere(
-            (t) => (t.customerId == customerId || t.customerId == null) &&
-                   (t.status == QueueStatus.waiting || t.status == QueueStatus.inChair),
+            (t) =>
+                (t.customerId == customerId || t.customerId == null) &&
+                (t.status == QueueStatus.waiting ||
+                    t.status == QueueStatus.inChair),
           );
         } catch (_) {
           return null;
@@ -385,16 +423,25 @@ class QueueRepository {
           .eq('customer_id', customerId)
           .map((rows) {
             if (rows.isEmpty) return null;
-            final sorted = rows.map((r) => QueueTicket.fromJson(Map<String, dynamic>.from(r))).toList()
-              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            final sorted =
+                rows
+                    .map(
+                      (r) => QueueTicket.fromJson(Map<String, dynamic>.from(r)),
+                    )
+                    .toList()
+                  ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
             return sorted.first;
           })
           .handleError((error) {
-            debugPrint('[QueueRepository] streamActiveTicketForCustomer stream error: $error');
+            debugPrint(
+              '[QueueRepository] streamActiveTicketForCustomer stream error: $error',
+            );
             return null;
           });
     } catch (e) {
-      debugPrint('[QueueRepository] streamActiveTicketForCustomer fallback: $e');
+      debugPrint(
+        '[QueueRepository] streamActiveTicketForCustomer fallback: $e',
+      );
       return Stream.fromFuture(fetchActiveTicketForCustomer(customerId));
     }
   }
@@ -425,10 +472,17 @@ class QueueRepository {
     } catch (e) {
       if (AppConfig.isSupabaseConfigured) {
         try {
-          final uri = Uri.parse('${AppConfig.supabaseUrl}/rest/v1/queue_tickets?salon_id=eq.$salonId&status=in.(WAITING,IN_CHAIR)&order=token_number.asc');
-          final req = await _directHttpClient.getUrl(uri).timeout(const Duration(seconds: 4));
+          final uri = Uri.parse(
+            '${AppConfig.supabaseUrl}/rest/v1/queue_tickets?salon_id=eq.$salonId&status=in.(WAITING,IN_CHAIR)&order=token_number.asc',
+          );
+          final req = await _directHttpClient
+              .getUrl(uri)
+              .timeout(const Duration(seconds: 4));
           req.headers.set('apikey', AppConfig.supabaseAnonKey);
-          req.headers.set('Authorization', 'Bearer ${AppConfig.supabaseAnonKey}');
+          req.headers.set(
+            'Authorization',
+            'Bearer ${AppConfig.supabaseAnonKey}',
+          );
           req.headers.set('Accept', 'application/json');
           final res = await req.close().timeout(const Duration(seconds: 4));
           if (res.statusCode == 200) {
@@ -436,7 +490,11 @@ class QueueRepository {
             final list = jsonDecode(body) as List<dynamic>;
             if (list.isNotEmpty) {
               return list
-                  .map((r) => QueueTicket.fromJson(Map<String, dynamic>.from(r as Map)))
+                  .map(
+                    (r) => QueueTicket.fromJson(
+                      Map<String, dynamic>.from(r as Map),
+                    ),
+                  )
                   .toList();
             }
           }
@@ -450,8 +508,9 @@ class QueueRepository {
   Stream<List<QueueTicket>> streamLiveQueueForSalon(String salonId) {
     final client = this.client;
     if (client == null) {
-      return _localQueueStreamController.stream
-          .map((all) => all.where((t) => t.salonId == salonId).toList());
+      return _localQueueStreamController.stream.map(
+        (all) => all.where((t) => t.salonId == salonId).toList(),
+      );
     }
 
     try {
@@ -461,7 +520,9 @@ class QueueRepository {
           .eq('salon_id', salonId)
           .map((rows) {
             return rows
-                .where((r) => r['status'] == 'WAITING' || r['status'] == 'IN_CHAIR')
+                .where(
+                  (r) => r['status'] == 'WAITING' || r['status'] == 'IN_CHAIR',
+                )
                 .map((r) => QueueTicket.fromJson(Map<String, dynamic>.from(r)))
                 .toList()
               ..sort((a, b) => a.tokenNumber.compareTo(b.tokenNumber));
@@ -470,8 +531,10 @@ class QueueRepository {
             return <QueueTicket>[];
           });
     } catch (e) {
-      return Stream.periodic(const Duration(seconds: 3), (_) => fetchLiveQueueForSalon(salonId))
-          .asyncMap((event) => event);
+      return Stream.periodic(
+        const Duration(seconds: 3),
+        (_) => fetchLiveQueueForSalon(salonId),
+      ).asyncMap((event) => event);
     }
   }
 
@@ -491,7 +554,9 @@ class QueueRepository {
       _inMemoryTickets[idx] = _inMemoryTickets[idx].copyWith(
         status: status,
         chairNumber: chairNumber,
-        startedAt: status == QueueStatus.inChair ? DateTime.now() : _inMemoryTickets[idx].startedAt,
+        startedAt: status == QueueStatus.inChair
+            ? DateTime.now()
+            : _inMemoryTickets[idx].startedAt,
         completedAt: status == QueueStatus.completed ? DateTime.now() : null,
       );
       _notifyLocalStream(_inMemoryTickets[idx].salonId);
@@ -518,12 +583,16 @@ class QueueRepository {
       final Map<String, dynamic> updateData = {
         'status': status.dbName,
         'chair_number': ?chairNumber,
-        if (status == QueueStatus.inChair) 'started_at': DateTime.now().toIso8601String(),
-        if (status == QueueStatus.completed) 'completed_at': DateTime.now().toIso8601String(),
+        if (status == QueueStatus.inChair)
+          'started_at': DateTime.now().toIso8601String(),
+        if (status == QueueStatus.completed)
+          'completed_at': DateTime.now().toIso8601String(),
       };
 
       await client.from('queue_tickets').update(updateData).eq('id', ticketId);
-      debugPrint('[QueueRepository] updateTicketStatus SUCCESS: ticketId=$ticketId, status=${status.dbName}');
+      debugPrint(
+        '[QueueRepository] updateTicketStatus SUCCESS: ticketId=$ticketId, status=${status.dbName}',
+      );
     } catch (e) {
       debugPrint('[QueueRepository] updateTicketStatus DB ERROR: $e');
       rethrow;
@@ -555,17 +624,27 @@ class QueueRepository {
     } catch (e) {
       if (AppConfig.isSupabaseConfigured) {
         try {
-          final uri = Uri.parse('${AppConfig.supabaseUrl}/rest/v1/queue_tickets?customer_id=eq.$customerId&order=created_at.desc');
-          final req = await _directHttpClient.getUrl(uri).timeout(const Duration(seconds: 4));
+          final uri = Uri.parse(
+            '${AppConfig.supabaseUrl}/rest/v1/queue_tickets?customer_id=eq.$customerId&order=created_at.desc',
+          );
+          final req = await _directHttpClient
+              .getUrl(uri)
+              .timeout(const Duration(seconds: 4));
           req.headers.set('apikey', AppConfig.supabaseAnonKey);
-          req.headers.set('Authorization', 'Bearer ${AppConfig.supabaseAnonKey}');
+          req.headers.set(
+            'Authorization',
+            'Bearer ${AppConfig.supabaseAnonKey}',
+          );
           req.headers.set('Accept', 'application/json');
           final res = await req.close().timeout(const Duration(seconds: 4));
           if (res.statusCode == 200) {
             final body = await res.transform(utf8.decoder).join();
             final list = jsonDecode(body) as List<dynamic>;
             return list
-                .map((r) => QueueTicket.fromJson(Map<String, dynamic>.from(r as Map)))
+                .map(
+                  (r) =>
+                      QueueTicket.fromJson(Map<String, dynamic>.from(r as Map)),
+                )
                 .toList();
           }
         } catch (_) {}

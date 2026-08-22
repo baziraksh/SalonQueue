@@ -39,15 +39,23 @@ class NotificationRepository {
       try {
         final query = activeClient.from('notifications').select();
         final res = (ownerId.isNotEmpty)
-            ? await query.eq('recipient_id', ownerId).order('created_at', ascending: false)
+            ? await query
+                  .eq('recipient_id', ownerId)
+                  .order('created_at', ascending: false)
             : await query.order('created_at', ascending: false);
 
         final list = (res as List)
-            .map((item) => AppNotification.fromJson(Map<String, dynamic>.from(item as Map)))
+            .map(
+              (item) => AppNotification.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ),
+            )
             .toList();
         return list;
       } catch (e) {
-        debugPrint('[NotificationRepository] fetchNotifications remote notice: $e');
+        debugPrint(
+          '[NotificationRepository] fetchNotifications remote notice: $e',
+        );
         return [];
       }
     }
@@ -64,7 +72,12 @@ class NotificationRepository {
     if (activeClient == null) {
       return _localStreamController.stream.map((all) {
         return all
-            .where((n) => n.ownerId == ownerId || n.ownerId == 'demo-owner' || ownerId.isEmpty)
+            .where(
+              (n) =>
+                  n.ownerId == ownerId ||
+                  n.ownerId == 'demo-owner' ||
+                  ownerId.isEmpty,
+            )
             .toList();
       });
     }
@@ -75,20 +88,29 @@ class NotificationRepository {
           .stream(primaryKey: ['id'])
           .eq('recipient_id', ownerId)
           .map((rows) {
-            final list = rows
-                .map((r) => AppNotification.fromJson(Map<String, dynamic>.from(r)))
-                .toList()
-              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            final list =
+                rows
+                    .map(
+                      (r) => AppNotification.fromJson(
+                        Map<String, dynamic>.from(r),
+                      ),
+                    )
+                    .toList()
+                  ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
             return list;
           })
           .handleError((error) {
-            debugPrint('[NotificationRepository] streamNotifications error: $error');
+            debugPrint(
+              '[NotificationRepository] streamNotifications error: $error',
+            );
             return <AppNotification>[];
           });
     } catch (e) {
       debugPrint('[NotificationRepository] streamNotifications fallback: $e');
-      return Stream.periodic(const Duration(seconds: 4), (_) => fetchNotifications(ownerId))
-          .asyncMap((event) => event);
+      return Stream.periodic(
+        const Duration(seconds: 4),
+        (_) => fetchNotifications(ownerId),
+      ).asyncMap((event) => event);
     }
   }
 
@@ -101,7 +123,9 @@ class NotificationRepository {
   /// Marks a specific notification as read
   Future<void> markAsRead(String notificationId) async {
     // Update local memory
-    final idx = _inMemoryNotifications.indexWhere((n) => n.id == notificationId);
+    final idx = _inMemoryNotifications.indexWhere(
+      (n) => n.id == notificationId,
+    );
     if (idx != -1) {
       _inMemoryNotifications[idx] = _inMemoryNotifications[idx].copyWith(
         isRead: true,
@@ -116,10 +140,7 @@ class NotificationRepository {
         final nowIso = DateTime.now().toUtc().toIso8601String();
         await activeClient
             .from('notifications')
-            .update({
-              'is_read': true,
-              'read_at': nowIso,
-            })
+            .update({'is_read': true, 'read_at': nowIso})
             .eq('id', notificationId);
       } catch (e) {
         debugPrint('[NotificationRepository] markAsRead error: $e');
@@ -147,19 +168,13 @@ class NotificationRepository {
         if (ownerId.isNotEmpty) {
           await activeClient
               .from('notifications')
-              .update({
-                'is_read': true,
-                'read_at': nowIso,
-              })
+              .update({'is_read': true, 'read_at': nowIso})
               .eq('recipient_id', ownerId)
               .eq('is_read', false);
         } else {
           await activeClient
               .from('notifications')
-              .update({
-                'is_read': true,
-                'read_at': nowIso,
-              })
+              .update({'is_read': true, 'read_at': nowIso})
               .eq('is_read', false);
         }
       } catch (e) {
@@ -199,26 +214,29 @@ class NotificationRepository {
 
     if (activeClient != null && ownerId.isNotEmpty) {
       try {
-        final res = await activeClient.from('notifications').insert({
-          'recipient_id': ownerId,
-          'user_id': ownerId,
-          'title': title,
-          'body': message,
-          'type': type.dbName,
-          'data': {
-            'type': type.dbName,
-            'related_id': ?relatedId,
-          },
-          'is_read': false,
-          'created_at': now.toUtc().toIso8601String(),
-        }).select().single();
+        final res = await activeClient
+            .from('notifications')
+            .insert({
+              'recipient_id': ownerId,
+              'user_id': ownerId,
+              'title': title,
+              'body': message,
+              'type': type.dbName,
+              'data': {'type': type.dbName, 'related_id': ?relatedId},
+              'is_read': false,
+              'created_at': now.toUtc().toIso8601String(),
+            })
+            .select()
+            .single();
 
         final notif = AppNotification.fromJson(Map<String, dynamic>.from(res));
         _inMemoryNotifications.insert(0, notif);
         _localStreamController.add(List.from(_inMemoryNotifications));
         return notif;
       } catch (e) {
-        debugPrint('[NotificationRepository] createNotification remote insert error: $e');
+        debugPrint(
+          '[NotificationRepository] createNotification remote insert error: $e',
+        );
       }
     }
 
@@ -231,10 +249,7 @@ class NotificationRepository {
       type: type,
       relatedId: relatedId,
       isRead: false,
-      data: {
-        'type': type.dbName,
-        'related_id': ?relatedId,
-      },
+      data: {'type': type.dbName, 'related_id': ?relatedId},
       createdAt: now,
     );
     _inMemoryNotifications.insert(0, notif);
@@ -255,7 +270,9 @@ class NotificationRepository {
     await createNotification(
       ownerId: ownerId,
       title: 'New Customer Joined Queue!',
-      message: '$customerName joined your live line with Token #$tokenNumber $servicesStr.'.trim(),
+      message:
+          '$customerName joined your live line with Token #$tokenNumber $servicesStr.'
+              .trim(),
       type: NotificationType.customerJoined,
     );
   }
@@ -274,15 +291,19 @@ class NotificationRepository {
     switch (type) {
       case NotificationType.customerJoined:
         title = 'Customer Joined Queue';
-        message = '$customerName was assigned Token #$tokenNumber. ${details ?? ''}'.trim();
+        message =
+            '$customerName was assigned Token #$tokenNumber. ${details ?? ''}'
+                .trim();
         break;
       case NotificationType.customerCancelled:
         title = 'Queue Cancellation';
-        message = '$customerName (Token #$tokenNumber) cancelled their spot in the queue.';
+        message =
+            '$customerName (Token #$tokenNumber) cancelled their spot in the queue.';
         break;
       case NotificationType.customerCalled:
         title = 'Customer Called to Chair';
-        message = '$customerName (Token #$tokenNumber) was called to Chair ${details ?? '#1'}.';
+        message =
+            '$customerName (Token #$tokenNumber) was called to Chair ${details ?? '#1'}.';
         break;
       default:
         title = 'Queue Update';
@@ -307,7 +328,8 @@ class NotificationRepository {
     await createNotification(
       ownerId: ownerId,
       title: 'Support Request Resolved',
-      message: 'Your support request "$subject" has been resolved. ${resolutionMessage ?? "Tap to view the resolution details."}',
+      message:
+          'Your support request "$subject" has been resolved. ${resolutionMessage ?? "Tap to view the resolution details."}',
       type: NotificationType.supportResolved,
       relatedId: ticketId,
     );
@@ -323,7 +345,8 @@ class NotificationRepository {
     await createNotification(
       ownerId: customerId,
       title: 'Queue Joined Successfully',
-      message: 'You have joined the queue at $salonName. Assigned Token #$tokenNumber (~$estWaitMinutes mins est. wait).',
+      message:
+          'You have joined the queue at $salonName. Assigned Token #$tokenNumber (~$estWaitMinutes mins est. wait).',
       type: NotificationType.customerJoined,
     );
   }
@@ -337,7 +360,8 @@ class NotificationRepository {
     await createNotification(
       ownerId: customerId,
       title: 'Your Turn Has Arrived! ✂️',
-      message: 'Your turn is now active at $salonName! Please proceed to Chair #$chairNumber.',
+      message:
+          'Your turn is now active at $salonName! Please proceed to Chair #$chairNumber.',
       type: NotificationType.customerCalled,
     );
   }
@@ -351,7 +375,9 @@ class NotificationRepository {
     await createNotification(
       ownerId: customerId,
       title: 'Queue Spot Cancelled',
-      message: 'Your queue spot at $salonName has been cancelled. ${reason ?? ""}'.trim(),
+      message:
+          'Your queue spot at $salonName has been cancelled. ${reason ?? ""}'
+              .trim(),
       type: NotificationType.customerCancelled,
     );
   }

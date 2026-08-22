@@ -47,67 +47,83 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
 
   void _subscribeToStreams() {
     // 1. Stream the specific ticket by its ID for live updates (WAITING -> IN_CHAIR -> COMPLETED)
-    _ticketSub = _queueRepo.streamTicket(_currentTicket.id).listen(
-      (updated) {
-        if (updated != null && mounted) {
-          final previousStatus = _currentTicket.status;
-          setState(() {
-            _currentTicket = updated;
-            if (updated.status == QueueStatus.completed) {
-              _currentPosition = 0;
-              _peopleAhead = 0;
-              _estWaitMinutes = 0;
+    _ticketSub = _queueRepo
+        .streamTicket(_currentTicket.id)
+        .listen(
+          (updated) {
+            if (updated != null && mounted) {
+              final previousStatus = _currentTicket.status;
+              setState(() {
+                _currentTicket = updated;
+                if (updated.status == QueueStatus.completed) {
+                  _currentPosition = 0;
+                  _peopleAhead = 0;
+                  _estWaitMinutes = 0;
+                }
+              });
+
+              // Check if called to chair
+              if (updated.status == QueueStatus.inChair &&
+                  previousStatus == QueueStatus.waiting &&
+                  !_hasShownTurnAlert) {
+                _hasShownTurnAlert = true;
+                HapticFeedback.heavyImpact();
+                _showTurnCalledAlert(updated.chairNumber ?? 1);
+              }
+
+              // Check if completed
+              if (updated.status == QueueStatus.completed &&
+                  !_hasShownRatingDialog) {
+                _hasShownRatingDialog = true;
+                HapticFeedback.mediumImpact();
+                _showRatingDialog();
+              }
             }
-          });
-
-          // Check if called to chair
-          if (updated.status == QueueStatus.inChair &&
-              previousStatus == QueueStatus.waiting &&
-              !_hasShownTurnAlert) {
-            _hasShownTurnAlert = true;
-            HapticFeedback.heavyImpact();
-            _showTurnCalledAlert(updated.chairNumber ?? 1);
-          }
-
-          // Check if completed
-          if (updated.status == QueueStatus.completed && !_hasShownRatingDialog) {
-            _hasShownRatingDialog = true;
-            HapticFeedback.mediumImpact();
-            _showRatingDialog();
-          }
-        }
-      },
-      onError: (err) {
-        debugPrint('[CustomerQueueScreen] streamTicket error: $err');
-      },
-    );
+          },
+          onError: (err) {
+            debugPrint('[CustomerQueueScreen] streamTicket error: $err');
+          },
+        );
 
     // 2. Stream salon's full queue to compute exact live position & people ahead
     _salonQueueSub = _queueRepo
         .streamLiveQueueForSalon(_currentTicket.salonId)
-        .listen((tickets) {
-      if (!mounted) return;
-      final waiting = tickets.where((t) => t.status == QueueStatus.waiting).toList();
-      waiting.sort((a, b) => a.tokenNumber.compareTo(b.tokenNumber));
+        .listen(
+          (tickets) {
+            if (!mounted) return;
+            final waiting = tickets
+                .where((t) => t.status == QueueStatus.waiting)
+                .toList();
+            waiting.sort((a, b) => a.tokenNumber.compareTo(b.tokenNumber));
 
-      final myIndex = waiting.indexWhere((t) => t.id == _currentTicket.id || t.tokenNumber == _currentTicket.tokenNumber);
-      final chairs = widget.salon?.activeChairs ?? 3;
-      final effectiveChairs = chairs > 0 ? chairs : 1;
+            final myIndex = waiting.indexWhere(
+              (t) =>
+                  t.id == _currentTicket.id ||
+                  t.tokenNumber == _currentTicket.tokenNumber,
+            );
+            final chairs = widget.salon?.activeChairs ?? 3;
+            final effectiveChairs = chairs > 0 ? chairs : 1;
 
-      setState(() {
-        if (_currentTicket.status == QueueStatus.completed || _currentTicket.status == QueueStatus.inChair) {
-          _currentPosition = 0;
-          _peopleAhead = 0;
-          _estWaitMinutes = 0;
-        } else if (myIndex != -1) {
-          _currentPosition = myIndex + 1;
-          _peopleAhead = myIndex;
-          _estWaitMinutes = (_peopleAhead * (20 / effectiveChairs)).round();
-        }
-      });
-    }, onError: (err) {
-      debugPrint('[CustomerQueueScreen] streamLiveQueueForSalon error: $err');
-    });
+            setState(() {
+              if (_currentTicket.status == QueueStatus.completed ||
+                  _currentTicket.status == QueueStatus.inChair) {
+                _currentPosition = 0;
+                _peopleAhead = 0;
+                _estWaitMinutes = 0;
+              } else if (myIndex != -1) {
+                _currentPosition = myIndex + 1;
+                _peopleAhead = myIndex;
+                _estWaitMinutes = (_peopleAhead * (20 / effectiveChairs))
+                    .round();
+              }
+            });
+          },
+          onError: (err) {
+            debugPrint(
+              '[CustomerQueueScreen] streamLiveQueueForSalon error: $err',
+            );
+          },
+        );
   }
 
   void _showTurnCalledAlert(int chairNum) {
@@ -118,7 +134,13 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
         title: const Row(
           children: [
             Text('🎉 '),
-            Text('It\'s Your Turn!', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF111827))),
+            Text(
+              'It\'s Your Turn!',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF111827),
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -130,12 +152,20 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                 color: Color(0xFFF3E8FF),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.event_seat_rounded, size: 44, color: Color(0xFF6D28D9)),
+              child: const Icon(
+                Icons.event_seat_rounded,
+                size: 44,
+                color: Color(0xFF6D28D9),
+              ),
             ),
             const SizedBox(height: 16),
             Text(
               'Please proceed to Chair #$chairNum.',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF111827),
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -152,10 +182,15 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6D28D9),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               elevation: 0,
             ),
-            child: const Text('I am Sitting Now', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: const Text(
+              'I am Sitting Now',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -170,12 +205,24 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Rate Your Experience', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF111827))),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Rate Your Experience',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF111827),
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('How was your grooming service today?', style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+              const Text(
+                'How was your grooming service today?',
+                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+              ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -183,7 +230,9 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                   final starIndex = idx + 1;
                   return IconButton(
                     icon: Icon(
-                      starIndex <= rating ? Icons.star_rounded : Icons.star_border_rounded,
+                      starIndex <= rating
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
                       color: const Color(0xFFF59E0B),
                       size: 32,
                     ),
@@ -197,7 +246,9 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                 decoration: InputDecoration(
                   labelText: 'Feedback (Optional)',
                   hintText: 'Great haircut, friendly stylist!',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
@@ -208,7 +259,10 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                 Navigator.of(ctx).pop();
                 AppRouter.navigateToCustomerEntry(context);
               },
-              child: const Text('Skip', style: TextStyle(color: Color(0xFF6B7280))),
+              child: const Text(
+                'Skip',
+                style: TextStyle(color: Color(0xFF6B7280)),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -224,10 +278,15 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6D28D9),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 0,
               ),
-              child: const Text('Submit Review', style: TextStyle(fontWeight: FontWeight.w700)),
+              child: const Text(
+                'Submit Review',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ),
@@ -247,12 +306,26 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Leave Queue?', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF111827))),
-        content: const Text('Are you sure you want to cancel your digital token? You will lose your spot in line.'),
+        title: const Text(
+          'Leave Queue?',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF111827),
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to cancel your digital token? You will lose your spot in line.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('No, Stay in Line', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
+            child: const Text(
+              'No, Stay in Line',
+              style: TextStyle(
+                color: Color(0xFF6B7280),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -260,9 +333,14 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
               backgroundColor: const Color(0xFFEF4444),
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Yes, Cancel Token', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Yes, Cancel Token',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -342,9 +420,15 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                         height: 48,
                         child: OutlinedButton.icon(
                           onPressed: _cancelling ? null : _handleCancelTicket,
-                          icon: const Icon(Icons.close_rounded, color: Color(0xFFEF4444), size: 18),
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: Color(0xFFEF4444),
+                            size: 18,
+                          ),
                           label: Text(
-                            _cancelling ? 'Cancelling...' : 'Cancel / Leave Queue',
+                            _cancelling
+                                ? 'Cancelling...'
+                                : 'Cancel / Leave Queue',
                             style: const TextStyle(
                               color: Color(0xFFEF4444),
                               fontWeight: FontWeight.w700,
@@ -352,8 +436,13 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFFFCA5A5), width: 1.2),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            side: const BorderSide(
+                              color: Color(0xFFFCA5A5),
+                              width: 1.2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                         ),
                       ),
@@ -464,7 +553,10 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -480,7 +572,10 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -520,10 +615,7 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
           const SizedBox(height: 18),
 
           // Divider
-          Container(
-            height: 1,
-            color: Colors.white.withValues(alpha: 0.25),
-          ),
+          Container(height: 1, color: Colors.white.withValues(alpha: 0.25)),
           const SizedBox(height: 12),
 
           // Salon Name & Location
@@ -535,7 +627,11 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                   color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 18),
+                child: const Icon(
+                  Icons.storefront_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -596,7 +692,11 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.format_list_numbered_rounded, size: 16, color: Color(0xFF6D28D9)),
+                    Icon(
+                      Icons.format_list_numbered_rounded,
+                      size: 16,
+                      color: Color(0xFF6D28D9),
+                    ),
                     SizedBox(width: 6),
                     Text(
                       'CURRENT POSITION',
@@ -614,8 +714,8 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                   _currentTicket.isCompleted
                       ? 'Completed 🎉'
                       : (_currentTicket.isInChair
-                          ? 'In Chair #${_currentTicket.chairNumber ?? 1}'
-                          : 'Position #$_currentPosition in Line'),
+                            ? 'In Chair #${_currentTicket.chairNumber ?? 1}'
+                            : 'Position #$_currentPosition in Line'),
                   style: const TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w900,
@@ -629,8 +729,10 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                   _currentTicket.isCompleted
                       ? 'Finished'
                       : (_currentTicket.isInChair
-                          ? 'Stylist attending you'
-                          : (_peopleAhead == 0 ? 'You are next!' : '$_peopleAhead ahead of you')),
+                            ? 'Stylist attending you'
+                            : (_peopleAhead == 0
+                                  ? 'You are next!'
+                                  : '$_peopleAhead ahead of you')),
                   style: TextStyle(
                     fontSize: 11.5,
                     color: _currentTicket.isCompleted || _peopleAhead == 0
@@ -666,7 +768,11 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.timer_outlined, size: 16, color: Color(0xFF6D28D9)),
+                    Icon(
+                      Icons.timer_outlined,
+                      size: 16,
+                      color: Color(0xFF6D28D9),
+                    ),
                     SizedBox(width: 6),
                     Text(
                       'ESTIMATED WAIT',
@@ -684,8 +790,8 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                   _currentTicket.isCompleted
                       ? 'Completed'
                       : (_currentTicket.isInChair
-                          ? 'In Chair'
-                          : '~$_estWaitMinutes mins'),
+                            ? 'In Chair'
+                            : '~$_estWaitMinutes mins'),
                   style: const TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w900,
@@ -699,8 +805,8 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
                   _currentTicket.isCompleted
                       ? 'All done'
                       : (_currentTicket.isInChair
-                          ? 'In progress'
-                          : 'Live estimate'),
+                            ? 'In progress'
+                            : 'Live estimate'),
                   style: const TextStyle(
                     fontSize: 11.5,
                     color: Color(0xFF6B7280),
@@ -803,20 +909,25 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
               child: isDone
                   ? const Icon(Icons.check, size: 14, color: Colors.white)
                   : (isCurrent
-                      ? Center(
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-                          ),
-                        )
-                      : null),
+                        ? Center(
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: color,
+                              ),
+                            ),
+                          )
+                        : null),
             ),
             if (!isLast)
               Container(
                 width: 2,
                 height: 32,
-                color: isDone ? const Color(0xFF6D28D9) : const Color(0xFFE5E7EB),
+                color: isDone
+                    ? const Color(0xFF6D28D9)
+                    : const Color(0xFFE5E7EB),
               ),
           ],
         ),
@@ -828,8 +939,12 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
               Text(
                 title,
                 style: TextStyle(
-                  fontWeight: isDone || isCurrent ? FontWeight.w800 : FontWeight.w600,
-                  color: isDone || isCurrent ? const Color(0xFF111827) : const Color(0xFF9CA3AF),
+                  fontWeight: isDone || isCurrent
+                      ? FontWeight.w800
+                      : FontWeight.w600,
+                  color: isDone || isCurrent
+                      ? const Color(0xFF111827)
+                      : const Color(0xFF9CA3AF),
                   fontSize: 14,
                 ),
               ),
@@ -874,28 +989,42 @@ class _CustomerQueueScreenState extends State<CustomerQueueScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          ...(_currentTicket.serviceNames.map((svc) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF15803D)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        svc,
-                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+          ...(_currentTicket.serviceNames.map(
+            (svc) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    size: 16,
+                    color: Color(0xFF15803D),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      svc,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF374151),
                       ),
                     ),
-                  ],
-                ),
-              ))),
+                  ),
+                ],
+              ),
+            ),
+          )),
           const Divider(height: 24, color: Color(0xFFF3F4F6)),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Est. Duration: ~${_currentTicket.totalDurationMinutes} mins',
-                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12.5, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               Text(
                 'Total: ₹${_currentTicket.totalPrice.toStringAsFixed(0)}',

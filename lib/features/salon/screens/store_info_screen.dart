@@ -28,7 +28,9 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.salon.name);
-    _descController = TextEditingController(text: widget.salon.description ?? '');
+    _descController = TextEditingController(
+      text: widget.salon.description ?? '',
+    );
     _phoneController = TextEditingController(text: widget.salon.phone ?? '');
   }
 
@@ -47,7 +49,8 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
 
     try {
       final auth = AuthScope.of(context, listen: false);
-      final effectiveOwnerId = (widget.salon.ownerId != null && widget.salon.ownerId!.isNotEmpty)
+      final effectiveOwnerId =
+          (widget.salon.ownerId != null && widget.salon.ownerId!.isNotEmpty)
           ? widget.salon.ownerId
           : auth.currentUser?.id;
 
@@ -72,9 +75,9 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save store info: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save store info: $e')));
     }
   }
 
@@ -130,7 +133,11 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                             color: AppColorSchemes.navy.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.storefront_rounded, color: AppColorSchemes.navy, size: 22),
+                          child: const Icon(
+                            Icons.storefront_rounded,
+                            color: AppColorSchemes.navy,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         const Expanded(
@@ -147,7 +154,10 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                               ),
                               Text(
                                 'Store name, description, and contact info',
-                                style: TextStyle(fontSize: 11, color: Colors.grey),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ],
                           ),
@@ -162,10 +172,14 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Salon / Business Name *',
                         hintText: 'e.g. Royal Cuts Lounge',
-                        prefixIcon: Icon(Icons.business_rounded, color: AppColorSchemes.navy),
+                        prefixIcon: Icon(
+                          Icons.business_rounded,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Please enter salon name' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Please enter salon name'
+                          : null,
                     ),
                     const SizedBox(height: 16),
 
@@ -175,11 +189,15 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                       maxLines: 3,
                       decoration: const InputDecoration(
                         labelText: 'Short Description',
-                        hintText: 'Describe your salon ambience, services & highlights...',
+                        hintText:
+                            'Describe your salon ambience, services & highlights...',
                         alignLabelWithHint: true,
                         prefixIcon: Padding(
                           padding: EdgeInsets.only(bottom: 36),
-                          child: Icon(Icons.description_outlined, color: AppColorSchemes.navy),
+                          child: Icon(
+                            Icons.description_outlined,
+                            color: AppColorSchemes.navy,
+                          ),
                         ),
                       ),
                     ),
@@ -192,7 +210,10 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Contact Phone Number',
                         hintText: '+91 98765 43210',
-                        prefixIcon: Icon(Icons.phone_outlined, color: AppColorSchemes.navy),
+                        prefixIcon: Icon(
+                          Icons.phone_outlined,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
                     ),
                   ],
@@ -211,7 +232,10 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.save_rounded, size: 20),
                   label: const Text(
@@ -221,7 +245,9 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorSchemes.navy,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),

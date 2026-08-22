@@ -32,9 +32,7 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           letterSpacing: 0.8,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -47,17 +45,13 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: AppColorSchemes.navy,
-        textStyle: const TextStyle(
-          fontWeight: FontWeight.w600,
-        ),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -76,18 +70,13 @@ class AppTheme {
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2),
       ),
-      hintStyle: TextStyle(
-        color: Colors.grey.shade400,
-        fontSize: 14,
-      ),
+      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
     ),
     cardTheme: CardThemeData(
       color: Colors.white,
       elevation: 2,
       shadowColor: Colors.black.withValues(alpha: 0.08),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       margin: EdgeInsets.zero,
     ),
     chipTheme: ChipThemeData(
@@ -106,10 +95,7 @@ class AppTheme {
       selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
       unselectedLabelStyle: TextStyle(fontSize: 11),
     ),
-    dividerTheme: DividerThemeData(
-      color: Colors.grey.shade200,
-      thickness: 1,
-    ),
+    dividerTheme: DividerThemeData(color: Colors.grey.shade200, thickness: 1),
   );
 
   /// Dark theme configuration
@@ -128,24 +114,18 @@ class AppTheme {
         foregroundColor: Colors.white,
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColorSchemes.goldLight,
         side: const BorderSide(color: AppColorSchemes.goldLight),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: AppColorSchemes.goldLight,
-      ),
+      style: TextButton.styleFrom(foregroundColor: AppColorSchemes.goldLight),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -161,15 +141,16 @@ class AppTheme {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColorSchemes.goldLight, width: 2),
+        borderSide: const BorderSide(
+          color: AppColorSchemes.goldLight,
+          width: 2,
+        ),
       ),
     ),
     cardTheme: CardThemeData(
       color: AppColorSchemes.darkScheme.surfaceContainerHighest,
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
   );
 }

@@ -63,9 +63,15 @@ class _SalonAnalyticsScreenState extends State<SalonAnalyticsScreen> {
       return _isSameDay(date, now);
     }).toList();
 
-    final allCompletedTickets = _allTickets.where((t) => t.status == QueueStatus.completed).toList();
-    final inChairTickets = _allTickets.where((t) => t.status == QueueStatus.inChair).toList();
-    final waitingTickets = _allTickets.where((t) => t.status == QueueStatus.waiting).toList();
+    final allCompletedTickets = _allTickets
+        .where((t) => t.status == QueueStatus.completed)
+        .toList();
+    final inChairTickets = _allTickets
+        .where((t) => t.status == QueueStatus.inChair)
+        .toList();
+    final waitingTickets = _allTickets
+        .where((t) => t.status == QueueStatus.waiting)
+        .toList();
 
     final totalCompletedRevenueToday = completedTicketsToday.fold<double>(
       0.0,
@@ -77,13 +83,12 @@ class _SalonAnalyticsScreenState extends State<SalonAnalyticsScreen> {
       (sum, t) => sum + t.totalPrice,
     );
 
-    final totalExpectedRevenueToday = _allTickets.where((t) {
-      final date = t.completedAt ?? t.createdAt;
-      return _isSameDay(date, now);
-    }).fold<double>(
-      0.0,
-      (sum, t) => sum + t.totalPrice,
-    );
+    final totalExpectedRevenueToday = _allTickets
+        .where((t) {
+          final date = t.completedAt ?? t.createdAt;
+          return _isSameDay(date, now);
+        })
+        .fold<double>(0.0, (sum, t) => sum + t.totalPrice);
 
     final avgTicketValueToday = completedTicketsToday.isNotEmpty
         ? (totalCompletedRevenueToday / completedTicketsToday.length)
@@ -91,7 +96,10 @@ class _SalonAnalyticsScreenState extends State<SalonAnalyticsScreen> {
 
     // Service Breakdown Map
     final Map<String, int> serviceCounts = {};
-    for (final ticket in completedTicketsToday.isNotEmpty ? completedTicketsToday : allCompletedTickets) {
+    for (final ticket
+        in completedTicketsToday.isNotEmpty
+            ? completedTicketsToday
+            : allCompletedTickets) {
       for (final s in ticket.serviceNames) {
         serviceCounts[s] = (serviceCounts[s] ?? 0) + 1;
       }
@@ -121,13 +129,17 @@ class _SalonAnalyticsScreenState extends State<SalonAnalyticsScreen> {
                     children: [
                       Text(
                         widget.salon.name,
-                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Today Summary & Performance',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.65,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -145,7 +157,9 @@ class _SalonAnalyticsScreenState extends State<SalonAnalyticsScreen> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF2E7D32).withValues(alpha: 0.3),
+                              color: const Color(
+                                0xFF2E7D32,
+                              ).withValues(alpha: 0.3),
                               blurRadius: 12,
                               offset: const Offset(0, 6),
                             ),
@@ -166,7 +180,11 @@ class _SalonAnalyticsScreenState extends State<SalonAnalyticsScreen> {
                                     letterSpacing: 1.1,
                                   ),
                                 ),
-                                Icon(Icons.account_balance_wallet, color: Colors.white70, size: 20),
+                                Icon(
+                                  Icons.account_balance_wallet,
+                                  color: Colors.white70,
+                                  size: 20,
+                                ),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -181,13 +199,20 @@ class _SalonAnalyticsScreenState extends State<SalonAnalyticsScreen> {
                             const SizedBox(height: 6),
                             Text(
                               'Avg Ticket: ₹${avgTicketValueToday.toStringAsFixed(0)} • Lifetime: ₹${totalLifetimeRevenue.toStringAsFixed(0)}',
-                              style: const TextStyle(color: Colors.white70, fontSize: 12),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
                             ),
-                            if (totalExpectedRevenueToday > totalCompletedRevenueToday) ...[
+                            if (totalExpectedRevenueToday >
+                                totalCompletedRevenueToday) ...[
                               const SizedBox(height: 4),
                               Text(
                                 'Potential Today (incl. In-Chair/Waiting): ₹${totalExpectedRevenueToday.toStringAsFixed(0)}',
-                                style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 11,
+                                ),
                               ),
                             ],
                           ],
@@ -233,39 +258,56 @@ class _SalonAnalyticsScreenState extends State<SalonAnalyticsScreen> {
                       // Popular Services Breakdown
                       Text(
                         'Top Requested Services',
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 12),
 
                       if (serviceCounts.isEmpty)
                         Card(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                           child: const Padding(
                             padding: EdgeInsets.all(20.0),
-                            child: Center(child: Text('No service records yet today.')),
+                            child: Center(
+                              child: Text('No service records yet today.'),
+                            ),
                           ),
                         )
                       else
                         ...serviceCounts.entries.map((entry) {
                           final totalTokens = completedTicketsToday.isNotEmpty
                               ? completedTicketsToday.length
-                              : (allCompletedTickets.isNotEmpty ? allCompletedTickets.length : 1);
-                          final percentage = (entry.value / totalTokens).clamp(0.0, 1.0);
+                              : (allCompletedTickets.isNotEmpty
+                                    ? allCompletedTickets.length
+                                    : 1);
+                          final percentage = (entry.value / totalTokens).clamp(
+                            0.0,
+                            1.0,
+                          );
 
                           return Card(
                             margin: const EdgeInsets.only(bottom: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             child: Padding(
                               padding: const EdgeInsets.all(14.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
                                         entry.key,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
                                       ),
                                       Text(
                                         '${entry.value} orders (${(percentage * 100).toStringAsFixed(0)}%)',
@@ -280,7 +322,9 @@ class _SalonAnalyticsScreenState extends State<SalonAnalyticsScreen> {
                                   const SizedBox(height: 8),
                                   LinearProgressIndicator(
                                     value: percentage,
-                                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                                    backgroundColor: theme
+                                        .colorScheme
+                                        .surfaceContainerHighest,
                                     color: const Color(0xFF6750A4),
                                     minHeight: 6,
                                     borderRadius: BorderRadius.circular(4),
@@ -317,12 +361,20 @@ class _SalonAnalyticsScreenState extends State<SalonAnalyticsScreen> {
           const SizedBox(height: 6),
           Text(
             value,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: color),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             title,
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
             textAlign: TextAlign.center,
           ),
         ],

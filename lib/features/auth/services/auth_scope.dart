@@ -9,11 +9,7 @@ import 'auth_service.dart';
 ///
 /// Avoids a third-party state-management package for this single scope.
 class AuthScope extends InheritedWidget {
-  const AuthScope({
-    super.key,
-    required this.service,
-    required super.child,
-  });
+  const AuthScope({super.key, required this.service, required super.child});
 
   final AuthService service;
 
@@ -27,12 +23,12 @@ class AuthScope extends InheritedWidget {
         : context.getInheritedWidgetOfExactType<AuthScope>();
     if (scope == null) {
       throw StateError(
-          'AuthScope not found. Wrap your app with AuthScope in main.dart.');
+        'AuthScope not found. Wrap your app with AuthScope in main.dart.',
+      );
     }
     return scope.service;
   }
 
   @override
-  bool updateShouldNotify(AuthScope oldWidget) =>
-      oldWidget.service != service;
+  bool updateShouldNotify(AuthScope oldWidget) => oldWidget.service != service;
 }

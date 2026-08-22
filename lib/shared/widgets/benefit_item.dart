@@ -62,7 +62,9 @@ class BenefitItem extends StatelessWidget {
                   child: Icon(
                     icon,
                     size: 18,
-                    color: isSelected ? AppColorSchemes.gold : AppColorSchemes.navy,
+                    color: isSelected
+                        ? AppColorSchemes.gold
+                        : AppColorSchemes.navy,
                   ),
                 ),
                 const SizedBox(height: 8),

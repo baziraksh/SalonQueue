@@ -15,10 +15,7 @@ import '../data/salon_repository.dart';
 
 /// Screen displaying salon details, complete service menu with price/time, and queue join action.
 class SalonDetailsScreen extends StatefulWidget {
-  const SalonDetailsScreen({
-    super.key,
-    required this.salon,
-  });
+  const SalonDetailsScreen({super.key, required this.salon});
 
   final Salon salon;
 
@@ -60,7 +57,10 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
 
   Future<void> _fetchInitialServices() async {
     try {
-      final services = await _salonRepo.fetchServices(widget.salon.id, onlyActive: true);
+      final services = await _salonRepo.fetchServices(
+        widget.salon.id,
+        onlyActive: true,
+      );
       if (!mounted || services.isEmpty) return;
       setState(() {
         _liveServices = services;
@@ -74,17 +74,17 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
     _servicesSubscription = _salonRepo
         .streamServices(widget.salon.id, onlyActive: true)
         .listen(
-      (services) {
-        if (!mounted) return;
-        setState(() {
-          _liveServices = services;
-          _pruneSelectedServices();
-        });
-      },
-      onError: (err) {
-        debugPrint('[SalonDetailsScreen] streamServices error: $err');
-      },
-    );
+          (services) {
+            if (!mounted) return;
+            setState(() {
+              _liveServices = services;
+              _pruneSelectedServices();
+            });
+          },
+          onError: (err) {
+            debugPrint('[SalonDetailsScreen] streamServices error: $err');
+          },
+        );
   }
 
   void _pruneSelectedServices() {
@@ -94,27 +94,37 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
 
   void _subscribeToLiveQueue() {
     _queueSubscription?.cancel();
-    _queueSubscription = _queueRepo.streamLiveQueueForSalon(widget.salon.id).listen(
-      (tickets) {
-        if (!mounted) return;
-        final waiting = tickets.where((t) => t.status == QueueStatus.waiting).toList();
-        final serving = tickets.where((t) => t.status == QueueStatus.inChair).toList();
-        final chairs = widget.salon.activeChairs > 0 ? widget.salon.activeChairs : 1;
-        final estWait = (waiting.length * (20 / chairs)).round();
+    _queueSubscription = _queueRepo
+        .streamLiveQueueForSalon(widget.salon.id)
+        .listen(
+          (tickets) {
+            if (!mounted) return;
+            final waiting = tickets
+                .where((t) => t.status == QueueStatus.waiting)
+                .toList();
+            final serving = tickets
+                .where((t) => t.status == QueueStatus.inChair)
+                .toList();
+            final chairs = widget.salon.activeChairs > 0
+                ? widget.salon.activeChairs
+                : 1;
+            final estWait = (waiting.length * (20 / chairs)).round();
 
-        setState(() {
-          _liveWaitingCount = waiting.length;
-          _liveServingCount = serving.length;
-          _liveServingTokens = serving.isNotEmpty
-              ? serving.map((t) => '#${t.tokenNumber}').join(', ')
-              : 'None';
-          _liveEstWaitMinutes = estWait;
-        });
-      },
-      onError: (err) {
-        debugPrint('[SalonDetailsScreen] streamLiveQueueForSalon error: $err');
-      },
-    );
+            setState(() {
+              _liveWaitingCount = waiting.length;
+              _liveServingCount = serving.length;
+              _liveServingTokens = serving.isNotEmpty
+                  ? serving.map((t) => '#${t.tokenNumber}').join(', ')
+                  : 'None';
+              _liveEstWaitMinutes = estWait;
+            });
+          },
+          onError: (err) {
+            debugPrint(
+              '[SalonDetailsScreen] streamLiveQueueForSalon error: $err',
+            );
+          },
+        );
   }
 
   @override
@@ -127,7 +137,9 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
   /// Calculates dynamic live rush level based on real-time waiting count
   RushLevel get _liveRushLevel {
     if (!widget.salon.isQueueOpen) return RushLevel.low;
-    final chairs = widget.salon.activeChairs > 0 ? widget.salon.activeChairs : 1;
+    final chairs = widget.salon.activeChairs > 0
+        ? widget.salon.activeChairs
+        : 1;
     final ratio = _liveWaitingCount / chairs;
     if (ratio <= 0.6) return RushLevel.low;
     if (ratio <= 1.5) return RushLevel.moderate;
@@ -137,7 +149,9 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
   /// Dynamically extracts all distinct service categories from the salon's actual services,
   /// always starting with 'All' so all categories are accessible horizontally.
   List<String> get _categories {
-    final source = _liveServices.isNotEmpty ? _liveServices : widget.salon.services;
+    final source = _liveServices.isNotEmpty
+        ? _liveServices
+        : widget.salon.services;
     final categoriesSet = <String>{};
     for (final s in source) {
       final cat = s.category.trim();
@@ -159,30 +173,36 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
     }
     if (cats.any((c) => c.toLowerCase() == _selectedCategory.toLowerCase())) {
       return cats.firstWhere(
-          (c) => c.toLowerCase() == _selectedCategory.toLowerCase());
+        (c) => c.toLowerCase() == _selectedCategory.toLowerCase(),
+      );
     }
     return 'All';
   }
 
   List<SalonService> get _filteredServices {
-    final source = _liveServices.isNotEmpty ? _liveServices : widget.salon.services;
+    final source = _liveServices.isNotEmpty
+        ? _liveServices
+        : widget.salon.services;
     final currentCat = _effectiveSelectedCategory;
     if (currentCat == 'All') {
       return source;
     }
     final matched = source
-        .where((s) =>
-            s.category.trim().toLowerCase() == currentCat.trim().toLowerCase())
+        .where(
+          (s) =>
+              s.category.trim().toLowerCase() ==
+              currentCat.trim().toLowerCase(),
+        )
         .toList();
     if (matched.isEmpty) return source;
     return matched;
   }
 
   List<SalonService> get _selectedServicesList {
-    final source = _liveServices.isNotEmpty ? _liveServices : widget.salon.services;
-    return source
-        .where((s) => _selectedServiceIds.contains(s.id))
-        .toList();
+    final source = _liveServices.isNotEmpty
+        ? _liveServices
+        : widget.salon.services;
+    return source.where((s) => _selectedServiceIds.contains(s.id)).toList();
   }
 
   double get _totalPrice =>
@@ -195,7 +215,9 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
     if (_selectedServiceIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select at least one service to join the queue.'),
+          content: Text(
+            'Please select at least one service to join the queue.',
+          ),
           backgroundColor: Color(0xFFC62828),
         ),
       );
@@ -233,18 +255,16 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
       // Navigate to digital ticket tracking screen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => CustomerQueueScreen(
-            ticket: ticket,
-            salon: widget.salon,
-          ),
+          builder: (_) =>
+              CustomerQueueScreen(ticket: ticket, salon: widget.salon),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isJoining = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to join queue: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to join queue: $e')));
     }
   }
 
@@ -280,7 +300,11 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                     Container(
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Color(0xFF14243A), Color(0xFF1E3650), Color(0xFF2C4A6F)],
+                          colors: [
+                            Color(0xFF14243A),
+                            Color(0xFF1E3650),
+                            Color(0xFF2C4A6F),
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -289,7 +313,9 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                         child: Icon(
                           Icons.storefront,
                           size: 80,
-                          color: const Color(0xFFC9A45C).withValues(alpha: 0.35),
+                          color: const Color(
+                            0xFFC9A45C,
+                          ).withValues(alpha: 0.35),
                         ),
                       ),
                     ),
@@ -325,7 +351,8 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                       const Icon(Icons.star, color: Colors.amber, size: 20),
                       const SizedBox(width: 4),
                       Text(
-                        (widget.salon.rating > 0 && widget.salon.reviewCount > 0)
+                        (widget.salon.rating > 0 &&
+                                widget.salon.reviewCount > 0)
                             ? '${widget.salon.rating.toStringAsFixed(1)} (${widget.salon.reviewCount} reviews)'
                             : 'New Salon',
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -334,7 +361,10 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                       ),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: widget.salon.isQueueOpen
                               ? const Color(0xFFE8F5E9)
@@ -357,13 +387,19 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.location_on_outlined, size: 18, color: theme.colorScheme.outline),
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 18,
+                        color: theme.colorScheme.outline,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           '${widget.salon.address}, ${widget.salon.city}',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.75,
+                            ),
                           ),
                         ),
                       ),
@@ -372,12 +408,18 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.schedule, size: 18, color: theme.colorScheme.outline),
+                      Icon(
+                        Icons.schedule,
+                        size: 18,
+                        color: theme.colorScheme.outline,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${widget.salon.openingTime} - ${widget.salon.closingTime}',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.65,
+                          ),
                         ),
                       ),
                     ],
@@ -390,7 +432,9 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                     decoration: BoxDecoration(
                       color: rush.backgroundColor,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: rush.color.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: rush.color.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -441,8 +485,12 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                       Expanded(
                         child: _buildLiveMetricCard(
                           title: 'Serving',
-                          value: _liveServingCount > 0 ? '$_liveServingCount' : '0',
-                          subtitle: _liveServingTokens.isNotEmpty ? 'Token $_liveServingTokens' : 'Available',
+                          value: _liveServingCount > 0
+                              ? '$_liveServingCount'
+                              : '0',
+                          subtitle: _liveServingTokens.isNotEmpty
+                              ? 'Token $_liveServingTokens'
+                              : 'Available',
                           icon: Icons.chair_alt_outlined,
                           color: const Color(0xFF0D9488),
                         ),
@@ -476,16 +524,24 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                   _buildOwnerCard(),
 
                   // ── About the Salon ─────────────────────────────────────────
-                  if (widget.salon.description != null && widget.salon.description!.isNotEmpty) ...[
+                  if (widget.salon.description != null &&
+                      widget.salon.description!.isNotEmpty) ...[
                     const SizedBox(height: 20),
                     const Text(
                       'About the Salon',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       widget.salon.description!,
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade700, height: 1.4),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                        height: 1.4,
+                      ),
                     ),
                   ],
 
@@ -497,11 +553,17 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                       children: [
                         const Text(
                           'Salon Gallery',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                         Text(
                           '${widget.salon.galleryImages.length} photos',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                       ],
                     ),
@@ -524,7 +586,10 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(14),
-                                child: _buildImageWidget(imgPath, fit: BoxFit.cover),
+                                child: _buildImageWidget(
+                                  imgPath,
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                           );
@@ -544,7 +609,9 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                   Text(
                     'Choose the options you want to get done:',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.65,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -557,7 +624,7 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                       children: _categories.map((cat) {
                         final isSelected =
                             _effectiveSelectedCategory.toLowerCase() ==
-                                cat.toLowerCase();
+                            cat.toLowerCase();
 
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
@@ -586,16 +653,18 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                                 boxShadow: isSelected
                                     ? [
                                         BoxShadow(
-                                          color: const Color(0xFF14243A)
-                                              .withValues(alpha: 0.2),
+                                          color: const Color(
+                                            0xFF14243A,
+                                          ).withValues(alpha: 0.2),
                                           blurRadius: 6,
                                           offset: const Offset(0, 2),
                                         ),
                                       ]
                                     : [
                                         BoxShadow(
-                                          color: Colors.black
-                                              .withValues(alpha: 0.03),
+                                          color: Colors.black.withValues(
+                                            alpha: 0.03,
+                                          ),
                                           blurRadius: 4,
                                           offset: const Offset(0, 1),
                                         ),
@@ -642,116 +711,124 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final service = _filteredServices[index];
-                  final isSelected = _selectedServiceIds.contains(service.id);
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final service = _filteredServices[index];
+                final isSelected = _selectedServiceIds.contains(service.id);
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: isSelected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.outline.withValues(alpha: 0.2),
-                        width: isSelected ? 1.5 : 1,
-                      ),
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outline.withValues(alpha: 0.2),
+                      width: isSelected ? 1.5 : 1,
                     ),
-                    color: isSelected
-                        ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-                        : null,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedServiceIds.remove(service.id);
-                          } else {
-                            _selectedServiceIds.add(service.id);
-                          }
-                        });
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(14.0),
-                        child: Row(
-                          children: [
-                            Checkbox(
-                              value: isSelected,
-                              onChanged: (val) {
-                                setState(() {
-                                  if (val == true) {
-                                    _selectedServiceIds.add(service.id);
-                                  } else {
-                                    _selectedServiceIds.remove(service.id);
-                                  }
-                                });
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    service.name,
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
+                  ),
+                  color: isSelected
+                      ? theme.colorScheme.primaryContainer.withValues(
+                          alpha: 0.3,
+                        )
+                      : null,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      setState(() {
+                        if (isSelected) {
+                          _selectedServiceIds.remove(service.id);
+                        } else {
+                          _selectedServiceIds.add(service.id);
+                        }
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(14.0),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: isSelected,
+                            onChanged: (val) {
+                              setState(() {
+                                if (val == true) {
+                                  _selectedServiceIds.add(service.id);
+                                } else {
+                                  _selectedServiceIds.remove(service.id);
+                                }
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  service.name,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: theme
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        service.category,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: theme.colorScheme.primary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.surfaceContainerHighest,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          service.category,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: theme.colorScheme.primary,
-                                            fontWeight: FontWeight.w500,
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      Icons.timer_outlined,
+                                      size: 14,
+                                      color: theme.colorScheme.outline,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      '~${service.durationMinutes} mins',
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: theme.colorScheme.onSurface
+                                                .withValues(alpha: 0.6),
                                           ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Icon(Icons.timer_outlined, size: 14, color: theme.colorScheme.outline),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        '~${service.durationMinutes} mins',
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                            Text(
-                              '₹${service.price.toStringAsFixed(0)}',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: theme.colorScheme.primary,
-                              ),
+                          ),
+                          Text(
+                            '₹${service.price.toStringAsFixed(0)}',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.primary,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
-                childCount: _filteredServices.length,
-              ),
+                  ),
+                );
+              }, childCount: _filteredServices.length),
             ),
           ),
 
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 100),
-          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
 
@@ -779,7 +856,9 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                     Text(
                       '${_selectedServiceIds.length} service(s) selected',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ),
                       ),
                     ),
                     Text(
@@ -794,12 +873,17 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
               ),
               const SizedBox(width: 16),
               ElevatedButton.icon(
-                onPressed: _isJoining || !widget.salon.isQueueOpen ? null : _handleJoinQueue,
+                onPressed: _isJoining || !widget.salon.isQueueOpen
+                    ? null
+                    : _handleJoinQueue,
                 icon: _isJoining
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.queue_play_next),
                 label: Text(
@@ -807,7 +891,10 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                 ),
               ),
             ],
@@ -818,7 +905,8 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
   }
 
   Widget _buildOwnerCard() {
-    final ownerName = (widget.salon.ownerName != null && widget.salon.ownerName!.isNotEmpty)
+    final ownerName =
+        (widget.salon.ownerName != null && widget.salon.ownerName!.isNotEmpty)
         ? widget.salon.ownerName!
         : 'Salon Owner';
     final avatar = widget.salon.ownerAvatarUrl;
@@ -828,7 +916,9 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFC9A45C).withValues(alpha: 0.3)),
+        border: Border.all(
+          color: const Color(0xFFC9A45C).withValues(alpha: 0.3),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -847,9 +937,18 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
               backgroundColor: const Color(0xFF14243A),
               child: avatar != null && avatar.isNotEmpty
                   ? ClipOval(
-                      child: _buildImageWidget(avatar, width: 50, height: 50, fit: BoxFit.cover),
+                      child: _buildImageWidget(
+                        avatar,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                      ),
                     )
-                  : const Icon(Icons.person, color: Color(0xFFC9A45C), size: 28),
+                  : const Icon(
+                      Icons.person,
+                      color: Color(0xFFC9A45C),
+                      size: 28,
+                    ),
             ),
           ),
           const SizedBox(width: 14),
@@ -873,7 +972,10 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                     ),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFC9A45C).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
@@ -902,7 +1004,11 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.verified_user_outlined, size: 13, color: Color(0xFF2E7D32)),
+                    const Icon(
+                      Icons.verified_user_outlined,
+                      size: 13,
+                      color: Color(0xFF2E7D32),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Verified Salon Management',
@@ -993,7 +1099,12 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
     return _buildImageWidget(path, fit: BoxFit.cover);
   }
 
-  Widget _buildImageWidget(String path, {BoxFit fit = BoxFit.cover, double? width, double? height}) {
+  Widget _buildImageWidget(
+    String path, {
+    BoxFit fit = BoxFit.cover,
+    double? width,
+    double? height,
+  }) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return Image.network(
         path,
@@ -1072,14 +1183,20 @@ class _SalonDetailsScreenState extends State<SalonDetailsScreen> {
                     right: 0,
                     child: Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black54,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           '${currentIdx + 1} / ${widget.salon.galleryImages.length}',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),

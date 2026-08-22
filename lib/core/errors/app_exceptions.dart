@@ -6,7 +6,8 @@ class AppException implements Exception {
   AppException(this.message, {this.code});
 
   @override
-  String toString() => 'AppException: $message${code != null ? ' (Code: $code)' : ''}';
+  String toString() =>
+      'AppException: $message${code != null ? ' (Code: $code)' : ''}';
 }
 
 /// Exception for network-related errors

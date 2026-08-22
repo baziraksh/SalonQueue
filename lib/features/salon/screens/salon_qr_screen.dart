@@ -63,7 +63,10 @@ class SalonQrScreen extends StatelessWidget {
               // Printable QR Code Container Card
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 28.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 28.0,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
@@ -87,7 +90,11 @@ class SalonQrScreen extends StatelessWidget {
                             color: AppColorSchemes.navy,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.content_cut, color: AppColorSchemes.gold, size: 18),
+                          child: const Icon(
+                            Icons.content_cut,
+                            color: AppColorSchemes.gold,
+                            size: 18,
+                          ),
                         ),
                         const SizedBox(width: 10),
                         const Text(
@@ -109,7 +116,10 @@ class SalonQrScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey.shade200, width: 1.5),
+                        border: Border.all(
+                          color: Colors.grey.shade200,
+                          width: 1.5,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.03),
@@ -164,12 +174,17 @@ class SalonQrScreen extends StatelessWidget {
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('QR Code Standee ready for printing & counter display.'),
+                        content: Text(
+                          'QR Code Standee ready for printing & counter display.',
+                        ),
                         backgroundColor: AppColorSchemes.available,
                       ),
                     );
                   },
-                  icon: const Icon(Icons.print_rounded, color: AppColorSchemes.gold),
+                  icon: const Icon(
+                    Icons.print_rounded,
+                    color: AppColorSchemes.gold,
+                  ),
                   label: const Text(
                     'Print QR Code Standee',
                     style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
@@ -177,7 +192,9 @@ class SalonQrScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorSchemes.navy,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),

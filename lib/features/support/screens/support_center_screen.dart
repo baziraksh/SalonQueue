@@ -73,7 +73,8 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
     return _allFaqs.where((faq) {
       final matchesCategory =
           _selectedCategory == 'All' || faq.category == _selectedCategory;
-      final matchesQuery = _searchQuery.isEmpty ||
+      final matchesQuery =
+          _searchQuery.isEmpty ||
           faq.question.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           faq.answer.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           faq.category.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -121,7 +122,8 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
 
     setState(() => _isSubmitting = true);
     final auth = AuthScope.of(context, listen: false);
-    final userId = auth.currentUser?.id ?? 'user-${DateTime.now().millisecondsSinceEpoch}';
+    final userId =
+        auth.currentUser?.id ?? 'user-${DateTime.now().millisecondsSinceEpoch}';
     final userRole = widget.isOwner ? 'salon_owner' : 'customer';
 
     try {
@@ -150,9 +152,9 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to submit ticket: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to submit ticket: $e')));
     }
   }
 
@@ -163,7 +165,11 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Row(
           children: [
-            Icon(Icons.check_circle_rounded, color: AppColorSchemes.available, size: 28),
+            Icon(
+              Icons.check_circle_rounded,
+              color: AppColorSchemes.available,
+              size: 28,
+            ),
             SizedBox(width: 10),
             Text(
               'Request Submitted',
@@ -184,9 +190,14 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColorSchemes.navy,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('View My Requests', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'View My Requests',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -218,7 +229,10 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
           unselectedLabelColor: Colors.grey.shade500,
           indicatorColor: AppColorSchemes.gold,
           indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+          ),
           tabs: const [
             Tab(text: 'Help Center'),
             Tab(text: 'Report Issue'),
@@ -272,7 +286,10 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
               decoration: InputDecoration(
                 hintText: 'Search for help (e.g. queue, QR code, turn)...',
                 hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                prefixIcon: const Icon(Icons.search_rounded, color: AppColorSchemes.navy),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: AppColorSchemes.navy,
+                ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear, size: 18),
@@ -283,7 +300,10 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                       )
                     : null,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
               ),
             ),
           ),
@@ -317,7 +337,11 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
               ),
               Text(
                 '${faqs.length} articles',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -334,7 +358,11 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
               ),
               child: Column(
                 children: [
-                  Icon(Icons.search_off_rounded, size: 48, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.search_off_rounded,
+                    size: 48,
+                    color: Colors.grey.shade400,
+                  ),
                   const SizedBox(height: 12),
                   const Text(
                     'No help articles found',
@@ -432,7 +460,11 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
               color: AppColorSchemes.charcoal,
             ),
           ),
-          childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 14),
+          childrenPadding: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: 14,
+          ),
           expandedCrossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Divider(height: 1, color: Color(0xFFEEEEEE)),
@@ -481,7 +513,11 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                   color: Colors.white.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.support_agent_rounded, color: AppColorSchemes.gold, size: 24),
+                child: const Icon(
+                  Icons.support_agent_rounded,
+                  color: AppColorSchemes.gold,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               const Column(
@@ -513,11 +549,16 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                 child: ElevatedButton.icon(
                   onPressed: () => _tabController.animateTo(1),
                   icon: const Icon(Icons.edit_note_rounded, size: 18),
-                  label: const Text('Submit Ticket', style: TextStyle(fontWeight: FontWeight.w800)),
+                  label: const Text(
+                    'Submit Ticket',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColorSchemes.gold,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
@@ -533,11 +574,23 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                       ),
                     );
                   },
-                  icon: const Icon(Icons.email_outlined, size: 18, color: Colors.white),
-                  label: const Text('Email Us', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                  icon: const Icon(
+                    Icons.email_outlined,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    'Email Us',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.white38),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
@@ -590,7 +643,10 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                     initialValue: _ticketCategory,
                     decoration: const InputDecoration(
                       labelText: 'Category *',
-                      prefixIcon: Icon(Icons.category_outlined, color: AppColorSchemes.navy),
+                      prefixIcon: Icon(
+                        Icons.category_outlined,
+                        color: AppColorSchemes.navy,
+                      ),
                     ),
                     items: _categories
                         .map((c) => DropdownMenuItem(value: c, child: Text(c)))
@@ -607,10 +663,14 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                     decoration: const InputDecoration(
                       labelText: 'Subject / Issue Title *',
                       hintText: 'e.g. QR scanner not recognizing code',
-                      prefixIcon: Icon(Icons.title_rounded, color: AppColorSchemes.navy),
+                      prefixIcon: Icon(
+                        Icons.title_rounded,
+                        color: AppColorSchemes.navy,
+                      ),
                     ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Please enter a subject' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Please enter a subject'
+                        : null,
                   ),
                   const SizedBox(height: 14),
 
@@ -620,11 +680,15 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                     maxLines: 4,
                     decoration: const InputDecoration(
                       labelText: 'Description *',
-                      hintText: 'Describe the steps or error you encountered...',
+                      hintText:
+                          'Describe the steps or error you encountered...',
                       alignLabelWithHint: true,
                       prefixIcon: Padding(
                         padding: EdgeInsets.only(bottom: 50),
-                        child: Icon(Icons.notes_rounded, color: AppColorSchemes.navy),
+                        child: Icon(
+                          Icons.notes_rounded,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
                     ),
                     validator: (v) => (v == null || v.trim().length < 5)
@@ -639,7 +703,10 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                     decoration: const InputDecoration(
                       labelText: 'Screenshot / Image Link (Optional)',
                       hintText: 'https://...',
-                      prefixIcon: Icon(Icons.attach_file_rounded, color: AppColorSchemes.navy),
+                      prefixIcon: Icon(
+                        Icons.attach_file_rounded,
+                        color: AppColorSchemes.navy,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -654,17 +721,25 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : const Icon(Icons.send_rounded, size: 18),
                       label: const Text(
                         'Submit Support Request',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColorSchemes.navy,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                   ),
@@ -682,7 +757,9 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildMyRequestsTab() {
     if (_isLoadingTickets) {
-      return const Center(child: CircularProgressIndicator(color: AppColorSchemes.gold));
+      return const Center(
+        child: CircularProgressIndicator(color: AppColorSchemes.gold),
+      );
     }
 
     return RefreshIndicator(
@@ -695,16 +772,26 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.inbox_rounded, size: 64, color: Colors.grey.shade400),
+                    Icon(
+                      Icons.inbox_rounded,
+                      size: 64,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(height: 14),
                     const Text(
                       'No Support Requests Yet',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Any issue you report will appear here with live resolution status.',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
@@ -715,7 +802,9 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColorSchemes.navy,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ],
@@ -771,16 +860,25 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: ticket.status.backgroundColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: ticket.status.color.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: ticket.status.color.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(ticket.status.icon, color: ticket.status.color, size: 14),
+                    Icon(
+                      ticket.status.icon,
+                      color: ticket.status.color,
+                      size: 14,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       ticket.status.label,
@@ -827,10 +925,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
               ),
               Text(
                 _formatDate(ticket.createdAt),
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade500,
-                ),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
               ),
             ],
           ),
@@ -846,12 +941,19 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.support_agent_rounded, color: AppColorSchemes.available, size: 18),
+                  const Icon(
+                    Icons.support_agent_rounded,
+                    color: AppColorSchemes.available,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Support Response: ${ticket.adminResponse}',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF15803D)),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF15803D),
+                      ),
                     ),
                   ),
                 ],
@@ -865,8 +967,18 @@ class _SupportCenterScreenState extends State<SupportCenterScreen>
 
   String _formatDate(DateTime dt) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
     final period = dt.hour >= 12 ? 'PM' : 'AM';

@@ -2,16 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase_flutter;
-// UGFUGYUFFYGU
 import 'core/config/supabase_config.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/theme.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/services/auth_scope.dart';
 import 'features/auth/services/auth_service.dart';
+import 'features/salon/data/salon_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Preload disk cached salons for instant frame-1 display
+  unawaited(SalonRepository.initDiskCache());
 
   // Load configuration and initialize shared Supabase client
   final initialized = await SupabaseConfig.initialize();
@@ -34,12 +37,7 @@ void main() async {
 
   authService.initialize();
 
-  runApp(
-    AuthScope(
-      service: authService,
-      child: const SalonQueueApp(),
-    ),
-  );
+  runApp(AuthScope(service: authService, child: const SalonQueueApp()));
 }
 
 class SalonQueueApp extends StatelessWidget {

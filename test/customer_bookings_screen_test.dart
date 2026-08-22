@@ -16,72 +16,74 @@ void main() {
   });
 
   group('Customer Bookings / History Screen Redesign Tests', () {
-    testWidgets('Bookings screen displays Top Header, Tabs, Badges and View CTA', (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+    testWidgets(
+      'Bookings screen displays Top Header, Tabs, Badges and View CTA',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
 
-      final authService = AuthService(null);
+        final authService = AuthService(null);
 
-      await tester.pumpWidget(
-        AuthScope(
-          service: authService,
-          child: const MaterialApp(
-            home: CustomerHistoryScreen(),
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: const MaterialApp(home: CustomerHistoryScreen()),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Top Header: Circular Back Arrow & Centered Title "My Bookings"
-      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
-      expect(find.text('My Bookings'), findsOneWidget);
+        // Top Header: Circular Back Arrow & Centered Title "My Bookings"
+        expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
+        expect(find.text('My Bookings'), findsOneWidget);
 
-      // Booking Tabs: Upcoming & Completed
-      expect(find.text('Upcoming'), findsOneWidget);
-      expect(find.text('Completed'), findsOneWidget);
+        // Booking Tabs: Upcoming & Completed
+        expect(find.text('Upcoming'), findsOneWidget);
+        expect(find.text('Completed'), findsOneWidget);
 
-      // Default empty state for Upcoming
-      expect(find.text('No Upcoming Bookings'), findsOneWidget);
-      expect(find.text('Explore Salons'), findsOneWidget);
+        // Default empty state for Upcoming
+        expect(find.text('No Upcoming Bookings'), findsOneWidget);
+        expect(find.text('Explore Salons'), findsOneWidget);
 
-      // Switch to Completed tab
-      await tester.tap(find.text('Completed'));
-      await tester.pumpAndSettle();
+        // Switch to Completed tab
+        await tester.tap(find.text('Completed'));
+        await tester.pumpAndSettle();
 
-      // Completed tab empty state
-      expect(find.text('No Completed Bookings'), findsOneWidget);
-    });
+        // Completed tab empty state
+        expect(find.text('No Completed Bookings'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Booking cards render salon name, service, date/time and View button', (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+    testWidgets(
+      'Booking cards render salon name, service, date/time and View button',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
 
-      final authService = AuthService(null);
-      final queueRepo = QueueRepository(client: null);
+        final authService = AuthService(null);
+        final queueRepo = QueueRepository(client: null);
 
-      // Add a test ticket to local in-memory queue
-      await queueRepo.joinQueue(
-        salonId: 'salon-book-1',
-        customerId: '',
-        customerName: 'Asafion Studio',
-        selectedServices: [],
-      );
+        // Add a test ticket to local in-memory queue
+        await queueRepo.joinQueue(
+          salonId: 'salon-book-1',
+          customerId: '',
+          customerName: 'Asafion Studio',
+          selectedServices: [],
+        );
 
-      await tester.pumpWidget(
-        AuthScope(
-          service: authService,
-          child: const MaterialApp(
-            home: CustomerHistoryScreen(),
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: const MaterialApp(home: CustomerHistoryScreen()),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Verify the booking card appears
-      expect(find.text('Upcoming'), findsAtLeast(1));
-      expect(find.text('View'), findsOneWidget);
-    });
+        // Verify the booking card appears
+        expect(find.text('Upcoming'), findsAtLeast(1));
+        expect(find.text('View'), findsOneWidget);
+      },
+    );
   });
 }

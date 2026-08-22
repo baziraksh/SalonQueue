@@ -46,14 +46,15 @@ class WelcomeScreen extends StatelessWidget {
         children: [
           // Subtle champagne wave background
           Positioned.fill(
-            child: CustomPaint(
-              painter: _BackgroundWavePainter(),
-            ),
+            child: CustomPaint(painter: _BackgroundWavePainter()),
           ),
 
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
               child: Column(
                 children: [
                   const Spacer(flex: 2),
@@ -123,7 +124,11 @@ class WelcomeScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.shield_outlined, size: 14, color: AppColorSchemes.gold),
+                      const Icon(
+                        Icons.shield_outlined,
+                        size: 14,
+                        color: AppColorSchemes.gold,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Fast, Secure & Verified Live Queues',
@@ -162,10 +167,7 @@ class WelcomeScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppColorSchemes.navy,
-              width: 1.8,
-            ),
+            border: Border.all(color: AppColorSchemes.navy, width: 1.8),
             boxShadow: [
               BoxShadow(
                 color: AppColorSchemes.navy.withValues(alpha: 0.08),
@@ -185,11 +187,7 @@ class WelcomeScreen extends StatelessWidget {
                   color: AppColorSchemes.navy,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icon,
-                  size: 22,
-                  color: AppColorSchemes.gold,
-                ),
+                child: Icon(icon, size: 22, color: AppColorSchemes.gold),
               ),
               const SizedBox(width: 16),
 
@@ -262,8 +260,16 @@ class _BackgroundWavePainter extends CustomPainter {
     final circlePaint = Paint()
       ..color = const Color(0xFFEFE8D8).withValues(alpha: 0.4)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(size.width * 0.88, size.height * 0.18), 36, circlePaint);
-    canvas.drawCircle(Offset(size.width * 0.12, size.height * 0.75), 24, circlePaint);
+    canvas.drawCircle(
+      Offset(size.width * 0.88, size.height * 0.18),
+      36,
+      circlePaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.12, size.height * 0.75),
+      24,
+      circlePaint,
+    );
   }
 
   @override

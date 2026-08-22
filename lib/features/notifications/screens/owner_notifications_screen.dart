@@ -14,7 +14,8 @@ class OwnerNotificationsScreen extends StatefulWidget {
   final String? ownerId;
 
   @override
-  State<OwnerNotificationsScreen> createState() => _OwnerNotificationsScreenState();
+  State<OwnerNotificationsScreen> createState() =>
+      _OwnerNotificationsScreenState();
 }
 
 class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
@@ -51,19 +52,21 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
     final ownerId = _effectiveOwnerId;
 
     _streamSub?.cancel();
-    _streamSub = _notifRepo.streamNotifications(ownerId).listen(
-      (liveList) {
-        if (mounted) {
-          setState(() {
-            _notifications = liveList;
-            _isLoading = false;
-          });
-        }
-      },
-      onError: (err) {
-        debugPrint('[OwnerNotificationsScreen] stream error: $err');
-      },
-    );
+    _streamSub = _notifRepo
+        .streamNotifications(ownerId)
+        .listen(
+          (liveList) {
+            if (mounted) {
+              setState(() {
+                _notifications = liveList;
+                _isLoading = false;
+              });
+            }
+          },
+          onError: (err) {
+            debugPrint('[OwnerNotificationsScreen] stream error: $err');
+          },
+        );
 
     final list = await _notifRepo.fetchNotifications(ownerId);
     if (!mounted) return;
@@ -76,21 +79,33 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
   List<AppNotification> get _filteredNotifications {
     if (_selectedFilter == 'All') return _notifications;
     if (_selectedFilter == 'Queue') {
-      return _notifications.where((n) =>
-          n.type == NotificationType.customerJoined ||
-          n.type == NotificationType.customerCancelled ||
-          n.type == NotificationType.customerCalled ||
-          n.type == NotificationType.queueUpdate).toList();
+      return _notifications
+          .where(
+            (n) =>
+                n.type == NotificationType.customerJoined ||
+                n.type == NotificationType.customerCancelled ||
+                n.type == NotificationType.customerCalled ||
+                n.type == NotificationType.queueUpdate,
+          )
+          .toList();
     }
     if (_selectedFilter == 'Support') {
-      return _notifications.where((n) =>
-          n.type == NotificationType.supportResolved ||
-          n.type == NotificationType.supportUpdate).toList();
+      return _notifications
+          .where(
+            (n) =>
+                n.type == NotificationType.supportResolved ||
+                n.type == NotificationType.supportUpdate,
+          )
+          .toList();
     }
     if (_selectedFilter == 'System') {
-      return _notifications.where((n) =>
-          n.type == NotificationType.systemUpdate ||
-          n.type == NotificationType.bookingUpdate).toList();
+      return _notifications
+          .where(
+            (n) =>
+                n.type == NotificationType.systemUpdate ||
+                n.type == NotificationType.bookingUpdate,
+          )
+          .toList();
     }
     return _notifications;
   }
@@ -101,7 +116,9 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
     HapticFeedback.lightImpact();
     await _notifRepo.markAllAsRead(_effectiveOwnerId);
     setState(() {
-      _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
+      _notifications = _notifications
+          .map((n) => n.copyWith(isRead: true))
+          .toList();
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -168,7 +185,10 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
                         const SizedBox(height: 2),
                         Text(
                           notif.timeAgo,
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                       ],
                     ),
@@ -214,12 +234,16 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
                       );
                     },
                     icon: const Icon(Icons.support_agent_rounded, size: 20),
-                    label: const Text('View Support Ticket Details',
-                        style: TextStyle(fontWeight: FontWeight.w800)),
+                    label: const Text(
+                      'View Support Ticket Details',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColorSchemes.navy,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
@@ -232,9 +256,14 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColorSchemes.gold,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
-                    child: const Text('Dismiss', style: TextStyle(fontWeight: FontWeight.w800)),
+                    child: const Text(
+                      'Dismiss',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
                   ),
                 ),
               ],
@@ -296,7 +325,11 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
           if (_unreadCount > 0)
             TextButton.icon(
               onPressed: _handleMarkAllAsRead,
-              icon: const Icon(Icons.done_all_rounded, size: 16, color: AppColorSchemes.navy),
+              icon: const Icon(
+                Icons.done_all_rounded,
+                size: 16,
+                color: AppColorSchemes.navy,
+              ),
               label: const Text(
                 'Mark read',
                 style: TextStyle(
@@ -327,15 +360,21 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
                     selectedColor: AppColorSchemes.navy,
                     checkmarkColor: Colors.white,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : AppColorSchemes.charcoal,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      color: isSelected
+                          ? Colors.white
+                          : AppColorSchemes.charcoal,
+                      fontWeight: isSelected
+                          ? FontWeight.w800
+                          : FontWeight.w600,
                       fontSize: 12.5,
                     ),
                     backgroundColor: AppColorSchemes.ivory,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color: isSelected ? AppColorSchemes.navy : Colors.grey.shade300,
+                        color: isSelected
+                            ? AppColorSchemes.navy
+                            : Colors.grey.shade300,
                         width: 1,
                       ),
                     ),
@@ -348,22 +387,29 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
           // Notification List View
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColorSchemes.gold))
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColorSchemes.gold,
+                    ),
+                  )
                 : filtered.isEmpty
-                    ? _buildEmptyState()
-                    : RefreshIndicator(
-                        color: AppColorSchemes.navy,
-                        onRefresh: _loadNotifications,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final notif = filtered[index];
-                            return _buildNotificationCard(notif);
-                          },
-                        ),
+                ? _buildEmptyState()
+                : RefreshIndicator(
+                    color: AppColorSchemes.navy,
+                    onRefresh: _loadNotifications,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
                       ),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final notif = filtered[index];
+                        return _buildNotificationCard(notif);
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -397,7 +443,9 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: notif.isRead ? Colors.grey.shade200 : AppColorSchemes.gold.withValues(alpha: 0.4),
+                color: notif.isRead
+                    ? Colors.grey.shade200
+                    : AppColorSchemes.gold.withValues(alpha: 0.4),
                 width: notif.isRead ? 1 : 1.5,
               ),
             ),
@@ -427,7 +475,9 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
                             child: Text(
                               notif.title,
                               style: TextStyle(
-                                fontWeight: notif.isRead ? FontWeight.w700 : FontWeight.w900,
+                                fontWeight: notif.isRead
+                                    ? FontWeight.w700
+                                    : FontWeight.w900,
                                 fontSize: 14,
                                 color: AppColorSchemes.charcoal,
                               ),
@@ -452,7 +502,9 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
                         style: TextStyle(
                           fontSize: 12.5,
                           height: 1.35,
-                          color: notif.isRead ? Colors.grey.shade700 : AppColorSchemes.charcoal,
+                          color: notif.isRead
+                              ? Colors.grey.shade700
+                              : AppColorSchemes.charcoal,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -512,7 +564,11 @@ class _OwnerNotificationsScreenState extends State<OwnerNotificationsScreen> {
           Text(
             'You will be notified when customers join the queue,\nsupport issues are updated, and more.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.4),
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey.shade600,
+              height: 1.4,
+            ),
           ),
         ],
       ),

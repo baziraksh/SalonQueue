@@ -17,43 +17,41 @@ import 'package:salon_queue/main.dart';
 Widget _buildTestApp() {
   final authService = AuthService(null);
   authService.initialize();
-  return AuthScope(
-    service: authService,
-    child: const SalonQueueApp(),
-  );
+  return AuthScope(service: authService, child: const SalonQueueApp());
 }
 
 void main() {
-  testWidgets('Splash screen appears on app launch', (WidgetTester tester) async {
+  testWidgets('Splash screen appears on app launch', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_buildTestApp());
 
     // Splash branding is visible.
     expect(find.text('Salon Queue'), findsOneWidget);
-    expect(find.text('Skip the wait, book your great.'), findsOneWidget);
+    expect(find.text('Skip the wait, book your great.'), findsNothing);
 
     // Advance past the splash delay; the timer must be handled cleanly.
     await tester.pump(const Duration(milliseconds: 2300));
     await tester.pumpAndSettle();
   });
 
-  testWidgets('Welcome screen appears after splash (unauthenticated)',
-      (WidgetTester tester) async {
+  testWidgets('Welcome screen appears after splash (unauthenticated)', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_buildTestApp());
 
     await tester.pump(const Duration(milliseconds: 2300));
     await tester.pumpAndSettle();
 
     expect(find.text('Salon Queue'), findsOneWidget);
-    expect(
-      find.text('Find Salons & Skip The Line 🇮🇳'),
-      findsOneWidget,
-    );
+    expect(find.text('Find Salons & Skip The Line 🇮🇳'), findsOneWidget);
     expect(find.text('I am a Customer'), findsOneWidget);
     expect(find.text('I am a Salon Owner'), findsOneWidget);
   });
 
-  testWidgets('Customer entry button opens sign-in when unauthenticated',
-      (WidgetTester tester) async {
+  testWidgets('Customer entry button opens sign-in when unauthenticated', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_buildTestApp());
 
     await tester.pump(const Duration(milliseconds: 2100));
@@ -66,8 +64,9 @@ void main() {
     expect(find.text('Welcome back'), findsOneWidget);
   });
 
-  testWidgets('Salon owner entry button opens sign-in when unauthenticated',
-      (WidgetTester tester) async {
+  testWidgets('Salon owner entry button opens sign-in when unauthenticated', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_buildTestApp());
 
     await tester.pump(const Duration(milliseconds: 2100));
@@ -80,7 +79,9 @@ void main() {
     expect(find.text('Welcome back'), findsOneWidget);
   });
 
-  testWidgets('Sign-in screen navigates to sign-up', (WidgetTester tester) async {
+  testWidgets('Sign-in screen navigates to sign-up', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_buildTestApp());
 
     await tester.pump(const Duration(milliseconds: 2100));
@@ -97,8 +98,9 @@ void main() {
     expect(find.text('Create Account'), findsWidgets);
   });
 
-  testWidgets('Sign-in screen navigates to forgot password',
-      (WidgetTester tester) async {
+  testWidgets('Sign-in screen navigates to forgot password', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_buildTestApp());
 
     await tester.pump(const Duration(milliseconds: 2100));
@@ -121,8 +123,9 @@ void main() {
     );
   });
 
-  testWidgets('Forgot password form validates required fields',
-      (WidgetTester tester) async {
+  testWidgets('Forgot password form validates required fields', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_buildTestApp());
 
     await tester.pump(const Duration(milliseconds: 2100));
@@ -140,8 +143,9 @@ void main() {
     expect(find.text('Email is required'), findsOneWidget);
   });
 
-  testWidgets('Sign-up form validates required fields',
-      (WidgetTester tester) async {
+  testWidgets('Sign-up form validates required fields', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_buildTestApp());
 
     await tester.pump(const Duration(milliseconds: 2100));

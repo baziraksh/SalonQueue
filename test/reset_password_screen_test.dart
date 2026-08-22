@@ -28,15 +28,11 @@ class _FakeAuthRepository extends AuthRepository {
   String? updatedPassword;
 
   @override
-  Stream<supabase.AuthState> get onAuthStateChange =>
-      _authEvents.stream;
+  Stream<supabase.AuthState> get onAuthStateChange => _authEvents.stream;
 
   void emitPasswordRecovery() {
     _authEvents.add(
-      supabase.AuthState(
-        supabase.AuthChangeEvent.passwordRecovery,
-        null,
-      ),
+      supabase.AuthState(supabase.AuthChangeEvent.passwordRecovery, null),
     );
   }
 
@@ -66,16 +62,11 @@ Future<AuthService> _recoveryService() async {
   return service;
 }
 
-Future<void> _pumpResetScreen(
-    WidgetTester tester,
-    AuthService service,
-    ) async {
+Future<void> _pumpResetScreen(WidgetTester tester, AuthService service) async {
   await tester.pumpWidget(
     AuthScope(
       service: service,
-      child: const MaterialApp(
-        home: ResetPasswordScreen(),
-      ),
+      child: const MaterialApp(home: ResetPasswordScreen()),
     ),
   );
 
@@ -83,195 +74,135 @@ Future<void> _pumpResetScreen(
 }
 
 Future<void> _enterPasswords(
-    WidgetTester tester, {
-      required String password,
-      required String confirm,
-    }) async {
+  WidgetTester tester, {
+  required String password,
+  required String confirm,
+}) async {
   await tester.enterText(
-    find.widgetWithText(
-      TextFormField,
-      'New Password',
-    ),
+    find.widgetWithText(TextFormField, 'New Password'),
     password,
   );
 
   await tester.enterText(
-    find.widgetWithText(
-      TextFormField,
-      'Confirm Password',
-    ),
+    find.widgetWithText(TextFormField, 'Confirm Password'),
     confirm,
   );
 }
 
 void main() {
-  testWidgets(
-    'recovery session routes to reset password screen',
-        (tester) async {
-      final repo = _FakeAuthRepository();
-      final service = AuthService(repo);
+  testWidgets('recovery session routes to reset password screen', (
+    tester,
+  ) async {
+    final repo = _FakeAuthRepository();
+    final service = AuthService(repo);
 
-      service.initialize();
+    service.initialize();
 
-      await tester.pumpWidget(
-        AuthScope(
-          service: service,
-          child: MaterialApp(
-            initialRoute: AppRouter.splash,
-            onGenerateRoute: AppRouter.generateRoute,
-            onGenerateInitialRoutes: (initialRoute) {
-              return [
-                AppRouter.generateRoute(
-                  RouteSettings(name: initialRoute),
-                ),
-              ];
-            },
-          ),
+    await tester.pumpWidget(
+      AuthScope(
+        service: service,
+        child: MaterialApp(
+          initialRoute: AppRouter.splash,
+          onGenerateRoute: AppRouter.generateRoute,
+          onGenerateInitialRoutes: (initialRoute) {
+            return [AppRouter.generateRoute(RouteSettings(name: initialRoute))];
+          },
         ),
-      );
+      ),
+    );
 
-      // Simulate the deep link delivering the PASSWORD_RECOVERY auth event.
-      repo.emitPasswordRecovery();
-      await tester.pump();
+    // Simulate the deep link delivering the PASSWORD_RECOVERY auth event.
+    repo.emitPasswordRecovery();
+    await tester.pump();
 
-      // Advance past the 2000 ms splash timer so the auth check runs, then
-      // give the route transition time to finish.
-      // Deliberately avoid pumpAndSettle(): the SplashScreen shows an
-      // indeterminate CircularProgressIndicator, which schedules frames
-      // indefinitely, so pumpAndSettle() would never observe an idle state.
-      await tester.pump(
-        const Duration(milliseconds: 2100),
-      );
+    // Advance past the 2000 ms splash timer so the auth check runs, then
+    // give the route transition time to finish.
+    // Deliberately avoid pumpAndSettle(): the SplashScreen shows an
+    // indeterminate CircularProgressIndicator, which schedules frames
+    // indefinitely, so pumpAndSettle() would never observe an idle state.
+    await tester.pump(const Duration(milliseconds: 2100));
 
-      await tester.pump(
-        const Duration(milliseconds: 500),
-      );
+    await tester.pump(const Duration(milliseconds: 500));
 
-      expect(
-        find.text('Create a new password'),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(find.text('Create a new password'), findsOneWidget);
+  });
 
-  testWidgets(
-    'validates that new password meets minimum length',
-        (tester) async {
-      final service = await _recoveryService();
+  testWidgets('validates that new password meets minimum length', (
+    tester,
+  ) async {
+    final service = await _recoveryService();
 
-      await _pumpResetScreen(
-        tester,
-        service,
-      );
+    await _pumpResetScreen(tester, service);
 
-      await _enterPasswords(
-        tester,
-        password: 'short',
-        confirm: 'short',
-      );
+    await _enterPasswords(tester, password: 'short', confirm: 'short');
 
-      await tester.tap(
-        find.text('Update Password'),
-      );
+    await tester.tap(find.text('Update Password'));
 
-      await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Password must be at least 8 characters'),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(find.text('Password must be at least 8 characters'), findsOneWidget);
+  });
 
-  testWidgets(
-    'shows error when passwords do not match',
-        (tester) async {
-      final service = await _recoveryService();
+  testWidgets('shows error when passwords do not match', (tester) async {
+    final service = await _recoveryService();
 
-      await _pumpResetScreen(
-        tester,
-        service,
-      );
+    await _pumpResetScreen(tester, service);
 
-      await _enterPasswords(
-        tester,
-        password: 'newPassword123',
-        confirm: 'differentPass1',
-      );
+    await _enterPasswords(
+      tester,
+      password: 'newPassword123',
+      confirm: 'differentPass1',
+    );
 
-      await tester.tap(
-        find.text('Update Password'),
-      );
+    await tester.tap(find.text('Update Password'));
 
-      await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Passwords do not match'),
-        findsWidgets,
-      );
-    },
-  );
+    expect(find.text('Passwords do not match'), findsWidgets);
+  });
 
-  testWidgets(
-    'successful password update shows success message',
-        (tester) async {
-      final service = await _recoveryService();
+  testWidgets('successful password update shows success message', (
+    tester,
+  ) async {
+    final service = await _recoveryService();
 
-      await _pumpResetScreen(
-        tester,
-        service,
-      );
+    await _pumpResetScreen(tester, service);
 
-      await _enterPasswords(
-        tester,
-        password: 'newPassword123',
-        confirm: 'newPassword123',
-      );
+    await _enterPasswords(
+      tester,
+      password: 'newPassword123',
+      confirm: 'newPassword123',
+    );
 
-      await tester.tap(
-        find.text('Update Password'),
-      );
+    await tester.tap(find.text('Update Password'));
 
-      await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Password updated successfully.'),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(find.text('Password updated successfully.'), findsOneWidget);
+  });
 
-  testWidgets(
-    'password update with mismatched confirmation does not submit',
-        (tester) async {
-      final repo = _FakeAuthRepository();
-      final service = AuthService(repo);
+  testWidgets('password update with mismatched confirmation does not submit', (
+    tester,
+  ) async {
+    final repo = _FakeAuthRepository();
+    final service = AuthService(repo);
 
-      service.initialize();
+    service.initialize();
 
-      repo.emitPasswordRecovery();
+    repo.emitPasswordRecovery();
 
-      await _pumpResetScreen(
-        tester,
-        service,
-      );
+    await _pumpResetScreen(tester, service);
 
-      await _enterPasswords(
-        tester,
-        password: 'newPassword123',
-        confirm: 'differentPass1',
-      );
+    await _enterPasswords(
+      tester,
+      password: 'newPassword123',
+      confirm: 'differentPass1',
+    );
 
-      await tester.tap(
-        find.text('Update Password'),
-      );
+    await tester.tap(find.text('Update Password'));
 
-      await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
-      expect(
-        repo.updatePasswordCalled,
-        isFalse,
-      );
-    },
-  );
+    expect(repo.updatePasswordCalled, isFalse);
+  });
 }

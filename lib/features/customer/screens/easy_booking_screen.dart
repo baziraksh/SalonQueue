@@ -84,7 +84,11 @@ class _EasyBookingScreenState extends State<EasyBookingScreen> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.touch_app_rounded, color: AppColorSchemes.gold, size: 28),
+                    Icon(
+                      Icons.touch_app_rounded,
+                      color: AppColorSchemes.gold,
+                      size: 28,
+                    ),
                     SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -116,17 +120,21 @@ class _EasyBookingScreenState extends State<EasyBookingScreen> {
               const SizedBox(height: 16),
 
               // ── Active Queue Ticket (if customer is currently in a queue) ──
-              if (_activeTicket != null && (_activeTicket!.isWaiting || _activeTicket!.isInChair)) ...[
+              if (_activeTicket != null &&
+                  (_activeTicket!.isWaiting || _activeTicket!.isInChair)) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: ActiveQueueCard(
                     ticket: _activeTicket!,
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => CustomerQueueScreen(ticket: _activeTicket!),
-                        ),
-                      ).then((_) => _loadData());
+                      Navigator.of(context)
+                          .push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  CustomerQueueScreen(ticket: _activeTicket!),
+                            ),
+                          )
+                          .then((_) => _loadData());
                     },
                   ),
                 ),
@@ -151,7 +159,9 @@ class _EasyBookingScreenState extends State<EasyBookingScreen> {
                 const Center(
                   child: Padding(
                     padding: EdgeInsets.all(32.0),
-                    child: CircularProgressIndicator(color: AppColorSchemes.gold),
+                    child: CircularProgressIndicator(
+                      color: AppColorSchemes.gold,
+                    ),
                   ),
                 )
               else if (_salons.isEmpty)
@@ -160,7 +170,11 @@ class _EasyBookingScreenState extends State<EasyBookingScreen> {
                     padding: const EdgeInsets.all(32.0),
                     child: Column(
                       children: [
-                        Icon(Icons.storefront_outlined, size: 48, color: Colors.grey.shade400),
+                        Icon(
+                          Icons.storefront_outlined,
+                          size: 48,
+                          color: Colors.grey.shade400,
+                        ),
                         const SizedBox(height: 12),
                         const Text(
                           'No open salons available for booking right now',
@@ -182,18 +196,24 @@ class _EasyBookingScreenState extends State<EasyBookingScreen> {
                       isFavorite: false,
                       onFavoriteTap: () {},
                       onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => SalonDetailsScreen(salon: salon),
-                          ),
-                        ).then((_) => _loadData());
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    SalonDetailsScreen(salon: salon),
+                              ),
+                            )
+                            .then((_) => _loadData());
                       },
                       onJoinQueue: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => SalonDetailsScreen(salon: salon),
-                          ),
-                        ).then((_) => _loadData());
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    SalonDetailsScreen(salon: salon),
+                              ),
+                            )
+                            .then((_) => _loadData());
                       },
                     );
                   },

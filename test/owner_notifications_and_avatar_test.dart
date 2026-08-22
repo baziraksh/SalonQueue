@@ -50,10 +50,7 @@ void main() {
         createdAt: DateTime.now(),
       );
 
-      final updated = notif.copyWith(
-        isRead: true,
-        title: 'Updated Title',
-      );
+      final updated = notif.copyWith(isRead: true, title: 'Updated Title');
 
       expect(updated.isRead, isTrue);
       expect(updated.title, equals('Updated Title'));
@@ -76,53 +73,69 @@ void main() {
   });
 
   group('NotificationRepository & Support Linkage Tests', () {
-    test('NotificationRepository creates, marks read, and deletes notifications', () async {
-      final repo = NotificationRepository();
-      const testOwner = 'test-owner-abc';
+    test(
+      'NotificationRepository creates, marks read, and deletes notifications',
+      () async {
+        final repo = NotificationRepository();
+        const testOwner = 'test-owner-abc';
 
-      final notif = await repo.createNotification(
-        ownerId: testOwner,
-        title: 'Test Notification',
-        message: 'Test Message Body',
-        type: NotificationType.queueUpdate,
-      );
+        final notif = await repo.createNotification(
+          ownerId: testOwner,
+          title: 'Test Notification',
+          message: 'Test Message Body',
+          type: NotificationType.queueUpdate,
+        );
 
-      expect(notif.ownerId, equals(testOwner));
-      expect(notif.isRead, isFalse);
+        expect(notif.ownerId, equals(testOwner));
+        expect(notif.isRead, isFalse);
 
-      final list = await repo.fetchNotifications(testOwner);
-      expect(list.any((n) => n.id == notif.id), isTrue);
+        final list = await repo.fetchNotifications(testOwner);
+        expect(list.any((n) => n.id == notif.id), isTrue);
 
-      await repo.markAsRead(notif.id);
-      final listAfterRead = await repo.fetchNotifications(testOwner);
-      final readNotif = listAfterRead.firstWhere((n) => n.id == notif.id);
-      expect(readNotif.isRead, isTrue);
+        await repo.markAsRead(notif.id);
+        final listAfterRead = await repo.fetchNotifications(testOwner);
+        final readNotif = listAfterRead.firstWhere((n) => n.id == notif.id);
+        expect(readNotif.isRead, isTrue);
 
-      await repo.deleteNotification(notif.id);
-      final listAfterDelete = await repo.fetchNotifications(testOwner);
-      expect(listAfterDelete.any((n) => n.id == notif.id), isFalse);
-    });
+        await repo.deleteNotification(notif.id);
+        final listAfterDelete = await repo.fetchNotifications(testOwner);
+        expect(listAfterDelete.any((n) => n.id == notif.id), isFalse);
+      },
+    );
 
-    test('Support ticket resolution creates persistent notification for owner', () async {
-      final supportRepo = SupportRepository();
-      final notifRepo = NotificationRepository();
-      const ownerId = 'owner-support-test';
+    test(
+      'Support ticket resolution creates persistent notification for owner',
+      () async {
+        final supportRepo = SupportRepository();
+        final notifRepo = NotificationRepository();
+        const ownerId = 'owner-support-test';
 
-      await supportRepo.updateTicketStatus(
-        ticketId: 'test-ticket-99',
-        status: SupportTicketStatus.resolved,
-        ownerId: ownerId,
-        subject: 'Printer configuration inquiry',
-        adminResponse: 'Bluetooth printer issue has been resolved in settings.',
-      );
+        await supportRepo.updateTicketStatus(
+          ticketId: 'test-ticket-99',
+          status: SupportTicketStatus.resolved,
+          ownerId: ownerId,
+          subject: 'Printer configuration inquiry',
+          adminResponse:
+              'Bluetooth printer issue has been resolved in settings.',
+        );
 
-      final notifs = await notifRepo.fetchNotifications(ownerId);
-      expect(notifs.any((n) => n.type == NotificationType.supportResolved && n.relatedId == 'test-ticket-99'), isTrue);
-    });
+        final notifs = await notifRepo.fetchNotifications(ownerId);
+        expect(
+          notifs.any(
+            (n) =>
+                n.type == NotificationType.supportResolved &&
+                n.relatedId == 'test-ticket-99',
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 
   group('Owner Notifications Screen Widget Tests', () {
-    testWidgets('OwnerNotificationsScreen renders title and filter chips', (tester) async {
+    testWidgets('OwnerNotificationsScreen renders title and filter chips', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: OwnerNotificationsScreen(ownerId: 'demo-owner'),
@@ -139,38 +152,39 @@ void main() {
   });
 
   group('Owner Dashboard Header & QR Removal Tests', () {
-    testWidgets('SalonEntryScreen header has Hamburger Menu, Salon Title, and Notification Bell (NO top-right QR icon)', (tester) async {
-      final authService = AuthService(null);
-      authService.updateCurrentUserAvatar('https://example.com/avatar.jpg');
+    testWidgets(
+      'SalonEntryScreen header has Hamburger Menu, Salon Title, and Notification Bell (NO top-right QR icon)',
+      (tester) async {
+        final authService = AuthService(null);
+        authService.updateCurrentUserAvatar('https://example.com/avatar.jpg');
 
-      await tester.pumpWidget(
-        AuthScope(
-          service: authService,
-          child: const MaterialApp(
-            home: SalonEntryScreen(),
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: const MaterialApp(home: SalonEntryScreen()),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Top-Left Hamburger Menu
-      expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+        // Top-Left Hamburger Menu
+        expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
 
-      // Center title and dashboard indicator
-      expect(find.text('OWNER DASHBOARD'), findsOneWidget);
+        // Center title and dashboard indicator
+        expect(find.text('OWNER DASHBOARD'), findsOneWidget);
 
-      // Top-Right Notification Bell
-      expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
+        // Top-Right Notification Bell
+        expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
 
-      // Verify that QR code icon is NOT in the AppBar actions
-      // (The QR code icon remains in the bottom navigation bar as intended)
-      final appBar = tester.widget<AppBar>(find.byType(AppBar));
-      expect(appBar.actions, isNotNull);
-      final qrIconsInAppBar = find.descendant(
-        of: find.byType(AppBar),
-        matching: find.byIcon(Icons.qr_code_2_rounded),
-      );
-      expect(qrIconsInAppBar, findsNothing);
-    });
+        // Verify that QR code icon is NOT in the AppBar actions
+        // (The QR code icon remains in the bottom navigation bar as intended)
+        final appBar = tester.widget<AppBar>(find.byType(AppBar));
+        expect(appBar.actions, isNotNull);
+        final qrIconsInAppBar = find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byIcon(Icons.qr_code_2_rounded),
+        );
+        expect(qrIconsInAppBar, findsNothing);
+      },
+    );
   });
 }

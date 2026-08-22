@@ -77,25 +77,22 @@ class AppRouter {
       case signIn:
       case '/sign-in':
         return MaterialPageRoute(
-          builder: (_) => SignInScreen(
-            requestedRole: _readRequestedRole(settings),
-          ),
+          builder: (_) =>
+              SignInScreen(requestedRole: _readRequestedRole(settings)),
           settings: settings,
         );
       case signUp:
       case '/sign-up':
         return MaterialPageRoute(
-          builder: (_) => SignUpScreen(
-            requestedRole: _readRequestedRole(settings),
-          ),
+          builder: (_) =>
+              SignUpScreen(requestedRole: _readRequestedRole(settings)),
           settings: settings,
         );
       case forgotPassword:
       case '/forgot-password':
         return MaterialPageRoute(
-          builder: (_) => ForgotPasswordScreen(
-            requestedRole: _readRequestedRole(settings),
-          ),
+          builder: (_) =>
+              ForgotPasswordScreen(requestedRole: _readRequestedRole(settings)),
           settings: settings,
         );
       case customerEntry:
@@ -112,9 +109,7 @@ class AppRouter {
         return MaterialPageRoute(
           builder: (_) => Scaffold(
             appBar: AppBar(title: const Text('Not Found')),
-            body: Center(
-              child: Text('No route defined for ${settings.name}'),
-            ),
+            body: Center(child: Text('No route defined for ${settings.name}')),
           ),
         );
     }
@@ -134,59 +129,58 @@ class AppRouter {
   /// Clears the entire navigation stack and lands on the welcome screen.
   /// Used for unauthenticated landings and after logout.
   static void navigateToWelcome(BuildContext context) {
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      welcome,
-      (route) => false,
-    );
+    Navigator.of(context).pushNamedAndRemoveUntil(welcome, (route) => false);
   }
 
   /// Navigates to sign-in for the requested login mode.
-  static void navigateToSignIn(BuildContext context,
-      {AppRole requestedRole = AppRole.customer}) {
-    Navigator.of(context).pushNamed(
-      signIn,
-      arguments: AuthFlowArguments(requestedRole),
-    );
+  static void navigateToSignIn(
+    BuildContext context, {
+    AppRole requestedRole = AppRole.customer,
+  }) {
+    Navigator.of(
+      context,
+    ).pushNamed(signIn, arguments: AuthFlowArguments(requestedRole));
   }
 
   /// Navigates to sign-up for the requested login mode.
-  static void navigateToSignUp(BuildContext context,
-      {AppRole requestedRole = AppRole.customer}) {
-    Navigator.of(context).pushNamed(
-      signUp,
-      arguments: AuthFlowArguments(requestedRole),
-    );
+  static void navigateToSignUp(
+    BuildContext context, {
+    AppRole requestedRole = AppRole.customer,
+  }) {
+    Navigator.of(
+      context,
+    ).pushNamed(signUp, arguments: AuthFlowArguments(requestedRole));
   }
 
   /// Navigates to the forgot-password screen.
-  static void navigateToForgotPassword(BuildContext context,
-      {AppRole requestedRole = AppRole.customer}) {
-    Navigator.of(context).pushNamed(
-      forgotPassword,
-      arguments: AuthFlowArguments(requestedRole),
-    );
+  static void navigateToForgotPassword(
+    BuildContext context, {
+    AppRole requestedRole = AppRole.customer,
+  }) {
+    Navigator.of(
+      context,
+    ).pushNamed(forgotPassword, arguments: AuthFlowArguments(requestedRole));
   }
 
   /// Navigates to the reset-password screen (after a recovery deep link).
   /// Clears the stack so no auth screen sits underneath.
   static void navigateToResetPassword(BuildContext context) {
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      resetPassword,
-      (route) => false,
-    );
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(resetPassword, (route) => false);
   }
 
   /// After a successful password update, return to sign-in and clear the
   /// entire recovery stack.
   static void navigateToSignInAfterReset(BuildContext context) {
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      signIn,
-      (route) => false,
-    );
+    Navigator.of(context).pushNamedAndRemoveUntil(signIn, (route) => false);
   }
 
   /// Routes an authenticated user to their role's home screen.
-  static void navigateToRoleHome(BuildContext context, {required AppRole role}) {
+  static void navigateToRoleHome(
+    BuildContext context, {
+    required AppRole role,
+  }) {
     switch (role) {
       case AppRole.salonOwner:
         navigateToSalonEntry(context);
@@ -201,29 +195,22 @@ class AppRouter {
   /// flow (splash/welcome/sign-in/sign-up) from the stack so the dashboard
   /// becomes the root route. Back navigation cannot return to auth screens.
   static void navigateToCustomerEntry(BuildContext context) {
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      customerEntry,
-      (route) => false,
-    );
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(customerEntry, (route) => false);
   }
 
   /// Routes to the Salon Owner Dashboard, clearing the entire authentication
   /// flow (splash/welcome/sign-in/sign-up) from the stack so the dashboard
   /// becomes the root route. Back navigation cannot return to auth screens.
   static void navigateToSalonEntry(BuildContext context) {
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      salonEntry,
-      (route) => false,
-    );
+    Navigator.of(context).pushNamedAndRemoveUntil(salonEntry, (route) => false);
   }
 
   /// Routes to the welcome screen after an explicit logout, clearing the
   /// entire authenticated stack (dashboard etc.).
   static void navigateToWelcomeAfterLogout(BuildContext context) {
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      welcome,
-      (route) => false,
-    );
+    Navigator.of(context).pushNamedAndRemoveUntil(welcome, (route) => false);
   }
 
   static AppRole _readRequestedRole(RouteSettings settings) {

@@ -44,11 +44,7 @@ class MockPersistentAuthRepository extends AuthRepository {
       throw Exception('Network timeout / offline');
     }
     if (profileRole != null) {
-      return {
-        'id': userId,
-        'full_name': 'Test User',
-        'role': profileRole,
-      };
+      return {'id': userId, 'full_name': 'Test User', 'role': profileRole};
     }
     return null;
   }
@@ -97,247 +93,267 @@ class MockPersistentAuthRepository extends AuthRepository {
 
 void main() {
   group('Authentication & Session Persistence Flow Tests', () {
-    testWidgets('TEST 1 & 2: Returning Salon Owner with valid session routes directly to Owner Dashboard', (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'TEST 1 & 2: Returning Salon Owner with valid session routes directly to Owner Dashboard',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      final mockUser = supabase.User(
-        id: 'owner-uuid-123',
-        appMetadata: {},
-        userMetadata: {'role': 'SALON_OWNER', 'full_name': 'Owner Rahul'},
-        aud: 'authenticated',
-        createdAt: DateTime.now().toIso8601String(),
-        email: 'owner@test.com',
-      );
+        final mockUser = supabase.User(
+          id: 'owner-uuid-123',
+          appMetadata: {},
+          userMetadata: {'role': 'SALON_OWNER', 'full_name': 'Owner Rahul'},
+          aud: 'authenticated',
+          createdAt: DateTime.now().toIso8601String(),
+          email: 'owner@test.com',
+        );
 
-      final mockSession = supabase.Session(
-        accessToken: 'valid-token',
-        tokenType: 'bearer',
-        user: mockUser,
-      );
+        final mockSession = supabase.Session(
+          accessToken: 'valid-token',
+          tokenType: 'bearer',
+          user: mockUser,
+        );
 
-      final repo = MockPersistentAuthRepository(
-        initialUser: mockUser,
-        initialSession: mockSession,
-        profileRole: 'SALON_OWNER',
-      );
+        final repo = MockPersistentAuthRepository(
+          initialUser: mockUser,
+          initialSession: mockSession,
+          profileRole: 'SALON_OWNER',
+        );
 
-      final authService = AuthService(repo);
-      authService.initialize();
+        final authService = AuthService(repo);
+        authService.initialize();
 
-      await tester.pumpWidget(
-        AuthScope(
-          service: authService,
-          child: MaterialApp(
-            home: const SplashScreen(),
-            routes: {
-              '/welcome': (_) => const WelcomeScreen(),
-              '/salon': (_) => const SalonEntryScreen(),
-              '/customer': (_) => const CustomerEntryScreen(),
-            },
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: MaterialApp(
+              home: const SplashScreen(),
+              routes: {
+                '/welcome': (_) => const WelcomeScreen(),
+                '/salon': (_) => const SalonEntryScreen(),
+                '/customer': (_) => const CustomerEntryScreen(),
+              },
+            ),
           ),
-        ),
-      );
+        );
 
-      // Advance through splash delay & session initialization
-      await tester.pump(const Duration(milliseconds: 1500));
-      await tester.pumpAndSettle();
+        // Advance through splash delay & session initialization
+        await tester.pump(const Duration(milliseconds: 1500));
+        await tester.pumpAndSettle();
 
-      // Verified: Directly opens Salon Owner Dashboard without displaying Welcome Screen
-      expect(find.byType(SalonEntryScreen), findsOneWidget);
-      expect(find.byType(WelcomeScreen), findsNothing);
-    });
+        // Verified: Directly opens Salon Owner Dashboard without displaying Welcome Screen
+        expect(find.byType(SalonEntryScreen), findsOneWidget);
+        expect(find.byType(WelcomeScreen), findsNothing);
+      },
+    );
 
-    testWidgets('TEST 3: Returning Customer with valid session routes directly to Customer Home', (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'TEST 3: Returning Customer with valid session routes directly to Customer Home',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      final mockUser = supabase.User(
-        id: 'customer-uuid-456',
-        appMetadata: {},
-        userMetadata: {'role': 'CUSTOMER', 'full_name': 'Customer Akash'},
-        aud: 'authenticated',
-        createdAt: DateTime.now().toIso8601String(),
-        email: 'customer@test.com',
-      );
+        final mockUser = supabase.User(
+          id: 'customer-uuid-456',
+          appMetadata: {},
+          userMetadata: {'role': 'CUSTOMER', 'full_name': 'Customer Akash'},
+          aud: 'authenticated',
+          createdAt: DateTime.now().toIso8601String(),
+          email: 'customer@test.com',
+        );
 
-      final mockSession = supabase.Session(
-        accessToken: 'valid-token-customer',
-        tokenType: 'bearer',
-        user: mockUser,
-      );
+        final mockSession = supabase.Session(
+          accessToken: 'valid-token-customer',
+          tokenType: 'bearer',
+          user: mockUser,
+        );
 
-      final repo = MockPersistentAuthRepository(
-        initialUser: mockUser,
-        initialSession: mockSession,
-        profileRole: 'CUSTOMER',
-      );
+        final repo = MockPersistentAuthRepository(
+          initialUser: mockUser,
+          initialSession: mockSession,
+          profileRole: 'CUSTOMER',
+        );
 
-      final authService = AuthService(repo);
-      authService.initialize();
+        final authService = AuthService(repo);
+        authService.initialize();
 
-      await tester.pumpWidget(
-        AuthScope(
-          service: authService,
-          child: MaterialApp(
-            home: const SplashScreen(),
-            routes: {
-              '/welcome': (_) => const WelcomeScreen(),
-              '/salon': (_) => const SalonEntryScreen(),
-              '/customer': (_) => const CustomerEntryScreen(),
-            },
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: MaterialApp(
+              home: const SplashScreen(),
+              routes: {
+                '/welcome': (_) => const WelcomeScreen(),
+                '/salon': (_) => const SalonEntryScreen(),
+                '/customer': (_) => const CustomerEntryScreen(),
+              },
+            ),
           ),
-        ),
-      );
+        );
 
-      await tester.pump(const Duration(milliseconds: 1500));
-      await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 1500));
+        await tester.pumpAndSettle();
 
-      // Verified: Directly opens Customer Home
-      expect(find.byType(CustomerEntryScreen), findsOneWidget);
-      expect(find.byType(WelcomeScreen), findsNothing);
-    });
+        // Verified: Directly opens Customer Home
+        expect(find.byType(CustomerEntryScreen), findsOneWidget);
+        expect(find.byType(WelcomeScreen), findsNothing);
+      },
+    );
 
-    testWidgets('TEST 4: Explicit logout clears session and routes to Welcome screen on restart', (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'TEST 4: Explicit logout clears session and routes to Welcome screen on restart',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      final repo = MockPersistentAuthRepository(
-        initialUser: null,
-        initialSession: null,
-      );
+        final repo = MockPersistentAuthRepository(
+          initialUser: null,
+          initialSession: null,
+        );
 
-      final authService = AuthService(repo);
-      authService.initialize();
+        final authService = AuthService(repo);
+        authService.initialize();
 
-      await tester.pumpWidget(
-        AuthScope(
-          service: authService,
-          child: MaterialApp(
-            home: const SplashScreen(),
-            routes: {
-              '/welcome': (_) => const WelcomeScreen(),
-              '/salon': (_) => const SalonEntryScreen(),
-              '/customer': (_) => const CustomerEntryScreen(),
-            },
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: MaterialApp(
+              home: const SplashScreen(),
+              routes: {
+                '/welcome': (_) => const WelcomeScreen(),
+                '/salon': (_) => const SalonEntryScreen(),
+                '/customer': (_) => const CustomerEntryScreen(),
+              },
+            ),
           ),
-        ),
-      );
+        );
 
-      await tester.pump(const Duration(milliseconds: 1500));
-      await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 1500));
+        await tester.pumpAndSettle();
 
-      // Verified: Unauthenticated lands on WelcomeScreen
-      expect(find.byType(WelcomeScreen), findsOneWidget);
-      expect(find.text('I am a Customer'), findsOneWidget);
-      expect(find.text('I am a Salon Owner'), findsOneWidget);
-    });
+        // Verified: Unauthenticated lands on WelcomeScreen
+        expect(find.byType(WelcomeScreen), findsOneWidget);
+        expect(find.text('I am a Customer'), findsOneWidget);
+        expect(find.text('I am a Salon Owner'), findsOneWidget);
+      },
+    );
 
-    testWidgets('TEST 5: Authenticated customer selecting "I am a Salon Owner" does NOT open Owner Dashboard', (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'TEST 5: Authenticated customer selecting "I am a Salon Owner" does NOT open Owner Dashboard',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      final mockUser = supabase.User(
-        id: 'cust-1',
-        appMetadata: {},
-        userMetadata: {'role': 'CUSTOMER'},
-        aud: 'authenticated',
-        createdAt: DateTime.now().toIso8601String(),
-        email: 'customer@test.com',
-      );
+        final mockUser = supabase.User(
+          id: 'cust-1',
+          appMetadata: {},
+          userMetadata: {'role': 'CUSTOMER'},
+          aud: 'authenticated',
+          createdAt: DateTime.now().toIso8601String(),
+          email: 'customer@test.com',
+        );
 
-      final repo = MockPersistentAuthRepository(
-        initialUser: mockUser,
-        initialSession: supabase.Session(accessToken: 'tok', tokenType: 'b', user: mockUser),
-        profileRole: 'CUSTOMER',
-      );
-
-      final authService = AuthService(repo);
-      authService.initialize();
-      await authService.waitForInitialization();
-
-      await tester.pumpWidget(
-        AuthScope(
-          service: authService,
-          child: MaterialApp(
-            home: const WelcomeScreen(),
-            routes: {
-              '/auth/sign-in': (_) => const Scaffold(body: Text('Sign In Screen')),
-              '/salon': (_) => const SalonEntryScreen(),
-              '/customer': (_) => const CustomerEntryScreen(),
-            },
+        final repo = MockPersistentAuthRepository(
+          initialUser: mockUser,
+          initialSession: supabase.Session(
+            accessToken: 'tok',
+            tokenType: 'b',
+            user: mockUser,
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+          profileRole: 'CUSTOMER',
+        );
 
-      // Tap 'I am a Salon Owner' as a customer
-      await tester.tap(find.text('I am a Salon Owner'));
-      await tester.pumpAndSettle();
+        final authService = AuthService(repo);
+        authService.initialize();
+        await authService.waitForInitialization();
 
-      // Verified: Does NOT navigate to SalonEntryScreen, shows role restriction notice and goes to sign in
-      expect(find.byType(SalonEntryScreen), findsNothing);
-      expect(find.text('Sign In Screen'), findsOneWidget);
-    });
-
-    testWidgets('TEST 6: Offline / temporary DB failure on cold boot uses token metadata and preserves session', (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      final mockUser = supabase.User(
-        id: 'owner-offline-123',
-        appMetadata: {},
-        userMetadata: {'role': 'SALON_OWNER', 'full_name': 'Owner Rahul'},
-        aud: 'authenticated',
-        createdAt: DateTime.now().toIso8601String(),
-        email: 'owner@test.com',
-      );
-
-      final mockSession = supabase.Session(
-        accessToken: 'valid-token',
-        tokenType: 'bearer',
-        user: mockUser,
-      );
-
-      final repo = MockPersistentAuthRepository(
-        initialUser: mockUser,
-        initialSession: mockSession,
-        shouldThrowOnProfile: true,
-      );
-
-      final authService = AuthService(repo);
-      authService.initialize();
-
-      await tester.pumpWidget(
-        AuthScope(
-          service: authService,
-          child: MaterialApp(
-            home: const SplashScreen(),
-            routes: {
-              '/welcome': (_) => const WelcomeScreen(),
-              '/salon': (_) => const SalonEntryScreen(),
-              '/customer': (_) => const CustomerEntryScreen(),
-            },
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: MaterialApp(
+              home: const WelcomeScreen(),
+              routes: {
+                '/auth/sign-in': (_) =>
+                    const Scaffold(body: Text('Sign In Screen')),
+                '/salon': (_) => const SalonEntryScreen(),
+                '/customer': (_) => const CustomerEntryScreen(),
+              },
+            ),
           ),
-        ),
-      );
+        );
+        await tester.pumpAndSettle();
 
-      await tester.pump(const Duration(milliseconds: 1500));
-      await tester.pumpAndSettle();
+        // Tap 'I am a Salon Owner' as a customer
+        await tester.tap(find.text('I am a Salon Owner'));
+        await tester.pumpAndSettle();
 
-      // Verified: Session is preserved from JWT metadata and routes to Owner Dashboard
-      expect(find.byType(SalonEntryScreen), findsOneWidget);
-      expect(find.byType(WelcomeScreen), findsNothing);
-    });
+        // Verified: Does NOT navigate to SalonEntryScreen, shows role restriction notice and goes to sign in
+        expect(find.byType(SalonEntryScreen), findsNothing);
+        expect(find.text('Sign In Screen'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'TEST 6: Offline / temporary DB failure on cold boot uses token metadata and preserves session',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final mockUser = supabase.User(
+          id: 'owner-offline-123',
+          appMetadata: {},
+          userMetadata: {'role': 'SALON_OWNER', 'full_name': 'Owner Rahul'},
+          aud: 'authenticated',
+          createdAt: DateTime.now().toIso8601String(),
+          email: 'owner@test.com',
+        );
+
+        final mockSession = supabase.Session(
+          accessToken: 'valid-token',
+          tokenType: 'bearer',
+          user: mockUser,
+        );
+
+        final repo = MockPersistentAuthRepository(
+          initialUser: mockUser,
+          initialSession: mockSession,
+          shouldThrowOnProfile: true,
+        );
+
+        final authService = AuthService(repo);
+        authService.initialize();
+
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: MaterialApp(
+              home: const SplashScreen(),
+              routes: {
+                '/welcome': (_) => const WelcomeScreen(),
+                '/salon': (_) => const SalonEntryScreen(),
+                '/customer': (_) => const CustomerEntryScreen(),
+              },
+            ),
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 1500));
+        await tester.pumpAndSettle();
+
+        // Verified: Session is preserved from JWT metadata and routes to Owner Dashboard
+        expect(find.byType(SalonEntryScreen), findsOneWidget);
+        expect(find.byType(WelcomeScreen), findsNothing);
+      },
+    );
   });
 }

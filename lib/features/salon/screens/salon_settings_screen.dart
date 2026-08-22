@@ -38,19 +38,29 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedState = widget.salon.state.isNotEmpty ? widget.salon.state : 'Maharashtra';
+    _selectedState = widget.salon.state.isNotEmpty
+        ? widget.salon.state
+        : 'Maharashtra';
     _nameController = TextEditingController(text: widget.salon.name);
     _descController = TextEditingController(text: widget.salon.description);
     _addressController = TextEditingController(text: widget.salon.address);
     _cityController = TextEditingController(text: widget.salon.city);
     _districtController = TextEditingController(
-      text: widget.salon.district.isNotEmpty ? widget.salon.district : widget.salon.city,
+      text: widget.salon.district.isNotEmpty
+          ? widget.salon.district
+          : widget.salon.city,
     );
-    _pincodeController = TextEditingController(text: widget.salon.pincode ?? '');
+    _pincodeController = TextEditingController(
+      text: widget.salon.pincode ?? '',
+    );
     _phoneController = TextEditingController(text: widget.salon.phone ?? '');
-    _chairsController = TextEditingController(text: widget.salon.activeChairs.toString());
+    _chairsController = TextEditingController(
+      text: widget.salon.activeChairs.toString(),
+    );
     _openTimeController = TextEditingController(text: widget.salon.openingTime);
-    _closeTimeController = TextEditingController(text: widget.salon.closingTime);
+    _closeTimeController = TextEditingController(
+      text: widget.salon.closingTime,
+    );
   }
 
   @override
@@ -74,7 +84,8 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
     setState(() => _isSaving = true);
 
     final auth = AuthScope.of(context, listen: false);
-    final effectiveOwnerId = (widget.salon.ownerId != null && widget.salon.ownerId!.isNotEmpty)
+    final effectiveOwnerId =
+        (widget.salon.ownerId != null && widget.salon.ownerId!.isNotEmpty)
         ? widget.salon.ownerId
         : auth.currentUser?.id;
 
@@ -152,10 +163,14 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Salon Name *',
                         hintText: 'e.g. Royal Cuts Unisex Salon',
-                        prefixIcon: Icon(Icons.storefront, color: AppColorSchemes.navy),
+                        prefixIcon: Icon(
+                          Icons.storefront,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Enter salon name' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Enter salon name'
+                          : null,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -164,7 +179,10 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Short Description',
                         hintText: 'e.g. Modern haircuts, beard spas & facials',
-                        prefixIcon: Icon(Icons.description_outlined, color: AppColorSchemes.navy),
+                        prefixIcon: Icon(
+                          Icons.description_outlined,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -174,7 +192,10 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Contact Phone Number',
                         hintText: '+91 98765 43210',
-                        prefixIcon: Icon(Icons.phone_outlined, color: AppColorSchemes.navy),
+                        prefixIcon: Icon(
+                          Icons.phone_outlined,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
                     ),
                   ],
@@ -186,7 +207,8 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                 _buildSectionHeader(
                   icon: Icons.location_on_rounded,
                   title: 'Store Location (Pan-India 🇮🇳)',
-                  subtitle: 'Helps nearby customers discover your salon in their city',
+                  subtitle:
+                      'Helps nearby customers discover your salon in their city',
                 ),
                 const SizedBox(height: 12),
                 _buildCardContainer(
@@ -194,12 +216,19 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                     // State Dropdown — Fully responsive & safe against narrow screens
                     DropdownButtonFormField<String>(
                       isExpanded: true,
-                      initialValue:
-                          allStates.contains(_selectedState) ? _selectedState : allStates.first,
+                      initialValue: allStates.contains(_selectedState)
+                          ? _selectedState
+                          : allStates.first,
                       decoration: const InputDecoration(
                         labelText: 'State *',
-                        prefixIcon: Icon(Icons.map_outlined, color: AppColorSchemes.navy),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        prefixIcon: Icon(
+                          Icons.map_outlined,
+                          color: AppColorSchemes.navy,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
                       ),
                       items: allStates.map((st) {
                         return DropdownMenuItem<String>(
@@ -231,11 +260,14 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                             decoration: const InputDecoration(
                               labelText: 'District *',
                               hintText: 'e.g. Pune',
-                              prefixIcon:
-                                  Icon(Icons.location_city_outlined, color: AppColorSchemes.navy),
+                              prefixIcon: Icon(
+                                Icons.location_city_outlined,
+                                color: AppColorSchemes.navy,
+                              ),
                             ),
-                            validator: (v) =>
-                                (v == null || v.trim().isEmpty) ? 'Enter district' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Enter district'
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -245,11 +277,14 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                             decoration: const InputDecoration(
                               labelText: 'City / Town *',
                               hintText: 'e.g. Pune',
-                              prefixIcon:
-                                  Icon(Icons.apartment_outlined, color: AppColorSchemes.navy),
+                              prefixIcon: Icon(
+                                Icons.apartment_outlined,
+                                color: AppColorSchemes.navy,
+                              ),
                             ),
-                            validator: (v) =>
-                                (v == null || v.trim().isEmpty) ? 'Enter city' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Enter city'
+                                : null,
                           ),
                         ),
                       ],
@@ -266,10 +301,14 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Street Address *',
                               hintText: 'e.g. FC Road, Lane 4',
-                              prefixIcon: Icon(Icons.pin_drop_outlined, color: AppColorSchemes.navy),
+                              prefixIcon: Icon(
+                                Icons.pin_drop_outlined,
+                                color: AppColorSchemes.navy,
+                              ),
                             ),
-                            validator: (v) =>
-                                (v == null || v.trim().isEmpty) ? 'Enter street address' : null,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Enter street address'
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -306,9 +345,13 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Active Chairs / Barbers *',
                         hintText: 'e.g. 3',
-                        prefixIcon: Icon(Icons.chair_alt_rounded, color: AppColorSchemes.navy),
+                        prefixIcon: Icon(
+                          Icons.chair_alt_rounded,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
-                      validator: (v) => (v == null || int.tryParse(v.trim()) == null)
+                      validator: (v) =>
+                          (v == null || int.tryParse(v.trim()) == null)
                           ? 'Enter valid chair count'
                           : null,
                     ),
@@ -321,8 +364,10 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Opening Time',
                               hintText: '09:00 AM',
-                              prefixIcon:
-                                  Icon(Icons.access_time_rounded, color: AppColorSchemes.navy),
+                              prefixIcon: Icon(
+                                Icons.access_time_rounded,
+                                color: AppColorSchemes.navy,
+                              ),
                             ),
                           ),
                         ),
@@ -333,8 +378,10 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Closing Time',
                               hintText: '10:00 PM',
-                              prefixIcon:
-                                  Icon(Icons.access_time_filled_rounded, color: AppColorSchemes.navy),
+                              prefixIcon: Icon(
+                                Icons.access_time_filled_rounded,
+                                color: AppColorSchemes.navy,
+                              ),
                             ),
                           ),
                         ),
@@ -365,11 +412,17 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                         color: AppColorSchemes.navy.withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.support_agent_rounded, color: AppColorSchemes.navy),
+                      child: const Icon(
+                        Icons.support_agent_rounded,
+                        color: AppColorSchemes.navy,
+                      ),
                     ),
                     title: const Text(
                       'Open Owner Help Center',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
                     ),
                     subtitle: const Text(
                       'Queue management FAQs & report issues',
@@ -379,7 +432,8 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => const SupportCenterScreen(isOwner: true),
+                          builder: (_) =>
+                              const SupportCenterScreen(isOwner: true),
                         ),
                       );
                     },
@@ -406,12 +460,19 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
                         ? const SizedBox(
                             width: 22,
                             height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
                           )
                         : const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.save_rounded, color: AppColorSchemes.gold, size: 20),
+                              Icon(
+                                Icons.save_rounded,
+                                color: AppColorSchemes.gold,
+                                size: 20,
+                              ),
                               SizedBox(width: 8),
                               Text(
                                 'Save Store Changes',
@@ -466,10 +527,7 @@ class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
               const SizedBox(height: 1),
               Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
               ),
             ],
           ),

@@ -40,7 +40,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   int _currentTabIndex = 0;
 
   String _selectedState = 'All States';
-  String _selectedLocation = 'All India'; // Shows all registered live salons by default
+  String _selectedLocation =
+      'All India'; // Shows all registered live salons by default
   String? _selectedCity;
   String? _selectedDistrict;
   String? _selectedPincode;
@@ -68,11 +69,15 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     // 1. Instant frame-1 cache retrieval to display cached salons immediately without spinner
     final cached = _salonRepo.getCachedSalons(
       state: _selectedState == 'All States' ? null : _selectedState,
-      city: (_selectedLocation == 'All India' || _selectedLocation == 'Near Me') ? null : (_selectedCity ?? _selectedLocation),
+      city: (_selectedLocation == 'All India' || _selectedLocation == 'Near Me')
+          ? null
+          : (_selectedCity ?? _selectedLocation),
       district: _selectedDistrict,
       pincode: _selectedPincode,
       search: _searchController.text.trim(),
-      category: (_selectedCategory == 'All' || _selectedCategory == 'Favorites') ? null : _selectedCategory,
+      category: (_selectedCategory == 'All' || _selectedCategory == 'Favorites')
+          ? null
+          : _selectedCategory,
       sortBy: _sortBy,
       userLat: _userLat,
       userLng: _userLng,
@@ -93,6 +98,11 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     _salonsSub?.cancel();
     _salonsSub = _salonRepo.streamSalons().listen((_) {
       if (mounted && !_isFetchingSalons) {
+        // Debounce auto-fetch to avoid duplicate requests right after screen mount
+        if (_lastFetchTime != null &&
+            DateTime.now().difference(_lastFetchTime!).inSeconds < 10) {
+          return;
+        }
         _loadData(forceRefresh: true);
       }
     });
@@ -125,7 +135,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     } catch (_) {}
 
     _notifSubscription?.cancel();
-    _notifSubscription = _notifRepo.streamNotifications(userId).listen((notifs) {
+    _notifSubscription = _notifRepo.streamNotifications(userId).listen((
+      notifs,
+    ) {
       if (mounted) {
         setState(() {
           _unreadNotifsCount = notifs.where((n) => !n.isRead).length;
@@ -159,14 +171,18 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     final auth = AuthScope.of(context, listen: false);
     final userId = auth.currentUser?.id;
 
-    final isAllIndia = (_selectedLocation == 'All India' || _selectedLocation == 'All Cities');
-    final isAllStates = (_selectedState == 'All States' || _selectedState == 'All');
+    final isAllIndia =
+        (_selectedLocation == 'All India' || _selectedLocation == 'All Cities');
+    final isAllStates =
+        (_selectedState == 'All States' || _selectedState == 'All');
     final isNearMe = (_selectedLocation == 'Near Me');
 
-    // Run salon query and ticket query concurrently in parallel for maximum speed
+    // 3. Primary query: Fetch salons without being delayed by secondary user data
     final salonFuture = _salonRepo.fetchSalons(
       state: isAllStates ? null : _selectedState,
-      city: (isAllIndia || isNearMe) ? null : (_selectedCity ?? _selectedLocation),
+      city: (isAllIndia || isNearMe)
+          ? null
+          : (_selectedCity ?? _selectedLocation),
       district: _selectedDistrict,
       pincode: _selectedPincode,
       search: _searchController.text.trim(),
@@ -179,40 +195,52 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       maxRadiusKm: isNearMe ? 25.0 : null,
     );
 
-    final ticketsFuture = (userId != null)
-        ? Future.wait([
+    // Update salon list as soon as salonFuture resolves
+    salonFuture
+        .then((fetchedList) {
+          if (!mounted) return;
+          var list = List<Salon>.from(fetchedList);
+          if (_selectedCategory == 'Favorites' || _currentTabIndex == 3) {
+            list = list.where((s) => _favoriteSalonIds.contains(s.id)).toList();
+          }
+
+          _lastFetchTime = DateTime.now();
+          setState(() {
+            _salons = list;
+            _isLoading = false;
+          });
+        })
+        .catchError((err) {
+          debugPrint('[CustomerEntryScreen] _loadData error: $err');
+          if (mounted) setState(() => _isLoading = false);
+        })
+        .whenComplete(() {
+          _isFetchingSalons = false;
+        });
+
+    // 4. Secondary background query: active tickets for current user (runs independently)
+    if (userId != null) {
+      Future.wait([
             _queueRepo.fetchActiveTicketForCustomer(userId),
             _queueRepo.fetchLatestTicketForCustomer(userId),
           ])
-        : Future.value(<dynamic>[null, null]);
-
-    try {
-      final results = await Future.wait([salonFuture, ticketsFuture]);
-      var list = results[0] as List<Salon>;
-
-      if (userId != null) {
-        final ticketData = results[1];
-        _activeTicket = ticketData[0] as QueueTicket?;
-        _latestTicket = ticketData[1] as QueueTicket?;
-        if (_latestTicket != null) {
-          _latestTicketSalon = await _salonRepo.fetchSalonById(_latestTicket!.salonId);
-        }
-      }
-
-      if (_selectedCategory == 'Favorites' || _currentTabIndex == 3) {
-        list = list.where((s) => _favoriteSalonIds.contains(s.id)).toList();
-      }
-
-      _lastFetchTime = DateTime.now();
-      if (!mounted) return;
-      setState(() {
-        _salons = list;
-        _isLoading = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
-    } finally {
-      _isFetchingSalons = false;
+          .then((ticketData) async {
+            if (!mounted) return;
+            final activeT = ticketData[0];
+            final latestT = ticketData[1];
+            Salon? latestS;
+            if (latestT != null) {
+              latestS = await _salonRepo.fetchSalonById(latestT.salonId);
+            }
+            if (mounted) {
+              setState(() {
+                _activeTicket = activeT;
+                _latestTicket = latestT;
+                _latestTicketSalon = latestS;
+              });
+            }
+          })
+          .catchError((_) {});
     }
   }
 
@@ -229,7 +257,11 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       {'city': 'Cuttack', 'state': 'Odisha', 'district': 'Cuttack'},
       {'city': 'Pune', 'state': 'Maharashtra', 'district': 'Pune'},
       {'city': 'Mumbai', 'state': 'Maharashtra', 'district': 'Mumbai City'},
-      {'city': 'Bengaluru', 'state': 'Karnataka', 'district': 'Bangalore Urban'},
+      {
+        'city': 'Bengaluru',
+        'state': 'Karnataka',
+        'district': 'Bangalore Urban',
+      },
       {'city': 'Delhi', 'state': 'Delhi', 'district': 'Central Delhi'},
       {'city': 'Hyderabad', 'state': 'Telangana', 'district': 'Hyderabad'},
       {'city': 'Kolkata', 'state': 'West Bengal', 'district': 'Kolkata'},
@@ -266,7 +298,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
             setModalState(() => isSearching = true);
             debounceTimer = Timer(const Duration(milliseconds: 300), () async {
-              final results = await LocationSuggestionService.searchLocationSuggestions(query);
+              final results =
+                  await LocationSuggestionService.searchLocationSuggestions(
+                    query,
+                  );
               if (ctx.mounted) {
                 setModalState(() {
                   searchResults = results;
@@ -296,7 +331,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close_rounded, color: Color(0xFF6B7280)),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: Color(0xFF6B7280),
+                        ),
                         onPressed: () {
                           debounceTimer?.cancel();
                           Navigator.of(ctx).pop();
@@ -311,33 +349,45 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     controller: locationSearchCtrl,
                     decoration: InputDecoration(
                       hintText: 'Search locality, street, city or PIN code...',
-                      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
-                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF6D28D9)),
+                      hintStyle: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: Color(0xFF6D28D9),
+                      ),
                       suffixIcon: isSearching
                           ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: Padding(
                                 padding: EdgeInsets.all(12),
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6D28D9)),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF6D28D9),
+                                ),
                               ),
                             )
                           : (locationSearchCtrl.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 18),
-                                  onPressed: () {
-                                    locationSearchCtrl.clear();
-                                    debounceTimer?.cancel();
-                                    setModalState(() {
-                                      searchResults = [];
-                                      isSearching = false;
-                                    });
-                                  },
-                                )
-                              : null),
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    onPressed: () {
+                                      locationSearchCtrl.clear();
+                                      debounceTimer?.cancel();
+                                      setModalState(() {
+                                        searchResults = [];
+                                        isSearching = false;
+                                      });
+                                    },
+                                  )
+                                : null),
                       filled: true,
                       fillColor: const Color(0xFFF9FAFB),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -348,7 +398,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFF6D28D9), width: 1.5),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF6D28D9),
+                          width: 1.5,
+                        ),
                       ),
                     ),
                     onChanged: performSearch,
@@ -361,11 +414,21 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     child: Row(
                       children: [
                         ActionChip(
-                          avatar: const Icon(Icons.navigation_rounded, size: 15, color: Color(0xFFD4AF5A)),
+                          avatar: const Icon(
+                            Icons.navigation_rounded,
+                            size: 15,
+                            color: Color(0xFFD4AF5A),
+                          ),
                           label: const Text('📍 Near Me'),
                           backgroundColor: const Color(0xFF10233F),
-                          labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12.5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          labelStyle: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                           onPressed: () {
                             debounceTimer?.cancel();
                             setState(() {
@@ -384,12 +447,22 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                         ),
                         const SizedBox(width: 8),
                         ActionChip(
-                          avatar: const Icon(Icons.public, size: 16, color: Color(0xFF6D28D9)),
+                          avatar: const Icon(
+                            Icons.public,
+                            size: 16,
+                            color: Color(0xFF6D28D9),
+                          ),
                           label: const Text('All India 🇮🇳'),
                           backgroundColor: Colors.white,
-                          labelStyle: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w700, fontSize: 12.5),
+                          labelStyle: const TextStyle(
+                            color: Color(0xFF111827),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12.5,
+                          ),
                           side: const BorderSide(color: Color(0xFFE5E7EB)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                           onPressed: () {
                             debounceTimer?.cancel();
                             setState(() {
@@ -409,7 +482,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   const SizedBox(height: 16),
 
                   // 4. Section Title or Search Results
-                  if (searchResults.isEmpty && locationSearchCtrl.text.trim().isEmpty) ...[
+                  if (searchResults.isEmpty &&
+                      locationSearchCtrl.text.trim().isEmpty) ...[
                     const Padding(
                       padding: EdgeInsets.only(bottom: 8, left: 4),
                       child: Text(
@@ -429,14 +503,19 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       builder: (context) {
                         if (isSearching && searchResults.isEmpty) {
                           return const Center(
-                            child: CircularProgressIndicator(color: Color(0xFF6D28D9)),
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF6D28D9),
+                            ),
                           );
                         }
 
                         if (searchResults.isNotEmpty) {
                           return ListView.separated(
                             itemCount: searchResults.length,
-                            separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                            separatorBuilder: (context, index) => const Divider(
+                              height: 1,
+                              color: Color(0xFFF3F4F6),
+                            ),
                             itemBuilder: (context, idx) {
                               final item = searchResults[idx];
                               return ListTile(
@@ -447,18 +526,27 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                                 ),
                                 title: Text(
                                   item.title,
-                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF111827)),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: Color(0xFF111827),
+                                  ),
                                 ),
                                 subtitle: Text(
                                   item.subtitle,
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF6B7280),
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 onTap: () {
                                   debounceTimer?.cancel();
                                   setState(() {
-                                    _selectedLocation = (item.city != null && item.state != null)
+                                    _selectedLocation =
+                                        (item.city != null &&
+                                            item.state != null)
                                         ? '${item.city}, ${item.state}'
                                         : item.title;
                                     _selectedCity = item.city ?? item.title;
@@ -476,7 +564,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                           );
                         }
 
-                        if (locationSearchCtrl.text.trim().isNotEmpty && !isSearching) {
+                        if (locationSearchCtrl.text.trim().isNotEmpty &&
+                            !isSearching) {
                           final queryText = locationSearchCtrl.text.trim();
                           return ListView(
                             children: [
@@ -488,13 +577,24 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                                 ),
                                 title: Text(
                                   'Find Salons in "$queryText"',
-                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFF111827)),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: Color(0xFF111827),
+                                  ),
                                 ),
                                 subtitle: const Text(
                                   'Search salons by this area or locality name',
-                                  style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF6B7280),
+                                  ),
                                 ),
-                                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF9CA3AF)),
+                                trailing: const Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 14,
+                                  color: Color(0xFF9CA3AF),
+                                ),
                                 onTap: () {
                                   debounceTimer?.cancel();
                                   setState(() {
@@ -522,7 +622,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                             final districtName = item['district'];
 
                             return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 2,
+                              ),
                               leading: const Icon(
                                 Icons.apartment_rounded,
                                 color: Color(0xFF6D28D9),
@@ -547,12 +650,17 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                               ),
                               onTap: () {
                                 debounceTimer?.cancel();
-                                final estCoords = LocationSuggestionService.getEstimatedCoordinates(
-                                  cityName,
-                                  stateName,
-                                );
-                                final resolvedDistrict = districtName ??
-                                    IndiaLocations.resolveDistrictForCity(cityName, stateName) ??
+                                final estCoords =
+                                    LocationSuggestionService.getEstimatedCoordinates(
+                                      cityName,
+                                      stateName,
+                                    );
+                                final resolvedDistrict =
+                                    districtName ??
+                                    IndiaLocations.resolveDistrictForCity(
+                                      cityName,
+                                      stateName,
+                                    ) ??
                                     cityName;
                                 setState(() {
                                   _selectedState = stateName;
@@ -631,17 +739,24 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               _buildSearchArea(),
 
               // ── 3. Active Queue Card (if active) ───────────────────────
-              if (_activeTicket != null && (_activeTicket!.isWaiting || _activeTicket!.isInChair)) ...[
+              if (_activeTicket != null &&
+                  (_activeTicket!.isWaiting || _activeTicket!.isInChair)) ...[
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 4,
+                  ),
                   child: ActiveQueueCard(
                     ticket: _activeTicket!,
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => CustomerQueueScreen(ticket: _activeTicket!),
-                        ),
-                      ).then((_) => _loadData());
+                      Navigator.of(context)
+                          .push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  CustomerQueueScreen(ticket: _activeTicket!),
+                            ),
+                          )
+                          .then((_) => _loadData());
                     },
                   ),
                 ),
@@ -680,7 +795,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
   // ── 1. Top Header Widget ───────────────────────────────────────────────────
   Widget _buildTopHeader(BuildContext context) {
-    final auth = AuthScope.of(context); // Listen to real-time auth/profile changes
+    final auth = AuthScope.of(
+      context,
+    ); // Listen to real-time auth/profile changes
     final user = auth.currentUser;
     final avatar = user?.avatarUrl;
     final fullName = user?.fullName?.trim();
@@ -752,7 +869,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     isLabelVisible: _unreadNotifsCount > 0,
                     backgroundColor: const Color(0xFFE91E63),
                     textColor: Colors.white,
-                    textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 9),
+                    textStyle: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 9,
+                    ),
                     child: const Icon(
                       Icons.notifications_none_rounded,
                       color: Color(0xFF111827),
@@ -761,11 +881,13 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   ),
                   tooltip: 'Notifications',
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const CustomerNotificationsScreen(),
-                      ),
-                    ).then((_) => _loadNotifications());
+                    Navigator.of(context)
+                        .push(
+                          MaterialPageRoute(
+                            builder: (_) => const CustomerNotificationsScreen(),
+                          ),
+                        )
+                        .then((_) => _loadNotifications());
                   },
                 ),
               ),
@@ -790,9 +912,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       ),
                     ],
                   ),
-                  child: ClipOval(
-                    child: _buildAvatarImage(avatar),
-                  ),
+                  child: ClipOval(child: _buildAvatarImage(avatar)),
                 ),
               ),
             ],
@@ -814,7 +934,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
         width: 40,
         height: 40,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A)),
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A)),
       );
     } else if (trimmed.startsWith('data:image')) {
       try {
@@ -826,7 +947,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
           width: 40,
           height: 40,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A)),
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A)),
         );
       } catch (_) {
         return const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A));
@@ -840,7 +962,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
           width: 40,
           height: 40,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A)),
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A)),
         );
       }
       return const Icon(Icons.person, size: 20, color: Color(0xFFD4AF5A));
@@ -848,15 +971,17 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   }
 
   void _openSearchScreen({String? query, String? category}) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CustomerSearchScreen(
-          initialQuery: query,
-          initialCategory: category,
-          initialLocation: _selectedLocation,
-        ),
-      ),
-    ).then((_) => _loadData());
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => CustomerSearchScreen(
+              initialQuery: query,
+              initialCategory: category,
+              initialLocation: _selectedLocation,
+            ),
+          ),
+        )
+        .then((_) => _loadData());
   }
 
   // ── 2. Search Area ─────────────────────────────────────────────────────────
@@ -989,11 +1114,14 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 ElevatedButton(
                   onPressed: () {
                     if (_salons.isNotEmpty) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => SalonDetailsScreen(salon: _salons.first),
-                        ),
-                      ).then((_) => _loadData());
+                      Navigator.of(context)
+                          .push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  SalonDetailsScreen(salon: _salons.first),
+                            ),
+                          )
+                          .then((_) => _loadData());
                     } else {
                       _openSearchScreen();
                     }
@@ -1002,7 +1130,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF111827),
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
                     minimumSize: const Size(0, 32),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -1032,11 +1163,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               fit: BoxFit.contain,
               alignment: Alignment.bottomRight,
               errorBuilder: (context, error, stackTrace) => const Center(
-                child: Icon(
-                  Icons.chair_rounded,
-                  size: 70,
-                  color: Colors.white,
-                ),
+                child: Icon(Icons.chair_rounded, size: 70, color: Colors.white),
               ),
             ),
           ),
@@ -1086,13 +1213,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
         const SizedBox(height: 10),
 
         // Horizontal List of Salon Cards
-        if (_isLoading)
-          const SizedBox(
-            height: 165,
-            child: Center(
-              child: CircularProgressIndicator(color: Color(0xFF6D28D9)),
-            ),
-          )
+        if (_isLoading && _salons.isEmpty)
+          _buildSkeletonSalonsList(height: 165, cardWidth: 165)
         else if (_salons.isEmpty)
           _buildEmptyNearbySalons()
         else
@@ -1112,6 +1234,85 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     );
   }
 
+  /// Lightweight skeleton loader for seamless instant feel on cold boot
+  Widget _buildSkeletonSalonsList({
+    double height = 165,
+    double cardWidth = 165,
+  }) {
+    final imgHeight = height * 0.54;
+    return SizedBox(
+      height: height,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: 3,
+        itemBuilder: (context, idx) {
+          return Container(
+            width: cardWidth,
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFF1F3F5)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  height: imgHeight,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8.0,
+                    vertical: 6.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        height: 10,
+                        width: cardWidth * 0.55,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5E7EB),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        height: 8,
+                        width: cardWidth * 0.35,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildHorizontalSalonCard(Salon salon) {
     final isFav = _favoriteSalonIds.contains(salon.id);
     final rating = salon.rating > 0 ? salon.rating.toStringAsFixed(1) : '4.8';
@@ -1122,11 +1323,13 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => SalonDetailsScreen(salon: salon),
-          ),
-        ).then((_) => _loadData());
+        Navigator.of(context)
+            .push(
+              MaterialPageRoute(
+                builder: (_) => SalonDetailsScreen(salon: salon),
+              ),
+            )
+            .then((_) => _loadData());
       },
       child: Container(
         width: 165,
@@ -1150,7 +1353,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
                   child: Container(
                     height: 100,
                     width: double.infinity,
@@ -1216,7 +1421,11 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 15),
+                      const Icon(
+                        Icons.star_rounded,
+                        color: Color(0xFFF59E0B),
+                        size: 15,
+                      ),
                       const SizedBox(width: 2),
                       Flexible(
                         child: Text(
@@ -1258,7 +1467,12 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
           height: 100,
           width: double.infinity,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildFallbackSalonImage(),
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded || frame != null) return child;
+            return _buildFallbackSalonImage();
+          },
+          errorBuilder: (context, error, stackTrace) =>
+              _buildFallbackSalonImage(),
         );
       } else if (imagePath.startsWith('data:image')) {
         try {
@@ -1269,6 +1483,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
             height: 100,
             width: double.infinity,
             fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) =>
+                _buildFallbackSalonImage(),
           );
         } catch (_) {
           return _buildFallbackSalonImage();
@@ -1284,11 +1500,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xFF1E293B),
-            Color(0xFF334155),
-            Color(0xFF475569),
-          ],
+          colors: [Color(0xFF1E293B), Color(0xFF334155), Color(0xFF475569)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1321,7 +1533,11 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 color: Color(0xFFEDE9FE),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.storefront_outlined, color: Color(0xFF6D28D9), size: 20),
+              child: const Icon(
+                Icons.storefront_outlined,
+                color: Color(0xFF6D28D9),
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1354,7 +1570,11 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   Widget _buildPopularServicesSection() {
     final servicesList = [
       {'name': 'Haircut', 'icon': Icons.content_cut_rounded, 'filter': 'Hair'},
-      {'name': 'Beard', 'icon': Icons.face_retouching_natural, 'filter': 'Beard'},
+      {
+        'name': 'Beard',
+        'icon': Icons.face_retouching_natural,
+        'filter': 'Beard',
+      },
       {'name': 'Hair Color', 'icon': Icons.brush_rounded, 'filter': 'Color'},
       {'name': 'Spa', 'icon': Icons.spa_rounded, 'filter': 'Spa'},
       {'name': 'More', 'icon': Icons.more_horiz_rounded, 'filter': 'All'},
@@ -1435,7 +1655,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                         boxShadow: [
                           if (isSelected)
                             BoxShadow(
-                              color: const Color(0xFF6D28D9).withValues(alpha: 0.3),
+                              color: const Color(
+                                0xFF6D28D9,
+                              ).withValues(alpha: 0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -1443,7 +1665,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       ),
                       child: Icon(
                         icon,
-                        color: isSelected ? Colors.white : const Color(0xFF6D28D9),
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF6D28D9),
                         size: 21,
                       ),
                     ),
@@ -1452,8 +1676,12 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       name,
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                        color: isSelected ? const Color(0xFF6D28D9) : const Color(0xFF111827),
+                        fontWeight: isSelected
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        color: isSelected
+                            ? const Color(0xFF6D28D9)
+                            : const Color(0xFF111827),
                       ),
                     ),
                   ],
@@ -1502,9 +1730,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
         'color': const Color(0xFF059669),
         'bgColor': const Color(0xFFD1FAE5),
         'onTap': () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-          ).then((_) => _loadData());
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const QrScannerScreen()))
+              .then((_) => _loadData());
         },
       },
     ];
@@ -1541,7 +1769,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                   onTap: onTap,
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 3),
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
@@ -1642,17 +1873,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
           ),
         ),
         const SizedBox(height: 10),
-        if (_isLoading)
-          const SizedBox(
-            height: 140,
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6D28D9)),
-              ),
-            ),
-          )
+        if (_isLoading && displaySalons.isEmpty)
+          _buildSkeletonSalonsList(height: 140, cardWidth: 140)
         else if (displaySalons.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1665,12 +1887,20 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 22),
+                  const Icon(
+                    Icons.stars_rounded,
+                    color: Color(0xFFF59E0B),
+                    size: 22,
+                  ),
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
                       'Explore top-rated salons across India',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF374151),
+                      ),
                     ),
                   ),
                   ElevatedButton(
@@ -1679,11 +1909,22 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       backgroundColor: const Color(0xFF6D28D9),
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       minimumSize: const Size(0, 28),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: const Text('Find', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                    child: const Text(
+                      'Find',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1712,7 +1953,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
 
   /// My Queue Tab (Index 3)
   Widget _buildMyQueueTab() {
-    if (_activeTicket != null && (_activeTicket!.isWaiting || _activeTicket!.isInChair)) {
+    if (_activeTicket != null &&
+        (_activeTicket!.isWaiting || _activeTicket!.isInChair)) {
       return CustomerQueueScreen(
         ticket: _activeTicket!,
         salon: _latestTicketSalon,
@@ -1721,7 +1963,9 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     }
 
     final hasRecent = _latestTicket != null && _latestTicket!.isCompleted;
-    final salonName = (_latestTicketSalon?.name != null && _latestTicketSalon!.name.isNotEmpty)
+    final salonName =
+        (_latestTicketSalon?.name != null &&
+            _latestTicketSalon!.name.isNotEmpty)
         ? _latestTicketSalon!.name
         : 'Salon Queue';
     final salonAddress = _latestTicketSalon?.address ?? 'Grooming Lounge';
@@ -1745,7 +1989,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                        border: Border.all(
+                          color: const Color(0xFFE5E7EB),
+                          width: 1,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.04),
@@ -1798,7 +2045,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFF1F3F5), width: 1.2),
+                      border: Border.all(
+                        color: const Color(0xFFF1F3F5),
+                        width: 1.2,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.04),
@@ -1845,12 +2095,20 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                         ElevatedButton.icon(
                           onPressed: () => setState(() => _currentTabIndex = 0),
                           icon: const Icon(Icons.search_rounded, size: 18),
-                          label: const Text('Find a Salon', style: TextStyle(fontWeight: FontWeight.w700)),
+                          label: const Text(
+                            'Find a Salon',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF6D28D9),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             elevation: 0,
                           ),
                         ),
@@ -1874,11 +2132,20 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                         ),
                         TextButton.icon(
                           onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const CustomerHistoryScreen()),
-                            ).then((_) => _loadData());
+                            Navigator.of(context)
+                                .push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const CustomerHistoryScreen(),
+                                  ),
+                                )
+                                .then((_) => _loadData());
                           },
-                          icon: const Icon(Icons.history_rounded, size: 16, color: Color(0xFF6D28D9)),
+                          icon: const Icon(
+                            Icons.history_rounded,
+                            size: 16,
+                            color: Color(0xFF6D28D9),
+                          ),
                           label: const Text(
                             'All History',
                             style: TextStyle(
@@ -1898,7 +2165,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFF1F3F5), width: 1.2),
+                        border: Border.all(
+                          color: const Color(0xFFF1F3F5),
+                          width: 1.2,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.04),
@@ -1923,7 +2193,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFDCFCE7),
                                   borderRadius: BorderRadius.circular(12),
@@ -1950,7 +2223,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                           ),
                           Text(
                             salonAddress,
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF6B7280),
+                            ),
                           ),
                           const Divider(height: 20, color: Color(0xFFF3F4F6)),
                           Row(
@@ -1958,7 +2234,10 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                             children: [
                               Text(
                                 'Services: ${_latestTicket!.serviceNames.join(", ")}',
-                                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+                                style: const TextStyle(
+                                  color: Color(0xFF6B7280),
+                                  fontSize: 12,
+                                ),
                               ),
                               Text(
                                 '₹${_latestTicket!.totalPrice.toStringAsFixed(0)}',
@@ -1985,8 +2264,6 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     );
   }
 
-
-
   // ═══════════════════════════════════════════════════════════════════════════
   // ── 10. BOTTOM NAVIGATION BAR ─────────────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2010,19 +2287,29 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
           onTap: (idx) {
             if (idx == 2) {
               // Quick QR Scan action
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-              ).then((_) => _loadData());
+              Navigator.of(context)
+                  .push(
+                    MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+                  )
+                  .then((_) => _loadData());
               return;
             }
             setState(() => _currentTabIndex = idx);
           },
           backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF6D28D9), // Purple active accent matching modern theme
+          selectedItemColor: const Color(
+            0xFF6D28D9,
+          ), // Purple active accent matching modern theme
           unselectedItemColor: const Color(0xFF9CA3AF),
           type: BottomNavigationBarType.fixed,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 11,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 11,
+          ),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
@@ -2085,34 +2372,53 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColorSchemes.gold, width: 1),
                   ),
-                  child: const Icon(Icons.content_cut, color: AppColorSchemes.gold, size: 24),
+                  child: const Icon(
+                    Icons.content_cut,
+                    color: AppColorSchemes.gold,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 const Text(
                   'SALON QUEUE',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const Text(
                   AppConstants.appTaglineShort,
-                  style: TextStyle(color: AppColorSchemes.goldLight, fontSize: 11),
+                  style: TextStyle(
+                    color: AppColorSchemes.goldLight,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.qr_code_scanner, color: AppColorSchemes.navy),
+            leading: const Icon(
+              Icons.qr_code_scanner,
+              color: AppColorSchemes.navy,
+            ),
             title: const Text('Scan Salon QR Code'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-              ).then((_) => _loadData());
+              Navigator.of(context)
+                  .push(
+                    MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+                  )
+                  .then((_) => _loadData());
             },
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Color(0xFFEF4444)),
-            title: const Text('Sign Out', style: TextStyle(color: Color(0xFFEF4444))),
+            title: const Text(
+              'Sign Out',
+              style: TextStyle(color: Color(0xFFEF4444)),
+            ),
             onTap: () async {
               Navigator.pop(context);
               await auth.signOut();

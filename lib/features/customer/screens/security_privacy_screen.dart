@@ -52,7 +52,10 @@ class SecurityPrivacyScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColorSchemes.gold.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColorSchemes.gold, width: 1.5),
+                      border: Border.all(
+                        color: AppColorSchemes.gold,
+                        width: 1.5,
+                      ),
                     ),
                     child: const Icon(
                       Icons.shield_outlined,
@@ -153,48 +156,90 @@ class SecurityPrivacyScreen extends StatelessWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.password_rounded, color: AppColorSchemes.navy),
-                    title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: const Text('Send password reset link to your email'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: AppColorSchemes.gold),
+                    leading: const Icon(
+                      Icons.password_rounded,
+                      color: AppColorSchemes.navy,
+                    ),
+                    title: const Text(
+                      'Change Password',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Send password reset link to your email',
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: AppColorSchemes.gold,
+                    ),
                     onTap: () {
                       final email = user?.email;
                       if (email != null && email.isNotEmpty) {
                         auth.resetPassword(email);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Password reset instructions sent to $email'),
+                            content: Text(
+                              'Password reset instructions sent to $email',
+                            ),
                             backgroundColor: AppColorSchemes.navy,
                           ),
                         );
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please sign in to change password.')),
+                          const SnackBar(
+                            content: Text('Please sign in to change password.'),
+                          ),
                         );
                       }
                     },
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.verified_user_outlined, color: AppColorSchemes.navy),
-                    title: const Text('Account Status', style: TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(user != null ? 'Signed in as ${user.email}' : 'Guest mode'),
+                    leading: const Icon(
+                      Icons.verified_user_outlined,
+                      color: AppColorSchemes.navy,
+                    ),
+                    title: const Text(
+                      'Account Status',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      user != null
+                          ? 'Signed in as ${user.email}'
+                          : 'Guest mode',
+                    ),
                     trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE8F5E9),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
                         'SECURE',
-                        style: TextStyle(color: Color(0xFF2E7D32), fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Color(0xFF2E7D32),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-                    title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.redAccent)),
+                    leading: const Icon(
+                      Icons.logout_rounded,
+                      color: Colors.redAccent,
+                    ),
+                    title: const Text(
+                      'Sign Out',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.redAccent,
+                      ),
+                    ),
                     subtitle: const Text('End your session on this device'),
                     onTap: () {
                       auth.signOut();

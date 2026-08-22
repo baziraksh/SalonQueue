@@ -9,28 +9,28 @@ enum RushLevel {
   high;
 
   String get label => switch (this) {
-        RushLevel.low => 'Low Rush',
-        RushLevel.moderate => 'Moderate',
-        RushLevel.high => 'High Rush',
-      };
+    RushLevel.low => 'Low Rush',
+    RushLevel.moderate => 'Moderate',
+    RushLevel.high => 'High Rush',
+  };
 
   Color get color => switch (this) {
-        RushLevel.low => const Color(0xFF2E7D32), // Green
-        RushLevel.moderate => const Color(0xFFE65100), // Amber / Orange
-        RushLevel.high => const Color(0xFFC62828), // Red
-      };
+    RushLevel.low => const Color(0xFF2E7D32), // Green
+    RushLevel.moderate => const Color(0xFFE65100), // Amber / Orange
+    RushLevel.high => const Color(0xFFC62828), // Red
+  };
 
   Color get backgroundColor => switch (this) {
-        RushLevel.low => const Color(0xFFE8F5E9),
-        RushLevel.moderate => const Color(0xFFFFF3E0),
-        RushLevel.high => const Color(0xFFFFEBEE),
-      };
+    RushLevel.low => const Color(0xFFE8F5E9),
+    RushLevel.moderate => const Color(0xFFFFF3E0),
+    RushLevel.high => const Color(0xFFFFEBEE),
+  };
 
   IconData get icon => switch (this) {
-        RushLevel.low => Icons.check_circle_outline,
-        RushLevel.moderate => Icons.access_time,
-        RushLevel.high => Icons.local_fire_department,
-      };
+    RushLevel.low => Icons.check_circle_outline,
+    RushLevel.moderate => Icons.access_time,
+    RushLevel.high => Icons.local_fire_department,
+  };
 }
 
 /// Represents a salon location with operating hours, services, geo-coordinates, and live queue status.
@@ -120,7 +120,8 @@ class Salon {
   double calculateDistance(double userLat, double userLng) {
     if (latitude == null || longitude == null) return 5.0;
     const p = 0.017453292519943295; // Math.PI / 180
-    final a = 0.5 -
+    final a =
+        0.5 -
         math.cos((latitude! - userLat) * p) / 2 +
         math.cos(userLat * p) *
             math.cos(latitude! * p) *
@@ -137,7 +138,8 @@ class Salon {
   }) {
     final waiting = json['waiting_count'] as int? ?? 0;
     final chairs = json['active_chairs'] as int? ?? 3;
-    final calculatedWait = (waiting * (chairs > 0 ? (20 / chairs).round() : 15));
+    final calculatedWait =
+        (waiting * (chairs > 0 ? (20 / chairs).round() : 15));
 
     final lat = (json['latitude'] as num?)?.toDouble() ?? 18.5204;
     final lng = (json['longitude'] as num?)?.toDouble() ?? 73.8567;
@@ -145,7 +147,8 @@ class Salon {
     double? computedDist;
     if (userLat != null && userLng != null) {
       const p = 0.017453292519943295;
-      final a = 0.5 -
+      final a =
+          0.5 -
           math.cos((lat - userLat) * p) / 2 +
           math.cos(userLat * p) *
               math.cos(lat * p) *
@@ -156,9 +159,11 @@ class Salon {
       computedDist = (json['distance_km'] as num?)?.toDouble();
     }
 
-    final rawGallery = json['gallery_images'] as List? ?? json['gallery'] as List? ?? [];
+    final rawGallery =
+        json['gallery_images'] as List? ?? json['gallery'] as List? ?? [];
     final gallery = rawGallery.map((e) => e.toString()).toList();
-    final cover = json['cover_image_url'] as String? ?? json['banner_url'] as String?;
+    final cover =
+        json['cover_image_url'] as String? ?? json['banner_url'] as String?;
 
     return Salon(
       id: json['id']?.toString() ?? '',
@@ -187,9 +192,13 @@ class Salon {
       waitingCount: waiting,
       estWaitMinutes: calculatedWait,
       distanceKm: computedDist,
-      services: services ??
+      services:
+          services ??
           (json['services'] as List?)
-              ?.map((s) => SalonService.fromJson(Map<String, dynamic>.from(s as Map)))
+              ?.map(
+                (s) =>
+                    SalonService.fromJson(Map<String, dynamic>.from(s as Map)),
+              )
               .toList() ??
           [],
       isVerified: json['is_verified'] as bool? ?? false,
@@ -281,10 +290,12 @@ class Salon {
       openingTime: openingTime ?? this.openingTime,
       closingTime: closingTime ?? this.closingTime,
       bannerUrl: clearBanner ? null : (bannerUrl ?? this.bannerUrl),
-      coverImageUrl:
-          clearCoverImage ? null : (coverImageUrl ?? this.coverImageUrl),
-      ownerAvatarUrl:
-          clearOwnerAvatar ? null : (ownerAvatarUrl ?? this.ownerAvatarUrl),
+      coverImageUrl: clearCoverImage
+          ? null
+          : (coverImageUrl ?? this.coverImageUrl),
+      ownerAvatarUrl: clearOwnerAvatar
+          ? null
+          : (ownerAvatarUrl ?? this.ownerAvatarUrl),
       ownerName: ownerName ?? this.ownerName,
       galleryImages: galleryImages ?? this.galleryImages,
       waitingCount: waitingCount ?? this.waitingCount,

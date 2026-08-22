@@ -33,7 +33,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   String? _validatePassword(String? value) {
     final result = Validators.validatePassword(value);
     if (result != null) return result;
-    if (_confirmController.text.isNotEmpty && value != _confirmController.text) {
+    if (_confirmController.text.isNotEmpty &&
+        value != _confirmController.text) {
       return 'Passwords do not match';
     }
     return null;
@@ -86,7 +87,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 12.0,
+            ),
             child: Form(
               key: _formKey,
               child: Column(
@@ -153,7 +157,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 22),
+                          Icon(
+                            Icons.check_circle_rounded,
+                            color: Color(0xFF059669),
+                            size: 22,
+                          ),
                           SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -172,7 +180,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     SizedBox(
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: () => AppRouter.navigateToSignInAfterReset(context),
+                        onPressed: () =>
+                            AppRouter.navigateToSignInAfterReset(context),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColorSchemes.navy,
                           foregroundColor: Colors.white,
@@ -182,7 +191,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         ),
                         child: const Text(
                           'Back to Sign In',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ),
@@ -193,7 +205,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       decoration: InputDecoration(
                         labelText: 'New Password',
                         helperText: 'At least 8 characters',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColorSchemes.navy, size: 20),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline_rounded,
+                          color: AppColorSchemes.navy,
+                          size: 20,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
@@ -202,22 +218,34 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             color: const Color(0xFF64748B),
                             size: 20,
                           ),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 16,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFCBD5E1),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE2E8F0),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: AppColorSchemes.navy, width: 1.6),
+                          borderSide: const BorderSide(
+                            color: AppColorSchemes.navy,
+                            width: 1.6,
+                          ),
                         ),
                       ),
                       obscureText: _obscurePassword,
@@ -230,7 +258,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       controller: _confirmController,
                       decoration: InputDecoration(
                         labelText: 'Confirm Password',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColorSchemes.navy, size: 20),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline_rounded,
+                          color: AppColorSchemes.navy,
+                          size: 20,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscureConfirm
@@ -239,22 +271,34 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             color: const Color(0xFF64748B),
                             size: 20,
                           ),
-                          onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                          onPressed: () => setState(
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
                         ),
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 16,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFCBD5E1),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE2E8F0),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: AppColorSchemes.navy, width: 1.6),
+                          borderSide: const BorderSide(
+                            color: AppColorSchemes.navy,
+                            width: 1.6,
+                          ),
                         ),
                       ),
                       obscureText: _obscureConfirm,
@@ -267,17 +311,25 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ListenableBuilder(
                       listenable: AuthScope.of(context, listen: false),
                       builder: (context, _) {
-                        final error = AuthScope.of(context, listen: false).errorMessage;
+                        final error = AuthScope.of(
+                          context,
+                          listen: false,
+                        ).errorMessage;
                         if (error == null) return const SizedBox.shrink();
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFEE2E2),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFFECACA)),
+                              border: Border.all(
+                                color: const Color(0xFFFECACA),
+                              ),
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,7 +368,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           elevation: 2,
-                          shadowColor: AppColorSchemes.navy.withValues(alpha: 0.3),
+                          shadowColor: AppColorSchemes.navy.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                         child: _submitting
                             ? const SizedBox(

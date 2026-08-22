@@ -35,16 +35,31 @@ void main() {
 
       final salon = Salon.fromJson(json);
       expect(salon.name, equals('Elite Styles Barbershop'));
-      expect(salon.effectiveCoverImage, equals('https://example.com/cover.jpg'));
+      expect(
+        salon.effectiveCoverImage,
+        equals('https://example.com/cover.jpg'),
+      );
       expect(salon.ownerAvatarUrl, equals('https://example.com/avatar.jpg'));
       expect(salon.ownerName, equals('Vikram Patel'));
       expect(salon.galleryImages.length, equals(2));
       expect(salon.galleryImages[0], equals('https://example.com/photo1.jpg'));
 
       final outJson = salon.toJson();
-      expect(outJson['cover_image_url'], equals('https://example.com/cover.jpg'));
-      expect(outJson['owner_avatar_url'], equals('https://example.com/avatar.jpg'));
-      expect(outJson['gallery_images'], equals(['https://example.com/photo1.jpg', 'https://example.com/photo2.jpg']));
+      expect(
+        outJson['cover_image_url'],
+        equals('https://example.com/cover.jpg'),
+      );
+      expect(
+        outJson['owner_avatar_url'],
+        equals('https://example.com/avatar.jpg'),
+      );
+      expect(
+        outJson['gallery_images'],
+        equals([
+          'https://example.com/photo1.jpg',
+          'https://example.com/photo2.jpg',
+        ]),
+      );
     });
 
     test('Salon copyWith correctly updates gallery and cover', () {
@@ -87,24 +102,27 @@ void main() {
       expect(salon.phone, equals('+91 99999 88888'));
     });
 
-    test('updateSalonLocation updates fallback salon address details', () async {
-      await repo.updateSalonLocation(
-        salonId: testId,
-        state: 'Karnataka',
-        district: 'Bengaluru Urban',
-        city: 'Bengaluru',
-        address: 'Indiranagar 100ft Rd',
-        pincode: '560038',
-      );
+    test(
+      'updateSalonLocation updates fallback salon address details',
+      () async {
+        await repo.updateSalonLocation(
+          salonId: testId,
+          state: 'Karnataka',
+          district: 'Bengaluru Urban',
+          city: 'Bengaluru',
+          address: 'Indiranagar 100ft Rd',
+          pincode: '560038',
+        );
 
-      final salon = await repo.fetchSalonById(testId);
-      expect(salon, isNotNull);
-      expect(salon!.state, equals('Karnataka'));
-      expect(salon.district, equals('Bengaluru Urban'));
-      expect(salon.city, equals('Bengaluru'));
-      expect(salon.address, equals('Indiranagar 100ft Rd'));
-      expect(salon.pincode, equals('560038'));
-    });
+        final salon = await repo.fetchSalonById(testId);
+        expect(salon, isNotNull);
+        expect(salon!.state, equals('Karnataka'));
+        expect(salon.district, equals('Bengaluru Urban'));
+        expect(salon.city, equals('Bengaluru'));
+        expect(salon.address, equals('Indiranagar 100ft Rd'));
+        expect(salon.pincode, equals('560038'));
+      },
+    );
 
     test('updateChairsTimings updates chairs and times', () async {
       await repo.updateChairsTimings(
@@ -121,31 +139,43 @@ void main() {
       expect(salon.closingTime, equals('10:00 PM'));
     });
 
-    test('updateCoverImage, addGalleryImage and removeGalleryImage work accurately', () async {
-      await repo.updateCoverImage(
-        salonId: testId,
-        coverImageUrl: 'https://example.com/new_cover.jpg',
-      );
+    test(
+      'updateCoverImage, addGalleryImage and removeGalleryImage work accurately',
+      () async {
+        await repo.updateCoverImage(
+          salonId: testId,
+          coverImageUrl: 'https://example.com/new_cover.jpg',
+        );
 
-      var salon = await repo.fetchSalonById(testId);
-      expect(salon!.effectiveCoverImage, equals('https://example.com/new_cover.jpg'));
+        var salon = await repo.fetchSalonById(testId);
+        expect(
+          salon!.effectiveCoverImage,
+          equals('https://example.com/new_cover.jpg'),
+        );
 
-      await repo.addGalleryImage(
-        salonId: testId,
-        imageUrl: 'https://example.com/gallery1.jpg',
-      );
+        await repo.addGalleryImage(
+          salonId: testId,
+          imageUrl: 'https://example.com/gallery1.jpg',
+        );
 
-      salon = await repo.fetchSalonById(testId);
-      expect(salon!.galleryImages.contains('https://example.com/gallery1.jpg'), isTrue);
+        salon = await repo.fetchSalonById(testId);
+        expect(
+          salon!.galleryImages.contains('https://example.com/gallery1.jpg'),
+          isTrue,
+        );
 
-      await repo.removeGalleryImage(
-        salonId: testId,
-        imageUrl: 'https://example.com/gallery1.jpg',
-      );
+        await repo.removeGalleryImage(
+          salonId: testId,
+          imageUrl: 'https://example.com/gallery1.jpg',
+        );
 
-      salon = await repo.fetchSalonById(testId);
-      expect(salon!.galleryImages.contains('https://example.com/gallery1.jpg'), isFalse);
-    });
+        salon = await repo.fetchSalonById(testId);
+        expect(
+          salon!.galleryImages.contains('https://example.com/gallery1.jpg'),
+          isFalse,
+        );
+      },
+    );
   });
 
   group('Dedicated Screen Rendering Tests', () {
@@ -165,11 +195,11 @@ void main() {
       galleryImages: ['img_a.jpg', 'img_b.jpg'],
     );
 
-    testWidgets('StoreInfoScreen renders basic fields and save button', (tester) async {
+    testWidgets('StoreInfoScreen renders basic fields and save button', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: StoreInfoScreen(salon: testSalon),
-        ),
+        const MaterialApp(home: StoreInfoScreen(salon: testSalon)),
       );
       await tester.pumpAndSettle();
 
@@ -179,11 +209,11 @@ void main() {
       expect(find.text('Save Store Information'), findsOneWidget);
     });
 
-    testWidgets('SalonLocationScreen renders state, district and city fields', (tester) async {
+    testWidgets('SalonLocationScreen renders state, district and city fields', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: SalonLocationScreen(salon: testSalon),
-        ),
+        const MaterialApp(home: SalonLocationScreen(salon: testSalon)),
       );
       await tester.pumpAndSettle();
 
@@ -193,11 +223,11 @@ void main() {
       expect(find.text('Save Salon Location'), findsOneWidget);
     });
 
-    testWidgets('ChairsTimingsScreen renders chairs and timings controls', (tester) async {
+    testWidgets('ChairsTimingsScreen renders chairs and timings controls', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: ChairsTimingsScreen(salon: testSalon),
-        ),
+        const MaterialApp(home: ChairsTimingsScreen(salon: testSalon)),
       );
       await tester.pumpAndSettle();
 
@@ -207,25 +237,33 @@ void main() {
       expect(find.text('Save Chairs & Timings'), findsOneWidget);
     });
 
-    testWidgets('OwnerProfileScreen renders profile, cover, and gallery sections', (tester) async {
-      const user = AppUser(id: 'test-owner', email: 'owner@salon.com', fullName: 'Rahul Sharma', role: AppRole.salonOwner);
-      final authService = AuthService(_FakeAuthRepo(user));
-      await tester.pumpWidget(
-        AuthScope(
-          service: authService,
-          child: const MaterialApp(
-            home: OwnerProfileScreen(salon: testSalon),
+    testWidgets(
+      'OwnerProfileScreen renders profile, cover, and gallery sections',
+      (tester) async {
+        const user = AppUser(
+          id: 'test-owner',
+          email: 'owner@salon.com',
+          fullName: 'Rahul Sharma',
+          role: AppRole.salonOwner,
+        );
+        final authService = AuthService(_FakeAuthRepo(user));
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: const MaterialApp(
+              home: OwnerProfileScreen(salon: testSalon),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Owner Profile'), findsOneWidget);
-      expect(find.text('SALON OWNER'), findsOneWidget);
-      expect(find.text('Salon Cover Image'), findsOneWidget);
-      expect(find.text('Salon Gallery'), findsOneWidget);
-      expect(find.text('+ Add Photos'), findsOneWidget);
-    });
+        expect(find.text('Owner Profile'), findsOneWidget);
+        expect(find.text('SALON OWNER'), findsOneWidget);
+        expect(find.text('Salon Cover Image'), findsOneWidget);
+        expect(find.text('Salon Gallery'), findsOneWidget);
+        expect(find.text('+ Add Photos'), findsOneWidget);
+      },
+    );
   });
 }
 
@@ -233,5 +271,8 @@ class _FakeAuthRepo extends AuthRepository {
   _FakeAuthRepo(this.user) : super();
   final AppUser user;
   @override
-  Future<AppUser> signIn({required String email, required String password}) async => user;
+  Future<AppUser> signIn({
+    required String email,
+    required String password,
+  }) async => user;
 }

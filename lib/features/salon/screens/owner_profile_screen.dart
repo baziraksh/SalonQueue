@@ -41,7 +41,10 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   Future<void> _fetchFreshData() async {
     final auth = AuthScope.of(context, listen: false);
     final user = auth.currentUser;
-    if (user != null && user.isAuthenticated && user.id.isNotEmpty && _salonRepo.client != null) {
+    if (user != null &&
+        user.isAuthenticated &&
+        user.id.isNotEmpty &&
+        _salonRepo.client != null) {
       final fresh = await _salonRepo.fetchOwnerSalon(user.id);
       if (fresh != null && mounted) {
         setState(() {
@@ -139,7 +142,10 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 16),
               ListTile(
@@ -149,12 +155,21 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                     color: AppColorSchemes.navy.withValues(alpha: 0.08),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.camera_alt_rounded, color: AppColorSchemes.navy),
+                  child: const Icon(
+                    Icons.camera_alt_rounded,
+                    color: AppColorSchemes.navy,
+                  ),
                 ),
-                title: const Text('Take Photo', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: const Text(
+                  'Take Photo',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 onTap: () async {
                   Navigator.of(ctx).pop();
-                  final path = await _pickAndProcessImage(source: ImageSource.camera, type: type);
+                  final path = await _pickAndProcessImage(
+                    source: ImageSource.camera,
+                    type: type,
+                  );
                   if (path != null) onImageSelected(path);
                 },
               ),
@@ -165,12 +180,21 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                     color: AppColorSchemes.navy.withValues(alpha: 0.08),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.photo_library_rounded, color: AppColorSchemes.navy),
+                  child: const Icon(
+                    Icons.photo_library_rounded,
+                    color: AppColorSchemes.navy,
+                  ),
                 ),
-                title: const Text('Choose from Gallery', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: const Text(
+                  'Choose from Gallery',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 onTap: () async {
                   Navigator.of(ctx).pop();
-                  final path = await _pickAndProcessImage(source: ImageSource.gallery, type: type);
+                  final path = await _pickAndProcessImage(
+                    source: ImageSource.gallery,
+                    type: type,
+                  );
                   if (path != null) onImageSelected(path);
                 },
               ),
@@ -196,10 +220,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
 
     // Update User Profile in DB
     if (userId.isNotEmpty) {
-      await _authRepo.updateProfile(
-        userId: userId,
-        avatarUrl: newPhotoPath,
-      );
+      await _authRepo.updateProfile(userId: userId, avatarUrl: newPhotoPath);
     }
 
     // Update In-Memory Auth State immediately
@@ -264,10 +285,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
     try {
       // 1. Delete from Supabase Storage & Profiles table
       if (userId.isNotEmpty) {
-        await _authRepo.deleteProfileImage(
-          userId: userId,
-          photoUrl: oldPhoto,
-        );
+        await _authRepo.deleteProfileImage(userId: userId, photoUrl: oldPhoto);
       }
 
       // 2. Update Salon record in DB & fallback memory
@@ -394,7 +412,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
     );
     setState(() {
       _currentSalon = _currentSalon.copyWith(
-        galleryImages: _currentSalon.galleryImages.where((i) => i != imagePath).toList(),
+        galleryImages: _currentSalon.galleryImages
+            .where((i) => i != imagePath)
+            .toList(),
       );
       _isLoading = false;
     });
@@ -412,7 +432,10 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: const Text('Edit Owner Profile', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text(
+          'Edit Owner Profile',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
         content: TextField(
           controller: nameCtrl,
           decoration: const InputDecoration(
@@ -430,7 +453,8 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
               final newName = nameCtrl.text.trim();
               if (newName.isNotEmpty) {
                 final auth = AuthScope.of(context, listen: false);
-                final userId = auth.currentUser?.id ?? _currentSalon.ownerId ?? '';
+                final userId =
+                    auth.currentUser?.id ?? _currentSalon.ownerId ?? '';
 
                 await _salonRepo.updateOwnerProfile(
                   salonId: _currentSalon.id,
@@ -458,7 +482,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColorSchemes.navy,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('Save'),
           ),
@@ -504,7 +530,8 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   Widget build(BuildContext context) {
     final auth = AuthScope.of(context, listen: false);
     final ownerEmail = auth.currentUser?.email ?? '';
-    final ownerDisplayName = (_currentSalon.ownerName != null && _currentSalon.ownerName!.isNotEmpty)
+    final ownerDisplayName =
+        (_currentSalon.ownerName != null && _currentSalon.ownerName!.isNotEmpty)
         ? _currentSalon.ownerName!
         : (auth.currentUser?.fullName ?? 'Salon Owner');
 
@@ -527,9 +554,14 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColorSchemes.gold))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColorSchemes.gold),
+            )
           : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 14.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -601,7 +633,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                             fit: BoxFit.cover,
                           ),
                         )
-                      : const Icon(Icons.person, size: 44, color: AppColorSchemes.gold),
+                      : const Icon(
+                          Icons.person,
+                          size: 44,
+                          color: AppColorSchemes.gold,
+                        ),
                 ),
               ),
               Positioned(
@@ -619,7 +655,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
-                    child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 14,
+                    ),
                   ),
                 ),
               ),
@@ -641,7 +681,9 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
             decoration: BoxDecoration(
               color: AppColorSchemes.gold.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColorSchemes.gold.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: AppColorSchemes.gold.withValues(alpha: 0.4),
+              ),
             ),
             child: const Text(
               'SALON OWNER',
@@ -656,20 +698,40 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
           const SizedBox(height: 6),
           Text(
             _currentSalon.name,
-            style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           Text(
             ownerEmail,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.5),
+              fontSize: 11,
+            ),
           ),
           const SizedBox(height: 14),
           OutlinedButton.icon(
             onPressed: _showEditProfileDialog,
-            icon: const Icon(Icons.edit_outlined, size: 14, color: Colors.white),
-            label: const Text('Edit Profile Name', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+            icon: const Icon(
+              Icons.edit_outlined,
+              size: 14,
+              color: Colors.white,
+            ),
+            label: const Text(
+              'Edit Profile Name',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.white30),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             ),
           ),
@@ -706,8 +768,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                       fit: BoxFit.cover,
                     ),
                   )
-                : const Icon(Icons.person_rounded,
-                    color: AppColorSchemes.navy, size: 28),
+                : const Icon(
+                    Icons.person_rounded,
+                    color: AppColorSchemes.navy,
+                    size: 28,
+                  ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -717,9 +782,10 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                 const Text(
                   'Profile Photo',
                   style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: AppColorSchemes.charcoal),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColorSchemes.charcoal,
+                  ),
                 ),
                 Text(
                   hasPhoto ? 'Photo uploaded' : 'No photo uploaded',
@@ -736,13 +802,18 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
             child: Text(
               hasPhoto ? 'Change' : 'Upload',
               style: const TextStyle(
-                  color: AppColorSchemes.navy, fontWeight: FontWeight.bold),
+                color: AppColorSchemes.navy,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           if (hasPhoto) ...[
             IconButton(
-              icon: const Icon(Icons.delete_outline,
-                  color: Color(0xFFEF4444), size: 20),
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Color(0xFFEF4444),
+                size: 20,
+              ),
               tooltip: 'Delete Profile Photo',
               onPressed: _confirmDeleteProfilePhoto,
             ),
@@ -774,7 +845,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
             children: [
               const Text(
                 'Salon Cover Image',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColorSchemes.charcoal),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppColorSchemes.charcoal,
+                ),
               ),
               if (cover != null)
                 TextButton.icon(
@@ -783,8 +858,19 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                     onImageSelected: _handleUpdateCoverImage,
                     type: ImageUploadType.cover,
                   ),
-                  icon: const Icon(Icons.refresh, size: 14, color: AppColorSchemes.navy),
-                  label: const Text('Change', style: TextStyle(color: AppColorSchemes.navy, fontWeight: FontWeight.bold, fontSize: 12)),
+                  icon: const Icon(
+                    Icons.refresh,
+                    size: 14,
+                    color: AppColorSchemes.navy,
+                  ),
+                  label: const Text(
+                    'Change',
+                    style: TextStyle(
+                      color: AppColorSchemes.navy,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -804,9 +890,7 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                   child: Container(
                     height: 160,
                     width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                    ),
+                    decoration: BoxDecoration(color: Colors.grey.shade100),
                     child: _buildImageWidget(cover, fit: BoxFit.cover),
                   ),
                 ),
@@ -818,7 +902,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                     backgroundColor: Colors.black54,
                     child: IconButton(
                       padding: EdgeInsets.zero,
-                      icon: const Icon(Icons.delete_outline, color: Colors.white, size: 16),
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                       onPressed: _handleRemoveCoverImage,
                     ),
                   ),
@@ -838,7 +926,10 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFFAF8F5),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColorSchemes.gold.withValues(alpha: 0.4), style: BorderStyle.solid),
+                  border: Border.all(
+                    color: AppColorSchemes.gold.withValues(alpha: 0.4),
+                    style: BorderStyle.solid,
+                  ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -849,12 +940,20 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                         color: AppColorSchemes.gold.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.add_photo_alternate_rounded, color: AppColorSchemes.gold, size: 28),
+                      child: const Icon(
+                        Icons.add_photo_alternate_rounded,
+                        color: AppColorSchemes.gold,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
                       'Upload Salon Cover Image',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColorSchemes.navy),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColorSchemes.navy,
+                      ),
                     ),
                     const Text(
                       'Tap to choose from Camera or Gallery',
@@ -891,11 +990,19 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
             children: [
               const Text(
                 'Salon Gallery',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColorSchemes.charcoal),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppColorSchemes.charcoal,
+                ),
               ),
               Text(
                 '${gallery.length} photos',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -941,7 +1048,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                               color: Colors.black54,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.close, color: Colors.white, size: 12),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 12,
+                            ),
                           ),
                         ),
                       ),
@@ -963,14 +1074,24 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
                 onImageSelected: _handleAddGalleryPhoto,
                 type: ImageUploadType.gallery,
               ),
-              icon: const Icon(Icons.add_a_photo_rounded, size: 18, color: AppColorSchemes.navy),
+              icon: const Icon(
+                Icons.add_a_photo_rounded,
+                size: 18,
+                color: AppColorSchemes.navy,
+              ),
               label: const Text(
                 '+ Add Photos',
-                style: TextStyle(color: AppColorSchemes.navy, fontWeight: FontWeight.w800, fontSize: 13),
+                style: TextStyle(
+                  color: AppColorSchemes.navy,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
               ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColorSchemes.navy, width: 1.2),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
           ),
@@ -980,14 +1101,20 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
   }
 
   // ── Universal Image Widget Helper (Handles Local file, Base64, and Network URLs) ──
-  Widget _buildImageWidget(String path, {double? width, double? height, BoxFit fit = BoxFit.cover}) {
+  Widget _buildImageWidget(
+    String path, {
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.cover,
+  }) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return Image.network(
         path,
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(width, height),
+        errorBuilder: (context, error, stackTrace) =>
+            _buildImagePlaceholder(width, height),
       );
     } else if (path.startsWith('data:image')) {
       try {
@@ -1012,7 +1139,11 @@ class _OwnerProfileScreenState extends State<OwnerProfileScreen> {
       height: height,
       color: Colors.grey.shade200,
       child: const Center(
-        child: Icon(Icons.image_not_supported_outlined, color: Colors.grey, size: 24),
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          color: Colors.grey,
+          size: 24,
+        ),
       ),
     );
   }

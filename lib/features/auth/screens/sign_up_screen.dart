@@ -9,10 +9,7 @@ import '../services/auth_scope.dart';
 /// Features clean, modern rounded input fields, confirm password validation,
 /// human-friendly error banners, and luxury navy & gold brand styling.
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({
-    super.key,
-    this.requestedRole = AppRole.customer,
-  });
+  const SignUpScreen({super.key, this.requestedRole = AppRole.customer});
 
   final AppRole requestedRole;
 
@@ -76,10 +73,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _submitting = false);
 
     if (auth.isAuthenticated && auth.currentUser != null) {
-      AppRouter.navigateToRoleHome(
-        context,
-        role: auth.currentUser!.role,
-      );
+      AppRouter.navigateToRoleHome(context, role: auth.currentUser!.role);
     }
   }
 
@@ -95,7 +89,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColorSchemes.navy, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColorSchemes.navy,
+            size: 20,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -111,7 +109,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 12.0,
+            ),
             child: Form(
               key: _formKey,
               child: Column(
@@ -175,29 +176,51 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     decoration: InputDecoration(
                       labelText: nameLabel,
                       hintText: isOwner ? 'Rahul Sharma' : 'Ananya Roy',
-                      prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColorSchemes.navy, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.person_outline_rounded,
+                        color: AppColorSchemes.navy,
+                        size: 20,
+                      ),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.8),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 1.8,
+                        ),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 2.0),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 2.0,
+                        ),
                       ),
                     ),
                     textCapitalization: TextCapitalization.words,
@@ -211,29 +234,51 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     decoration: InputDecoration(
                       labelText: 'Email',
                       hintText: 'you@example.com',
-                      prefixIcon: const Icon(Icons.mail_outline_rounded, color: AppColorSchemes.navy, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.mail_outline_rounded,
+                        color: AppColorSchemes.navy,
+                        size: 20,
+                      ),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.8),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 1.8,
+                        ),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 2.0),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 2.0,
+                        ),
                       ),
                     ),
                     keyboardType: TextInputType.emailAddress,
@@ -248,7 +293,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     decoration: InputDecoration(
                       labelText: 'Password',
                       helperText: 'At least 6 characters',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColorSchemes.navy, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.lock_outline_rounded,
+                        color: AppColorSchemes.navy,
+                        size: 20,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
@@ -257,30 +306,50 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           color: const Color(0xFF64748B),
                           size: 20,
                         ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.8),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 1.8,
+                        ),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 2.0),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 2.0,
+                        ),
                       ),
                     ),
                     obscureText: _obscurePassword,
@@ -293,7 +362,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     controller: _confirmPasswordController,
                     decoration: InputDecoration(
                       labelText: 'Confirm Password',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColorSchemes.navy, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.lock_outline_rounded,
+                        color: AppColorSchemes.navy,
+                        size: 20,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscureConfirmPassword
@@ -302,30 +375,51 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           color: const Color(0xFF64748B),
                           size: 20,
                         ),
-                        onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                        onPressed: () => setState(
+                          () => _obscureConfirmPassword =
+                              !_obscureConfirmPassword,
+                        ),
                       ),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColorSchemes.navy, width: 2.0),
+                        borderSide: const BorderSide(
+                          color: AppColorSchemes.navy,
+                          width: 2.0,
+                        ),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.8),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 1.8,
+                        ),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Color(0xFFDC2626), width: 2.0),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFDC2626),
+                          width: 2.0,
+                        ),
                       ),
                     ),
                     obscureText: _obscureConfirmPassword,
@@ -345,13 +439,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ListenableBuilder(
                     listenable: AuthScope.of(context, listen: false),
                     builder: (context, _) {
-                      final error = AuthScope.of(context, listen: false).errorMessage;
+                      final error = AuthScope.of(
+                        context,
+                        listen: false,
+                      ).errorMessage;
                       if (error == null) return const SizedBox.shrink();
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFEE2E2),
                             borderRadius: BorderRadius.circular(14),
@@ -396,7 +496,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         elevation: 2,
-                        shadowColor: AppColorSchemes.navy.withValues(alpha: 0.3),
+                        shadowColor: AppColorSchemes.navy.withValues(
+                          alpha: 0.3,
+                        ),
                       ),
                       child: _submitting
                           ? const SizedBox(
@@ -419,7 +521,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   ),
                                 ),
                                 SizedBox(width: 8),
-                                Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColorSchemes.gold),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 14,
+                                  color: AppColorSchemes.gold,
+                                ),
                               ],
                             ),
                     ),

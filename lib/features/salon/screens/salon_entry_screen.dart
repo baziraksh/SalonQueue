@@ -75,18 +75,20 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
     if (ownerId.isEmpty) return;
 
     _notifSub?.cancel();
-    _notifSub = _notifRepo.streamNotifications(ownerId).listen(
-      (notifs) {
-        if (mounted) {
-          setState(() {
-            _unreadNotifsCount = notifs.where((n) => !n.isRead).length;
-          });
-        }
-      },
-      onError: (err) {
-        debugPrint('[SalonEntryScreen] notif stream error: $err');
-      },
-    );
+    _notifSub = _notifRepo
+        .streamNotifications(ownerId)
+        .listen(
+          (notifs) {
+            if (mounted) {
+              setState(() {
+                _unreadNotifsCount = notifs.where((n) => !n.isRead).length;
+              });
+            }
+          },
+          onError: (err) {
+            debugPrint('[SalonEntryScreen] notif stream error: $err');
+          },
+        );
 
     final unread = await _notifRepo.getUnreadCount(ownerId);
     if (!mounted) return;
@@ -106,18 +108,22 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
     final salon = await _salonRepo.fetchOwnerSalon(ownerId);
     if (salon != null) {
       _queueSub?.cancel();
-      _queueSub = _queueRepo.streamLiveQueueForSalon(salon.id).listen(
-        (liveTickets) {
-          if (mounted) {
-            setState(() {
-              _tickets = liveTickets;
-            });
-          }
-        },
-        onError: (err) {
-          debugPrint('[SalonEntryScreen] streamLiveQueueForSalon error: $err');
-        },
-      );
+      _queueSub = _queueRepo
+          .streamLiveQueueForSalon(salon.id)
+          .listen(
+            (liveTickets) {
+              if (mounted) {
+                setState(() {
+                  _tickets = liveTickets;
+                });
+              }
+            },
+            onError: (err) {
+              debugPrint(
+                '[SalonEntryScreen] streamLiveQueueForSalon error: $err',
+              );
+            },
+          );
 
       final queue = await _queueRepo.fetchLiveQueueForSalon(salon.id);
       if (!mounted) return;
@@ -143,7 +149,11 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
     setState(() {
       _salon = _salon!.copyWith(isQueueOpen: isOpen);
     });
-    await _salonRepo.setQueueStatus(_salon!.id, isOpen, ownerId: _salon!.ownerId);
+    await _salonRepo.setQueueStatus(
+      _salon!.id,
+      isOpen,
+      ownerId: _salon!.ownerId,
+    );
   }
 
   Future<void> _handleCallNext(QueueTicket ticket) async {
@@ -157,7 +167,9 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Called ${ticket.customerName} to Chair #$assignedChair!'),
+        content: Text(
+          'Called ${ticket.customerName} to Chair #$assignedChair!',
+        ),
         backgroundColor: AppColorSchemes.navy,
       ),
     );
@@ -204,7 +216,9 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
         builder: (context, setModalState) {
           return AlertDialog(
             backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+            ),
             title: Row(
               children: [
                 Container(
@@ -213,7 +227,11 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                     color: AppColorSchemes.navy.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.person_add_rounded, color: AppColorSchemes.navy, size: 20),
+                  child: const Icon(
+                    Icons.person_add_rounded,
+                    color: AppColorSchemes.navy,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 const Text(
@@ -237,7 +255,10 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                       controller: nameController,
                       decoration: const InputDecoration(
                         labelText: 'Customer Name *',
-                        prefixIcon: Icon(Icons.person_outline, color: AppColorSchemes.navy),
+                        prefixIcon: Icon(
+                          Icons.person_outline,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -246,7 +267,10 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                       keyboardType: TextInputType.phone,
                       decoration: const InputDecoration(
                         labelText: 'Phone Number (Optional)',
-                        prefixIcon: Icon(Icons.phone_outlined, color: AppColorSchemes.navy),
+                        prefixIcon: Icon(
+                          Icons.phone_outlined,
+                          color: AppColorSchemes.navy,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -267,11 +291,17 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                         contentPadding: EdgeInsets.zero,
                         title: Text(
                           '${svc.name} (₹${svc.price.toStringAsFixed(0)})',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                         ),
                         subtitle: Text(
                           '~${svc.durationMinutes} mins',
-                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                         value: isSelected,
                         onChanged: (val) {
@@ -292,13 +322,18 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.grey),
+                ),
               ),
               ElevatedButton(
                 onPressed: () async {
                   if (nameController.text.trim().isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter customer name')),
+                      const SnackBar(
+                        content: Text('Please enter customer name'),
+                      ),
                     );
                     return;
                   }
@@ -310,17 +345,17 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                   final servicesToUse = chosenServices.isNotEmpty
                       ? chosenServices
                       : (_salon!.services.isNotEmpty
-                          ? [_salon!.services.first]
-                          : [
-                              SalonService(
-                                id: 'svc-general',
-                                salonId: _salon!.id,
-                                name: 'General Grooming',
-                                category: 'Hair',
-                                price: 150.0,
-                                durationMinutes: 20,
-                              ),
-                            ]);
+                            ? [_salon!.services.first]
+                            : [
+                                SalonService(
+                                  id: 'svc-general',
+                                  salonId: _salon!.id,
+                                  name: 'General Grooming',
+                                  category: 'Hair',
+                                  price: 150.0,
+                                  durationMinutes: 20,
+                                ),
+                              ]);
 
                   await _queueRepo.joinQueue(
                     salonId: _salon!.id,
@@ -338,10 +373,18 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColorSchemes.gold,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 10,
+                  ),
                 ),
-                child: const Text('Generate Token', style: TextStyle(fontWeight: FontWeight.w800)),
+                child: const Text(
+                  'Generate Token',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
               ),
             ],
           );
@@ -359,13 +402,18 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
         appBar: _buildAppBar(context),
         drawer: _buildOwnerDrawer(context),
         body: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppColorSchemes.gold))
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColorSchemes.gold),
+              )
             : RefreshIndicator(
                 color: AppColorSchemes.navy,
                 onRefresh: _loadSalonAndQueue,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 12.0,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -392,7 +440,9 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                       // ── 5. Live Waiting Queue Section ────────────────────
                       _buildLiveWaitingQueueSection(),
 
-                      const SizedBox(height: 90), // Spacing for FAB & Bottom Nav
+                      const SizedBox(
+                        height: 90,
+                      ), // Spacing for FAB & Bottom Nav
                     ],
                   ),
                 ),
@@ -423,7 +473,11 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
       titleSpacing: 0,
       leading: Builder(
         builder: (ctx) => IconButton(
-          icon: const Icon(Icons.menu_rounded, color: AppColorSchemes.navy, size: 26),
+          icon: const Icon(
+            Icons.menu_rounded,
+            color: AppColorSchemes.navy,
+            size: 26,
+          ),
           tooltip: 'Navigation Menu',
           onPressed: () => Scaffold.of(ctx).openDrawer(),
         ),
@@ -446,7 +500,10 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 5,
+                  vertical: 1.5,
+                ),
                 decoration: BoxDecoration(
                   color: AppColorSchemes.gold.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
@@ -472,19 +529,28 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
             isLabelVisible: _unreadNotifsCount > 0,
             backgroundColor: AppColorSchemes.gold,
             textColor: Colors.white,
-            textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
-            child: const Icon(Icons.notifications_outlined, color: AppColorSchemes.navy, size: 25),
+            textStyle: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 10,
+            ),
+            child: const Icon(
+              Icons.notifications_outlined,
+              color: AppColorSchemes.navy,
+              size: 25,
+            ),
           ),
           tooltip: 'Notifications',
           visualDensity: VisualDensity.compact,
           onPressed: () {
             final auth = AuthScope.of(context, listen: false);
             final ownerId = auth.currentUser?.id ?? _salon?.ownerId ?? '';
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => OwnerNotificationsScreen(ownerId: ownerId),
-              ),
-            ).then((_) => _loadNotifications());
+            Navigator.of(context)
+                .push(
+                  MaterialPageRoute(
+                    builder: (_) => OwnerNotificationsScreen(ownerId: ownerId),
+                  ),
+                )
+                .then((_) => _loadNotifications());
           },
         ),
         const SizedBox(width: 8),
@@ -498,11 +564,13 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
   Widget _buildOwnerDrawer(BuildContext context) {
     final auth = AuthScope.of(context, listen: false);
     final ownerEmail = auth.currentUser?.email ?? 'owner@salonqueue.app';
-    final ownerDisplayName = (auth.currentUser?.fullName != null && auth.currentUser!.fullName!.trim().isNotEmpty)
+    final ownerDisplayName =
+        (auth.currentUser?.fullName != null &&
+            auth.currentUser!.fullName!.trim().isNotEmpty)
         ? auth.currentUser!.fullName!
         : ((_salon?.ownerName != null && _salon!.ownerName!.trim().isNotEmpty)
-            ? _salon!.ownerName!
-            : 'Salon Owner');
+              ? _salon!.ownerName!
+              : 'Salon Owner');
     final avatar = auth.currentUser?.avatarUrl ?? _salon?.ownerAvatarUrl;
     final salonName = (_salon?.name != null && _salon!.name.trim().isNotEmpty)
         ? _salon!.name
@@ -529,15 +597,19 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor: AppColorSchemes.gold.withValues(alpha: 0.3),
+                    backgroundColor: AppColorSchemes.gold.withValues(
+                      alpha: 0.3,
+                    ),
                     child: CircleAvatar(
                       radius: 27,
                       backgroundColor: AppColorSchemes.navy,
                       child: avatar != null && avatar.isNotEmpty
-                          ? ClipOval(
-                              child: _buildDrawerAvatar(avatar),
-                            )
-                          : const Icon(Icons.person, size: 32, color: AppColorSchemes.gold),
+                          ? ClipOval(child: _buildDrawerAvatar(avatar))
+                          : const Icon(
+                              Icons.person,
+                              size: 32,
+                              color: AppColorSchemes.gold,
+                            ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -551,7 +623,10 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                   ),
                   Container(
                     margin: const EdgeInsets.only(top: 2, bottom: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColorSchemes.gold.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
@@ -572,7 +647,10 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                   ),
                   Text(
                     ownerEmail,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 11),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.45),
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
@@ -585,21 +663,32 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                 children: [
                   _buildDrawerSectionLabel('PROFILE & BRAND'),
                   ListTile(
-                    leading: const Icon(Icons.person_outline_rounded, color: AppColorSchemes.navy),
-                    title: const Text('Owner Profile', style: TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: const Text('Cover photo, gallery & owner info', style: TextStyle(fontSize: 11)),
+                    leading: const Icon(
+                      Icons.person_outline_rounded,
+                      color: AppColorSchemes.navy,
+                    ),
+                    title: const Text(
+                      'Owner Profile',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Cover photo, gallery & owner info',
+                      style: TextStyle(fontSize: 11),
+                    ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () {
                       Navigator.pop(context);
                       if (_salon != null) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => OwnerProfileScreen(
-                              salon: _salon!,
-                              onUpdated: _loadSalonAndQueue,
-                            ),
-                          ),
-                        ).then((_) => _loadSalonAndQueue());
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) => OwnerProfileScreen(
+                                  salon: _salon!,
+                                  onUpdated: _loadSalonAndQueue,
+                                ),
+                              ),
+                            )
+                            .then((_) => _loadSalonAndQueue());
                       }
                     },
                   ),
@@ -607,58 +696,113 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                   const Divider(height: 16),
                   _buildDrawerSectionLabel('STORE MANAGEMENT'),
                   ListTile(
-                    leading: const Icon(Icons.storefront_rounded, color: AppColorSchemes.navy),
-                    title: const Text('Store Information', style: TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: const Text('Name, description & phone', style: TextStyle(fontSize: 11)),
+                    leading: const Icon(
+                      Icons.storefront_rounded,
+                      color: AppColorSchemes.navy,
+                    ),
+                    title: const Text(
+                      'Store Information',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Name, description & phone',
+                      style: TextStyle(fontSize: 11),
+                    ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () {
                       Navigator.pop(context);
                       if (_salon != null) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => StoreInfoScreen(salon: _salon!)),
-                        ).then((_) => _loadSalonAndQueue());
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) => StoreInfoScreen(salon: _salon!),
+                              ),
+                            )
+                            .then((_) => _loadSalonAndQueue());
                       }
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.location_on_rounded, color: AppColorSchemes.navy),
-                    title: const Text('Salon Location', style: TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: const Text('Address, state, district & city', style: TextStyle(fontSize: 11)),
+                    leading: const Icon(
+                      Icons.location_on_rounded,
+                      color: AppColorSchemes.navy,
+                    ),
+                    title: const Text(
+                      'Salon Location',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Address, state, district & city',
+                      style: TextStyle(fontSize: 11),
+                    ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () {
                       Navigator.pop(context);
                       if (_salon != null) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => SalonLocationScreen(salon: _salon!)),
-                        ).then((_) => _loadSalonAndQueue());
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    SalonLocationScreen(salon: _salon!),
+                              ),
+                            )
+                            .then((_) => _loadSalonAndQueue());
                       }
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.schedule_rounded, color: AppColorSchemes.navy),
-                    title: const Text('Chairs & Timings', style: TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: const Text('Capacity & operating hours', style: TextStyle(fontSize: 11)),
+                    leading: const Icon(
+                      Icons.schedule_rounded,
+                      color: AppColorSchemes.navy,
+                    ),
+                    title: const Text(
+                      'Chairs & Timings',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Capacity & operating hours',
+                      style: TextStyle(fontSize: 11),
+                    ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () {
                       Navigator.pop(context);
                       if (_salon != null) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => ChairsTimingsScreen(salon: _salon!)),
-                        ).then((_) => _loadSalonAndQueue());
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ChairsTimingsScreen(salon: _salon!),
+                              ),
+                            )
+                            .then((_) => _loadSalonAndQueue());
                       }
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.content_cut_rounded, color: AppColorSchemes.navy),
-                    title: const Text('Services & Pricing', style: TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: const Text('Add, edit prices & manage rate card', style: TextStyle(fontSize: 11)),
+                    leading: const Icon(
+                      Icons.content_cut_rounded,
+                      color: AppColorSchemes.navy,
+                    ),
+                    title: const Text(
+                      'Services & Pricing',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Add, edit prices & manage rate card',
+                      style: TextStyle(fontSize: 11),
+                    ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () {
                       Navigator.pop(context);
                       if (_salon != null) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => ManageServicesScreen(salon: _salon!)),
-                        ).then((_) => _loadSalonAndQueue());
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ManageServicesScreen(salon: _salon!),
+                              ),
+                            )
+                            .then((_) => _loadSalonAndQueue());
                       }
                     },
                   ),
@@ -666,14 +810,26 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                   const Divider(height: 16),
                   _buildDrawerSectionLabel('SUPPORT & ALERTS'),
                   ListTile(
-                    leading: const Icon(Icons.help_outline_rounded, color: AppColorSchemes.navy),
-                    title: const Text('Help & Support', style: TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: const Text('Owner FAQs & submit ticket', style: TextStyle(fontSize: 11)),
+                    leading: const Icon(
+                      Icons.help_outline_rounded,
+                      color: AppColorSchemes.navy,
+                    ),
+                    title: const Text(
+                      'Help & Support',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Owner FAQs & submit ticket',
+                      style: TextStyle(fontSize: 11),
+                    ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SupportCenterScreen(isOwner: true)),
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const SupportCenterScreen(isOwner: true),
+                        ),
                       );
                     },
                   ),
@@ -683,20 +839,33 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                       isLabelVisible: _unreadNotifsCount > 0,
                       backgroundColor: AppColorSchemes.gold,
                       textColor: Colors.white,
-                      child: const Icon(Icons.notifications_outlined, color: AppColorSchemes.navy),
+                      child: const Icon(
+                        Icons.notifications_outlined,
+                        color: AppColorSchemes.navy,
+                      ),
                     ),
-                    title: const Text('Notifications', style: TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: const Text('Live queue joins & system updates', style: TextStyle(fontSize: 11)),
+                    title: const Text(
+                      'Notifications',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Live queue joins & system updates',
+                      style: TextStyle(fontSize: 11),
+                    ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () {
                       Navigator.pop(context);
                       final auth = AuthScope.of(context, listen: false);
-                      final ownerId = auth.currentUser?.id ?? _salon?.ownerId ?? '';
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => OwnerNotificationsScreen(ownerId: ownerId),
-                        ),
-                      ).then((_) => _loadNotifications());
+                      final ownerId =
+                          auth.currentUser?.id ?? _salon?.ownerId ?? '';
+                      Navigator.of(context)
+                          .push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  OwnerNotificationsScreen(ownerId: ownerId),
+                            ),
+                          )
+                          .then((_) => _loadNotifications());
                     },
                   ),
 
@@ -704,7 +873,13 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                   _buildDrawerSectionLabel('ACCOUNT'),
                   ListTile(
                     leading: const Icon(Icons.logout, color: Color(0xFFEF4444)),
-                    title: const Text('Logout', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+                    title: const Text(
+                      'Logout',
+                      style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     onTap: () => _showLogoutConfirmDialog(context),
                   ),
                 ],
@@ -738,7 +913,8 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
         width: 54,
         height: 54,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => const Icon(Icons.person, size: 32, color: AppColorSchemes.gold),
+        errorBuilder: (_, _, _) =>
+            const Icon(Icons.person, size: 32, color: AppColorSchemes.gold),
       );
     } else if (path.startsWith('data:image')) {
       try {
@@ -789,9 +965,14 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Logout',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -816,7 +997,8 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: (isOpen ? AppColorSchemes.available : AppColorSchemes.busy).withValues(alpha: 0.08),
+            color: (isOpen ? AppColorSchemes.available : AppColorSchemes.busy)
+                .withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -831,7 +1013,9 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isOpen ? Icons.check_circle_outline_rounded : Icons.pause_circle_outline_rounded,
+              isOpen
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.pause_circle_outline_rounded,
               color: Colors.white,
               size: 22,
             ),
@@ -846,7 +1030,9 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 14,
-                    color: isOpen ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
+                    color: isOpen
+                        ? const Color(0xFF15803D)
+                        : const Color(0xFFB91C1C),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -855,10 +1041,7 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                   isOpen
                       ? 'Customers can join the live queue'
                       : 'New tokens are temporarily paused',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade700,
-                  ),
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
                 ),
               ],
             ),
@@ -1018,7 +1201,9 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                 color: AppColorSchemes.navy,
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => SalonQrScreen(salon: _salon!)),
+                    MaterialPageRoute(
+                      builder: (_) => SalonQrScreen(salon: _salon!),
+                    ),
                   );
                 },
               ),
@@ -1028,9 +1213,13 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                 label: 'Services & Pricing',
                 color: AppColorSchemes.navy,
                 onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => ManageServicesScreen(salon: _salon!)),
-                  ).then((_) => _loadSalonAndQueue());
+                  Navigator.of(context)
+                      .push(
+                        MaterialPageRoute(
+                          builder: (_) => ManageServicesScreen(salon: _salon!),
+                        ),
+                      )
+                      .then((_) => _loadSalonAndQueue());
                 },
               ),
               const SizedBox(width: 8),
@@ -1041,7 +1230,10 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => SalonAnalyticsScreen(salon: _salon!, tickets: _tickets),
+                      builder: (_) => SalonAnalyticsScreen(
+                        salon: _salon!,
+                        tickets: _tickets,
+                      ),
                     ),
                   );
                 },
@@ -1052,14 +1244,16 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                 label: 'Owner Profile',
                 color: AppColorSchemes.navy,
                 onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => OwnerProfileScreen(
-                        salon: _salon!,
-                        onUpdated: _loadSalonAndQueue,
-                      ),
-                    ),
-                  ).then((_) => _loadSalonAndQueue());
+                  Navigator.of(context)
+                      .push(
+                        MaterialPageRoute(
+                          builder: (_) => OwnerProfileScreen(
+                            salon: _salon!,
+                            onUpdated: _loadSalonAndQueue,
+                          ),
+                        ),
+                      )
+                      .then((_) => _loadSalonAndQueue());
                 },
               ),
               const SizedBox(width: 8),
@@ -1115,7 +1309,9 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: color == AppColorSchemes.gold ? AppColorSchemes.charcoal : color,
+                color: color == AppColorSchemes.gold
+                    ? AppColorSchemes.charcoal
+                    : color,
               ),
             ),
           ],
@@ -1147,7 +1343,10 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColorSchemes.navy,
                     borderRadius: BorderRadius.circular(10),
@@ -1177,7 +1376,11 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
             ),
             child: Column(
               children: [
-                Icon(Icons.chair_outlined, size: 40, color: Colors.grey.shade400),
+                Icon(
+                  Icons.chair_outlined,
+                  size: 40,
+                  color: Colors.grey.shade400,
+                ),
                 const SizedBox(height: 8),
                 const Text(
                   'No customers currently in chair',
@@ -1208,7 +1411,10 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColorSchemes.gold.withValues(alpha: 0.5), width: 1.2),
+        border: Border.all(
+          color: AppColorSchemes.gold.withValues(alpha: 0.5),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColorSchemes.navy.withValues(alpha: 0.05),
@@ -1223,7 +1429,10 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
             children: [
               // Chair Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [AppColorSchemes.navy, AppColorSchemes.navyLight],
@@ -1264,12 +1473,20 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
               ElevatedButton.icon(
                 onPressed: () => _handleFinishService(ticket),
                 icon: const Icon(Icons.check_circle_outline, size: 16),
-                label: const Text('Finish', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                label: const Text(
+                  'Finish',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColorSchemes.available,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   elevation: 0,
                 ),
               ),
@@ -1342,7 +1559,10 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColorSchemes.gold,
                     borderRadius: BorderRadius.circular(10),
@@ -1360,7 +1580,11 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
             ),
             TextButton.icon(
               onPressed: _showAddWalkInDialog,
-              icon: const Icon(Icons.add_rounded, size: 16, color: AppColorSchemes.gold),
+              icon: const Icon(
+                Icons.add_rounded,
+                size: 16,
+                color: AppColorSchemes.gold,
+              ),
               label: const Text(
                 '+ Add Walk-in',
                 style: TextStyle(
@@ -1384,7 +1608,11 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
             ),
             child: Column(
               children: [
-                Icon(Icons.hourglass_empty_rounded, size: 44, color: Colors.grey.shade400),
+                Icon(
+                  Icons.hourglass_empty_rounded,
+                  size: 44,
+                  color: Colors.grey.shade400,
+                ),
                 const SizedBox(height: 10),
                 const Text(
                   'No customers waiting',
@@ -1431,7 +1659,10 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
             children: [
               // Token Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF7ED),
                   borderRadius: BorderRadius.circular(10),
@@ -1493,7 +1724,11 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
               // Share Button
               IconButton(
                 visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.share_rounded, color: AppColorSchemes.available, size: 20),
+                icon: const Icon(
+                  Icons.share_rounded,
+                  color: AppColorSchemes.available,
+                  size: 20,
+                ),
                 tooltip: 'Share Token update',
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1522,10 +1757,18 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFDC2626),
                   side: const BorderSide(color: Color(0xFFFCA5A5)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                child: const Text('Cancel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
               ),
               const SizedBox(width: 8),
               OutlinedButton(
@@ -1533,21 +1776,37 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColorSchemes.navy,
                   side: BorderSide(color: Colors.grey.shade300),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                child: const Text('Skip', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'Skip',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: () => _handleCallNext(ticket),
                 icon: const Icon(Icons.call_rounded, size: 16),
-                label: const Text('Call Next / Sit', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                label: const Text(
+                  'Call Next / Sit',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColorSchemes.navy,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   elevation: 0,
                 ),
               ),
@@ -1584,39 +1843,54 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
             setState(() => _selectedBottomNavIndex = idx);
             if (idx == 1) {
               // Services
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => ManageServicesScreen(salon: _salon!)),
-              ).then((_) => _loadSalonAndQueue());
+              Navigator.of(context)
+                  .push(
+                    MaterialPageRoute(
+                      builder: (_) => ManageServicesScreen(salon: _salon!),
+                    ),
+                  )
+                  .then((_) => _loadSalonAndQueue());
             } else if (idx == 2) {
               // Store QR
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => SalonQrScreen(salon: _salon!)),
+                MaterialPageRoute(
+                  builder: (_) => SalonQrScreen(salon: _salon!),
+                ),
               );
             } else if (idx == 3) {
               // Analytics
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => SalonAnalyticsScreen(salon: _salon!, tickets: _tickets),
+                  builder: (_) =>
+                      SalonAnalyticsScreen(salon: _salon!, tickets: _tickets),
                 ),
               );
             } else if (idx == 4) {
               // Owner Profile
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => OwnerProfileScreen(
-                    salon: _salon!,
-                    onUpdated: _loadSalonAndQueue,
-                  ),
-                ),
-              ).then((_) => _loadSalonAndQueue());
+              Navigator.of(context)
+                  .push(
+                    MaterialPageRoute(
+                      builder: (_) => OwnerProfileScreen(
+                        salon: _salon!,
+                        onUpdated: _loadSalonAndQueue,
+                      ),
+                    ),
+                  )
+                  .then((_) => _loadSalonAndQueue());
             }
           },
           backgroundColor: Colors.white,
           selectedItemColor: AppColorSchemes.navy,
           unselectedItemColor: Colors.grey.shade400,
           type: BottomNavigationBarType.fixed,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 11,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 11,
+          ),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),

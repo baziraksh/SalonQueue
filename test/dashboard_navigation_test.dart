@@ -72,13 +72,18 @@ void main() {
     testWidgets('shows no back arrow and blocks system back', (tester) async {
       final service = await _authenticatedService(
         const AppUser(
-            id: 'u2', email: 'o@example.com', role: AppRole.salonOwner),
+          id: 'u2',
+          email: 'o@example.com',
+          role: AppRole.salonOwner,
+        ),
       );
 
-      await tester.pumpWidget(AuthScope(
-        service: service,
-        child: MaterialApp(home: const SalonEntryScreen()),
-      ));
+      await tester.pumpWidget(
+        AuthScope(
+          service: service,
+          child: MaterialApp(home: const SalonEntryScreen()),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // No back arrow anywhere.
@@ -93,11 +98,15 @@ void main() {
       expect(popScope.canPop, isFalse);
     });
 
-    testWidgets('logout signs out and returns to welcome screen',
-        (tester) async {
+    testWidgets('logout signs out and returns to welcome screen', (
+      tester,
+    ) async {
       final repo = _FakeAuthRepository(
         const AppUser(
-            id: 'u2', email: 'o@example.com', role: AppRole.salonOwner),
+          id: 'u2',
+          email: 'o@example.com',
+          role: AppRole.salonOwner,
+        ),
       );
       final service = AuthService(repo);
       await service.signIn(
@@ -106,13 +115,15 @@ void main() {
         requestedRole: AppRole.salonOwner,
       );
 
-      await tester.pumpWidget(AuthScope(
-        service: service,
-        child: _appForRoute(
-          initialRoute: AppRouter.salonEntry,
+      await tester.pumpWidget(
+        AuthScope(
           service: service,
+          child: _appForRoute(
+            initialRoute: AppRouter.salonEntry,
+            service: service,
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       // Confirm we're on the salon dashboard.
@@ -148,14 +159,15 @@ void main() {
   group('Customer Dashboard navigation', () {
     testWidgets('shows no back arrow and blocks system back', (tester) async {
       final service = await _authenticatedService(
-        const AppUser(
-            id: 'u1', email: 'c@example.com', role: AppRole.customer),
+        const AppUser(id: 'u1', email: 'c@example.com', role: AppRole.customer),
       );
 
-      await tester.pumpWidget(AuthScope(
-        service: service,
-        child: MaterialApp(home: const CustomerEntryScreen()),
-      ));
+      await tester.pumpWidget(
+        AuthScope(
+          service: service,
+          child: MaterialApp(home: const CustomerEntryScreen()),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(BackButton), findsNothing);
