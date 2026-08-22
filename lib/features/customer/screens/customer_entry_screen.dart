@@ -56,6 +56,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   QueueTicket? _latestTicket;
   Salon? _latestTicketSalon;
   bool _isLoading = true;
+  bool _isFetchingSalons = false;
+  DateTime? _lastFetchTime;
   int _unreadNotifsCount = 0;
   StreamSubscription<List<AppNotification>>? _notifSubscription;
   StreamSubscription<List<Salon>>? _salonsSub;
@@ -78,6 +80,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     if (cached.isNotEmpty) {
       _salons = cached;
       _isLoading = false;
+      _lastFetchTime = DateTime.now();
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _verifyAccess());
@@ -89,8 +92,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
   void _setupSalonsAutoFetch() {
     _salonsSub?.cancel();
     _salonsSub = _salonRepo.streamSalons().listen((_) {
-      if (mounted && !_isLoading) {
-        _loadData();
+      if (mounted && !_isFetchingSalons) {
+        _loadData(forceRefresh: true);
       }
     });
   }
@@ -131,9 +134,25 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     });
   }
 
-  Future<void> _loadData() async {
-    // Only set loading indicator if we don't already have salons on screen
-    if (_salons.isEmpty) {
+  Future<void> _loadData({bool forceRefresh = false}) async {
+    // 1. If we already have fresh salon data in memory, skip redundant API calls
+    if (!forceRefresh && _salons.isNotEmpty && _lastFetchTime != null) {
+      final age = DateTime.now().difference(_lastFetchTime!);
+      if (age.inMinutes < 2) {
+        // Data is still fresh (< 2 mins), render immediately without any delay or spinner
+        if (_isLoading && mounted) {
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+    }
+
+    // 2. Prevent duplicate concurrent fetch requests
+    if (_isFetchingSalons) return;
+    _isFetchingSalons = true;
+
+    // Only set loading indicator if we genuinely have 0 salons on screen
+    if (_salons.isEmpty && mounted) {
       setState(() => _isLoading = true);
     }
 
@@ -184,6 +203,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
         list = list.where((s) => _favoriteSalonIds.contains(s.id)).toList();
       }
 
+      _lastFetchTime = DateTime.now();
       if (!mounted) return;
       setState(() {
         _salons = list;
@@ -191,6 +211,8 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       });
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
+    } finally {
+      _isFetchingSalons = false;
     }
   }
 
@@ -636,6 +658,16 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               // ── 6. Popular Services (Horizontal Icons) ─────────────────
               _buildPopularServicesSection(),
 
+              const SizedBox(height: 14),
+
+              // ── 7. Quick Actions (New useful customer feature) ─────────
+              _buildQuickActionsSection(),
+
+              const SizedBox(height: 14),
+
+              // ── 8. Recommended For You (Curated Salons) ───────────────
+              _buildRecommendedSalonsSection(),
+
               const SizedBox(height: 16),
             ],
           ),
@@ -872,24 +904,7 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 ),
               ),
             ),
-            // Right-side manual search & location/options button
-            InkWell(
-              onTap: showAllIndiaLocationSelector,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                margin: const EdgeInsets.only(right: 6),
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF3F4F6),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.tune_rounded,
-                  color: Color(0xFF111827),
-                  size: 16,
-                ),
-              ),
-            ),
+            const SizedBox(width: 14),
           ],
         ),
       ),
@@ -1449,6 +1464,246 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
     );
   }
 
+  // ── 7. Quick Actions Section ───────────────────────────────────────────────
+  Widget _buildQuickActionsSection() {
+    final quickActions = [
+      {
+        'title': 'My Queue',
+        'subtitle': _activeTicket != null ? 'Active Token' : 'Check status',
+        'icon': Icons.confirmation_number_rounded,
+        'color': const Color(0xFF6D28D9),
+        'bgColor': const Color(0xFFF3E8FF),
+        'onTap': () => setState(() => _currentTabIndex = 3),
+      },
+      {
+        'title': 'Bookings',
+        'subtitle': 'History & Slips',
+        'icon': Icons.calendar_today_rounded,
+        'color': const Color(0xFF0284C7),
+        'bgColor': const Color(0xFFE0F2FE),
+        'onTap': () => setState(() => _currentTabIndex = 1),
+      },
+      {
+        'title': 'Favorites',
+        'subtitle': '${_favoriteSalonIds.length} Saved',
+        'icon': Icons.favorite_rounded,
+        'color': const Color(0xFFE11D48),
+        'bgColor': const Color(0xFFFFE4E6),
+        'onTap': () {
+          _openSearchScreen(category: 'Favorites');
+        },
+      },
+      {
+        'title': 'Scan QR',
+        'subtitle': 'Fast check-in',
+        'icon': Icons.qr_code_scanner_rounded,
+        'color': const Color(0xFF059669),
+        'bgColor': const Color(0xFFD1FAE5),
+        'onTap': () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+          ).then((_) => _loadData());
+        },
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'Quick Actions',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF111827),
+              letterSpacing: -0.3,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: quickActions.map((action) {
+              final title = action['title'] as String;
+              final subtitle = action['subtitle'] as String;
+              final icon = action['icon'] as IconData;
+              final color = action['color'] as Color;
+              final bgColor = action['bgColor'] as Color;
+              final onTap = action['onTap'] as VoidCallback;
+
+              return Expanded(
+                child: GestureDetector(
+                  onTap: onTap,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFF1F3F5)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: bgColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(icon, color: color, size: 16),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF6B7280),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── 8. Recommended Salons Section ──────────────────────────────────────────
+  Widget _buildRecommendedSalonsSection() {
+    // Pick top rated or available salons from the existing list
+    final recommended = List<Salon>.from(_salons)
+      ..sort((a, b) => b.rating.compareTo(a.rating));
+    final displaySalons = recommended.take(4).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recommended For You',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                  letterSpacing: -0.3,
+                ),
+              ),
+              InkWell(
+                onTap: () => _openSearchScreen(),
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Text(
+                    'See all',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF6D28D9),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (_isLoading)
+          const SizedBox(
+            height: 140,
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6D28D9)),
+              ),
+            ),
+          )
+        else if (displaySalons.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 22),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Explore top-rated salons across India',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _openSearchScreen(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6D28D9),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      minimumSize: const Size(0, 28),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Find', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          SizedBox(
+            height: 165,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: displaySalons.length,
+              itemBuilder: (context, idx) {
+                final salon = displaySalons[idx];
+                return _buildHorizontalSalonCard(salon);
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ── OTHER TABS (My Queue, Favorites) ──────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1775,49 +2030,35 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
               return;
             }
             setState(() => _currentTabIndex = idx);
-            if (idx == 0) _loadData();
           },
           backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFFE91E63), // Pink/Purple active accent matching reference
+          selectedItemColor: const Color(0xFF6D28D9), // Purple active accent matching modern theme
           unselectedItemColor: const Color(0xFF9CA3AF),
           type: BottomNavigationBarType.fixed,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
-          items: [
-            const BottomNavigationBarItem(
+          items: const [
+            BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
               activeIcon: Icon(Icons.home_rounded),
               label: 'Home',
             ),
-            const BottomNavigationBarItem(
+            BottomNavigationBarItem(
               icon: Icon(Icons.calendar_today_outlined),
               activeIcon: Icon(Icons.calendar_today_rounded),
               label: 'Bookings',
             ),
             BottomNavigationBarItem(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF10233F),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x3310233F),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFFD4AF5A), size: 22),
-              ),
+              icon: Icon(Icons.qr_code_scanner_rounded),
+              activeIcon: Icon(Icons.qr_code_scanner_rounded),
               label: 'Scan',
             ),
-            const BottomNavigationBarItem(
+            BottomNavigationBarItem(
               icon: Icon(Icons.confirmation_number_outlined),
               activeIcon: Icon(Icons.confirmation_number_rounded),
               label: 'My Queue',
             ),
-            const BottomNavigationBarItem(
+            BottomNavigationBarItem(
               icon: Icon(Icons.person_outline_rounded),
               activeIcon: Icon(Icons.person_rounded),
               label: 'Profile',

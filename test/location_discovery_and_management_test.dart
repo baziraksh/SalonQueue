@@ -247,12 +247,20 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Check search area with tune/filter button
-      expect(find.byType(TextField), findsOneWidget);
-      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+      // Check search area
+      expect(find.text('Search salon, services or location'), findsOneWidget);
+      expect(find.byIcon(Icons.search_rounded), findsOneWidget);
 
-      // Tap the Location/filter selector button
-      await tester.tap(find.byIcon(Icons.tune_rounded));
+      // Tap the Search bar
+      await tester.tap(find.byType(TextField).first, warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      // Check CustomerSearchScreen contents
+      expect(find.text('Search'), findsOneWidget);
+      expect(find.byIcon(Icons.location_on_rounded), findsOneWidget);
+
+      // Tap Location selector in Search
+      await tester.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
       await tester.pumpAndSettle();
 
       // Check bottom sheet contents
