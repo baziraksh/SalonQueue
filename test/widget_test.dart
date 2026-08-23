@@ -21,28 +21,13 @@ Widget _buildTestApp() {
 }
 
 void main() {
-  testWidgets('Splash screen appears on app launch', (
+  testWidgets('App opens directly to Welcome screen on unauthenticated launch', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(_buildTestApp());
-
-    // Splash branding is visible.
-    expect(find.text('Salon Queue'), findsOneWidget);
-    expect(find.text('Skip the wait, book your great.'), findsNothing);
-
-    // Advance past the splash delay; the timer must be handled cleanly.
-    await tester.pump(const Duration(milliseconds: 2300));
-    await tester.pumpAndSettle();
-  });
-
-  testWidgets('Welcome screen appears after splash (unauthenticated)', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(_buildTestApp());
-
-    await tester.pump(const Duration(milliseconds: 2300));
     await tester.pumpAndSettle();
 
+    // Directly renders Welcome screen branding & role selection on launch
     expect(find.text('Salon Queue'), findsOneWidget);
     expect(find.text('Find Salons & Skip The Line 🇮🇳'), findsOneWidget);
     expect(find.text('I am a Customer'), findsOneWidget);
@@ -53,8 +38,6 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(_buildTestApp());
-
-    await tester.pump(const Duration(milliseconds: 2100));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('I am a Customer'));
@@ -68,8 +51,6 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(_buildTestApp());
-
-    await tester.pump(const Duration(milliseconds: 2100));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('I am a Salon Owner'));
@@ -83,8 +64,6 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(_buildTestApp());
-
-    await tester.pump(const Duration(milliseconds: 2100));
     await tester.pumpAndSettle();
 
     // Go to sign-in first.
@@ -102,8 +81,6 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(_buildTestApp());
-
-    await tester.pump(const Duration(milliseconds: 2100));
     await tester.pumpAndSettle();
 
     // Go to sign-in first.
@@ -114,8 +91,6 @@ void main() {
     await tester.tap(find.text('Forgot password?'));
     await tester.pumpAndSettle();
 
-    // Verify Reset Password screen appears (AppBar title + headline both
-    // show "Reset Password", so use findsWidgets for that).
     expect(find.text('Reset Password'), findsWidgets);
     expect(
       find.text("Enter your email and we'll send you a password reset link."),
@@ -127,10 +102,9 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(_buildTestApp());
-
-    await tester.pump(const Duration(milliseconds: 2100));
     await tester.pumpAndSettle();
 
+    // Navigate to forgot password.
     await tester.tap(find.text('I am a Customer'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Forgot password?'));
@@ -147,10 +121,9 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(_buildTestApp());
-
-    await tester.pump(const Duration(milliseconds: 2100));
     await tester.pumpAndSettle();
 
+    // Navigate to sign-up.
     await tester.tap(find.text('I am a Customer'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sign Up'));
