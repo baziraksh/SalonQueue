@@ -329,16 +329,17 @@ void main() {
         expect(find.text('WAITING'), findsOneWidget);
         expect(find.text('CHAIRS'), findsOneWidget);
 
-        expect(find.text('Quick Operations'), findsOneWidget);
+        expect(find.text('Quick Actions'), findsOneWidget);
         expect(find.text('Add Walk-in'), findsOneWidget);
         expect(find.text('Store QR'), findsOneWidget);
         expect(find.text('Services & Pricing'), findsOneWidget);
 
-        expect(find.text('Currently Serving'), findsOneWidget);
-        expect(find.text('Live Queue'), findsOneWidget);
-
-        // Bottom Navigation has Home label
-        expect(find.text('Home'), findsOneWidget);
+        // Bottom Navigation has Dashboard, Bookings, Live Queue, Customers, More
+        expect(find.text('Dashboard'), findsWidgets);
+        expect(find.text('Bookings'), findsWidgets);
+        expect(find.text('Live Queue'), findsWidgets);
+        expect(find.text('Customers'), findsWidgets);
+        expect(find.text('More'), findsOneWidget);
       },
     );
 

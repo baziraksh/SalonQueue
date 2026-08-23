@@ -1,561 +1,330 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/color_schemes.dart';
-import '../../../shared/data/india_locations.dart';
+import '../../../core/routing/app_router.dart';
 import '../../../shared/models/salon.dart';
 import '../../auth/services/auth_scope.dart';
+import '../../notifications/screens/owner_notifications_screen.dart';
 import '../../support/screens/support_center_screen.dart';
-import '../data/salon_repository.dart';
+import 'chairs_timings_screen.dart';
+import 'manage_services_screen.dart';
+import 'owner_profile_screen.dart';
+import 'owner_wallet_screen.dart';
+import 'salon_location_screen.dart';
+import 'store_info_screen.dart';
 
-/// Screen allowing Salon Owner to manage salon profile, operating hours, and location (State/District/City).
-/// Fully responsive with zero RenderFlex overflow and styled in luxury Navy & Gold theme.
-class SalonSettingsScreen extends StatefulWidget {
-  const SalonSettingsScreen({super.key, required this.salon});
+/// Screen displaying the Salon Owner settings menu matching the reference design system.
+class SalonSettingsScreen extends StatelessWidget {
+  const SalonSettingsScreen({super.key, required this.salon, this.onUpdated});
 
   final Salon salon;
+  final VoidCallback? onUpdated;
 
-  @override
-  State<SalonSettingsScreen> createState() => _SalonSettingsScreenState();
-}
-
-class _SalonSettingsScreenState extends State<SalonSettingsScreen> {
-  final SalonRepository _salonRepo = SalonRepository();
-  final _formKey = GlobalKey<FormState>();
-
-  late TextEditingController _nameController;
-  late TextEditingController _descController;
-  late TextEditingController _addressController;
-  late TextEditingController _cityController;
-  late TextEditingController _districtController;
-  late TextEditingController _pincodeController;
-  late TextEditingController _phoneController;
-  late TextEditingController _chairsController;
-  late TextEditingController _openTimeController;
-  late TextEditingController _closeTimeController;
-
-  late String _selectedState;
-  bool _isSaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedState = widget.salon.state.isNotEmpty
-        ? widget.salon.state
-        : 'Maharashtra';
-    _nameController = TextEditingController(text: widget.salon.name);
-    _descController = TextEditingController(text: widget.salon.description);
-    _addressController = TextEditingController(text: widget.salon.address);
-    _cityController = TextEditingController(text: widget.salon.city);
-    _districtController = TextEditingController(
-      text: widget.salon.district.isNotEmpty
-          ? widget.salon.district
-          : widget.salon.city,
-    );
-    _pincodeController = TextEditingController(
-      text: widget.salon.pincode ?? '',
-    );
-    _phoneController = TextEditingController(text: widget.salon.phone ?? '');
-    _chairsController = TextEditingController(
-      text: widget.salon.activeChairs.toString(),
-    );
-    _openTimeController = TextEditingController(text: widget.salon.openingTime);
-    _closeTimeController = TextEditingController(
-      text: widget.salon.closingTime,
-    );
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _descController.dispose();
-    _addressController.dispose();
-    _cityController.dispose();
-    _districtController.dispose();
-    _pincodeController.dispose();
-    _phoneController.dispose();
-    _chairsController.dispose();
-    _openTimeController.dispose();
-    _closeTimeController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handleSave() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isSaving = true);
-
-    final auth = AuthScope.of(context, listen: false);
-    final effectiveOwnerId =
-        (widget.salon.ownerId != null && widget.salon.ownerId!.isNotEmpty)
-        ? widget.salon.ownerId
-        : auth.currentUser?.id;
-
-    await _salonRepo.updateSalonDetails(
-      salonId: widget.salon.id,
-      ownerId: effectiveOwnerId,
-      name: _nameController.text.trim(),
-      description: _descController.text.trim(),
-      address: _addressController.text.trim(),
-      city: _cityController.text.trim(),
-      district: _districtController.text.trim(),
-      state: _selectedState,
-      pincode: _pincodeController.text.trim(),
-      phone: _phoneController.text.trim(),
-      activeChairs: int.tryParse(_chairsController.text.trim()) ?? 3,
-      openingTime: _openTimeController.text.trim(),
-      closingTime: _closeTimeController.text.trim(),
-    );
-
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Salon details & location updated successfully!'),
-        backgroundColor: AppColorSchemes.available,
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Row(
+          children: [
+            Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 24),
+            SizedBox(width: 10),
+            Text(
+              'Logout',
+              style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to sign out from your salon owner account?',
+          style: TextStyle(fontSize: 13.5, color: Color(0xFF4B5563), height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final auth = AuthScope.of(context, listen: false);
+              await auth.signOut();
+              if (!context.mounted) return;
+              AppRouter.navigateToWelcomeAfterLogout(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
+  }
 
-    Navigator.of(context).pop(true);
+  void _showPrivacyPolicy(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Privacy & Data Policy',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'SalonQueue is committed to protecting your salon business data. All digital queue tokens, customer telephone numbers, and financial transactions are encrypted with Supabase row-level security (RLS).',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade700, height: 1.5),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6D28D9),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: const Text('Understood', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final allStates = IndiaLocations.getAllStates();
+    final auth = AuthScope.of(context, listen: false);
+    final ownerId = auth.currentUser?.id ?? salon.ownerId ?? '';
+
+    final settingsItems = [
+      _SettingsItem(
+        icon: Icons.person_outline_rounded,
+        title: 'Salon Profile',
+        subtitle: 'Cover photo, gallery & owner info',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => OwnerProfileScreen(salon: salon, onUpdated: onUpdated),
+            ),
+          );
+        },
+      ),
+      _SettingsItem(
+        icon: Icons.storefront_outlined,
+        title: 'Business Information',
+        subtitle: 'Salon name, contact & description',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => StoreInfoScreen(salon: salon),
+            ),
+          );
+        },
+      ),
+      _SettingsItem(
+        icon: Icons.location_on_outlined,
+        title: 'Salon Location',
+        subtitle: 'State, City, District & Pincode',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SalonLocationScreen(salon: salon),
+            ),
+          );
+        },
+      ),
+      _SettingsItem(
+        icon: Icons.access_time_rounded,
+        title: 'Working Hours',
+        subtitle: 'Operating hours & active chairs capacity',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ChairsTimingsScreen(salon: salon),
+            ),
+          );
+        },
+      ),
+      _SettingsItem(
+        icon: Icons.content_cut_rounded,
+        title: 'Services & Pricing',
+        subtitle: 'Menu items, prices & durations',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ManageServicesScreen(salon: salon),
+            ),
+          );
+        },
+      ),
+      _SettingsItem(
+        icon: Icons.credit_card_outlined,
+        title: 'Payment Methods',
+        subtitle: 'Wallet, bank account & payouts',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => OwnerWalletScreen(salon: salon),
+            ),
+          );
+        },
+      ),
+      _SettingsItem(
+        icon: Icons.notifications_outlined,
+        title: 'Notifications',
+        subtitle: 'Queue alerts & system updates',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => OwnerNotificationsScreen(ownerId: ownerId),
+            ),
+          );
+        },
+      ),
+      _SettingsItem(
+        icon: Icons.shield_outlined,
+        title: 'Privacy Policy',
+        subtitle: 'Data security and terms of service',
+        onTap: () => _showPrivacyPolicy(context),
+      ),
+      _SettingsItem(
+        icon: Icons.help_outline_rounded,
+        title: 'Help & Support',
+        subtitle: 'Owner FAQs & support tickets',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const SupportCenterScreen(isOwner: true),
+            ),
+          );
+        },
+      ),
+      _SettingsItem(
+        icon: Icons.logout_rounded,
+        title: 'Logout',
+        subtitle: 'Sign out from owner dashboard',
+        isDestructive: true,
+        onTap: () => _showLogoutDialog(context),
+      ),
+    ];
 
     return Scaffold(
-      backgroundColor: AppColorSchemes.ivory,
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0.5,
-        title: const Text(
-          'Salon Profile & Location',
-          style: TextStyle(
-            color: AppColorSchemes.charcoal,
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
-          ),
-        ),
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColorSchemes.navy),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF111827), size: 18),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        title: const Text(
+          'Settings',
+          style: TextStyle(
+            color: Color(0xFF111827),
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+          ),
+        ),
+        centerTitle: true,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Section 1: Store Information ─────────────────────────
-                _buildSectionHeader(
-                  icon: Icons.storefront_rounded,
-                  title: 'Store Information',
-                  subtitle: 'Basic details visible to customers on Salon Queue',
+      body: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        itemCount: settingsItems.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final item = settingsItems[index];
+          final isDestructive = item.isDestructive;
+
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDestructive ? const Color(0xFFFEE2E2) : const Color(0xFFF1F3F5),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
                 ),
-                const SizedBox(height: 12),
-                _buildCardContainer(
-                  children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Salon Name *',
-                        hintText: 'e.g. Royal Cuts Unisex Salon',
-                        prefixIcon: Icon(
-                          Icons.storefront,
-                          color: AppColorSchemes.navy,
-                        ),
-                      ),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Enter salon name'
-                          : null,
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _descController,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Short Description',
-                        hintText: 'e.g. Modern haircuts, beard spas & facials',
-                        prefixIcon: Icon(
-                          Icons.description_outlined,
-                          color: AppColorSchemes.navy,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Contact Phone Number',
-                        hintText: '+91 98765 43210',
-                        prefixIcon: Icon(
-                          Icons.phone_outlined,
-                          color: AppColorSchemes.navy,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // ── Section 2: Store Location (Pan-India) ─────────────────
-                _buildSectionHeader(
-                  icon: Icons.location_on_rounded,
-                  title: 'Store Location (Pan-India 🇮🇳)',
-                  subtitle:
-                      'Helps nearby customers discover your salon in their city',
-                ),
-                const SizedBox(height: 12),
-                _buildCardContainer(
-                  children: [
-                    // State Dropdown — Fully responsive & safe against narrow screens
-                    DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      initialValue: allStates.contains(_selectedState)
-                          ? _selectedState
-                          : allStates.first,
-                      decoration: const InputDecoration(
-                        labelText: 'State *',
-                        prefixIcon: Icon(
-                          Icons.map_outlined,
-                          color: AppColorSchemes.navy,
-                        ),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 14,
-                        ),
-                      ),
-                      items: allStates.map((st) {
-                        return DropdownMenuItem<String>(
-                          value: st,
-                          child: Text(
-                            st,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColorSchemes.charcoal,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedState = val);
-                      },
-                    ),
-                    const SizedBox(height: 14),
-
-                    // District & City Row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _districtController,
-                            decoration: const InputDecoration(
-                              labelText: 'District *',
-                              hintText: 'e.g. Pune',
-                              prefixIcon: Icon(
-                                Icons.location_city_outlined,
-                                color: AppColorSchemes.navy,
-                              ),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Enter district'
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _cityController,
-                            decoration: const InputDecoration(
-                              labelText: 'City / Town *',
-                              hintText: 'e.g. Pune',
-                              prefixIcon: Icon(
-                                Icons.apartment_outlined,
-                                color: AppColorSchemes.navy,
-                              ),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Enter city'
-                                : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Street Address & Pincode Row
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: TextFormField(
-                            controller: _addressController,
-                            decoration: const InputDecoration(
-                              labelText: 'Street Address *',
-                              hintText: 'e.g. FC Road, Lane 4',
-                              prefixIcon: Icon(
-                                Icons.pin_drop_outlined,
-                                color: AppColorSchemes.navy,
-                              ),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Enter street address'
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 1,
-                          child: TextFormField(
-                            controller: _pincodeController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'PIN Code',
-                              hintText: '411004',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // ── Section 3: Chairs & Operating Timings ────────────────
-                _buildSectionHeader(
-                  icon: Icons.schedule_rounded,
-                  title: 'Chairs & Timings',
-                  subtitle: 'Live queue capacity and opening/closing hours',
-                ),
-                const SizedBox(height: 12),
-                _buildCardContainer(
-                  children: [
-                    TextFormField(
-                      controller: _chairsController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Active Chairs / Barbers *',
-                        hintText: 'e.g. 3',
-                        prefixIcon: Icon(
-                          Icons.chair_alt_rounded,
-                          color: AppColorSchemes.navy,
-                        ),
-                      ),
-                      validator: (v) =>
-                          (v == null || int.tryParse(v.trim()) == null)
-                          ? 'Enter valid chair count'
-                          : null,
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _openTimeController,
-                            decoration: const InputDecoration(
-                              labelText: 'Opening Time',
-                              hintText: '09:00 AM',
-                              prefixIcon: Icon(
-                                Icons.access_time_rounded,
-                                color: AppColorSchemes.navy,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _closeTimeController,
-                            decoration: const InputDecoration(
-                              labelText: 'Closing Time',
-                              hintText: '10:00 PM',
-                              prefixIcon: Icon(
-                                Icons.access_time_filled_rounded,
-                                color: AppColorSchemes.navy,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // ── Section 4: Owner Help & Support ───────────────────────
-                _buildSectionHeader(
-                  icon: Icons.help_outline_rounded,
-                  title: 'Help & Support Center',
-                  subtitle: 'Owner guide, FAQs, and submit support requests',
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColorSchemes.navy.withValues(alpha: 0.08),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.support_agent_rounded,
-                        color: AppColorSchemes.navy,
-                      ),
-                    ),
-                    title: const Text(
-                      'Open Owner Help Center',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                      ),
-                    ),
-                    subtitle: const Text(
-                      'Queue management FAQs & report issues',
-                      style: TextStyle(fontSize: 11),
-                    ),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const SupportCenterScreen(isOwner: true),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                // ── Save Button ──────────────────────────────────────────
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _isSaving ? null : _handleSave,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColorSchemes.navy,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.save_rounded,
-                                color: AppColorSchemes.gold,
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Save Store Changes',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 24),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(
-            color: AppColorSchemes.navy.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 18, color: AppColorSchemes.navy),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColorSchemes.charcoal,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              onTap: item.onTap,
+              leading: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: isDestructive ? const Color(0xFFFEE2E2) : const Color(0xFFF3E8FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  item.icon,
+                  color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF6D28D9),
+                  size: 22,
                 ),
               ),
-              const SizedBox(height: 1),
-              Text(
-                subtitle,
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              title: Text(
+                item.title,
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                  color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF111827),
+                  letterSpacing: -0.2,
+                ),
               ),
-            ],
-          ),
-        ),
-      ],
+              subtitle: Text(
+                item.subtitle,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+              trailing: Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: isDestructive ? const Color(0xFFEF4444) : Colors.grey.shade400,
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
+}
 
-  Widget _buildCardContainer({required List<Widget> children}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
-      ),
-    );
-  }
+class _SettingsItem {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool isDestructive;
+
+  const _SettingsItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.isDestructive = false,
+  });
 }
