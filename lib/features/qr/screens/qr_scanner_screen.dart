@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../../../core/theme/color_schemes.dart';
 import '../../salon/data/salon_repository.dart';
 import '../../salon/screens/salon_details_screen.dart';
 import '../services/qr_payload_service.dart';
@@ -127,18 +126,19 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColorSchemes.busy.withValues(alpha: 0.12),
+                color: const Color(0xFFEF4444).withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.error_outline_rounded,
-                color: AppColorSchemes.busy,
+                color: Color(0xFFEF4444),
                 size: 24,
               ),
             ),
@@ -149,7 +149,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: AppColorSchemes.charcoal,
+                  color: Color(0xFF111827),
                 ),
               ),
             ),
@@ -159,13 +159,14 @@ class _QrScannerScreenState extends State<QrScannerScreen>
           message,
           style: const TextStyle(
             fontSize: 13,
-            color: Colors.black87,
+            color: Color(0xFF4B5563),
             height: 1.4,
           ),
         ),
         actions: [
           SizedBox(
             width: double.infinity,
+            height: 44,
             child: ElevatedButton(
               onPressed: () {
                 Navigator.of(ctx).pop();
@@ -180,15 +181,16 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                 });
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorSchemes.navy,
+                backgroundColor: const Color(0xFF6D28D9),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                elevation: 0,
               ),
               child: const Text(
                 'Scan Again',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
               ),
             ),
           ),
@@ -199,58 +201,10 @@ class _QrScannerScreenState extends State<QrScannerScreen>
 
   @override
   Widget build(BuildContext context) {
-    const scanAreaSize = 260.0;
+    const scanAreaSize = 265.0;
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: AppColorSchemes.navy,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Column(
-          children: [
-            Text(
-              'Scan Salon QR Code',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
-            ),
-            Text(
-              'Scan a salon QR code to check in',
-              style: TextStyle(fontSize: 11, color: AppColorSchemes.goldLight),
-            ),
-          ],
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-              color: _isTorchOn ? AppColorSchemes.gold : Colors.white70,
-            ),
-            tooltip: 'Toggle Flashlight',
-            onPressed: () {
-              _scannerController.toggleTorch();
-              setState(() => _isTorchOn = !_isTorchOn);
-            },
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.flip_camera_ios_rounded,
-              color: Colors.white70,
-              size: 20,
-            ),
-            tooltip: 'Switch Camera',
-            onPressed: () => _scannerController.switchCamera(),
-          ),
-        ],
-      ),
       body: Stack(
         children: [
           // ── 1. Real Device Camera Preview ──────────────────────────────
@@ -262,10 +216,10 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             },
           ),
 
-          // ── 2. Semi-translucent Overlay with Cutout ────────────────────
+          // ── 2. Modern Dark Overlay with Rounded Cutout ─────────────────
           ColorFiltered(
             colorFilter: ColorFilter.mode(
-              Colors.black.withValues(alpha: 0.65),
+              Colors.black.withValues(alpha: 0.60),
               BlendMode.srcOut,
             ),
             child: Stack(
@@ -277,7 +231,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                   ),
                 ),
                 Align(
-                  alignment: const Alignment(0.0, -0.2),
+                  alignment: const Alignment(0.0, -0.15),
                   child: Container(
                     width: scanAreaSize,
                     height: scanAreaSize,
@@ -291,29 +245,29 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             ),
           ),
 
-          // ── 3. Premium Scanner Frame, Corner Marks & Laser ─────────────
+          // ── 3. Modern Scanner Frame, Purple/Pink Corners & Laser ───────
           Align(
-            alignment: const Alignment(0.0, -0.2),
+            alignment: const Alignment(0.0, -0.15),
             child: SizedBox(
               width: scanAreaSize,
               height: scanAreaSize,
               child: Stack(
                 children: [
-                  // Outer Gold Border with Rounded Corners
+                  // Subtle Rounded Border
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: AppColorSchemes.gold.withValues(alpha: 0.6),
-                        width: 2,
+                        color: const Color(0xFF6D28D9).withValues(alpha: 0.4),
+                        width: 1.5,
                       ),
                     ),
                   ),
 
-                  // 4 Corner Markers
+                  // 4 Modern Vibrant Corner Markers
                   ..._buildCornerMarkers(),
 
-                  // Animated Laser Scanning Line
+                  // Animated Gradient Laser Scanning Line
                   AnimatedBuilder(
                     animation: _laserController,
                     builder: (context, _) {
@@ -329,17 +283,18 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                             gradient: const LinearGradient(
                               colors: [
                                 Colors.transparent,
-                                AppColorSchemes.gold,
+                                Color(0xFFE91E63),
                                 Colors.white,
-                                AppColorSchemes.gold,
+                                Color(0xFF8B5CF6),
                                 Colors.transparent,
                               ],
                             ),
+                            borderRadius: BorderRadius.circular(2),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColorSchemes.gold.withValues(
-                                  alpha: 0.8,
-                                ),
+                                color: const Color(
+                                  0xFF8B5CF6,
+                                ).withValues(alpha: 0.8),
                                 blurRadius: 10,
                                 spreadRadius: 2,
                               ),
@@ -354,7 +309,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                   if (_isProcessing)
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.black54,
+                        color: Colors.black.withValues(alpha: 0.75),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: const Center(
@@ -362,16 +317,16 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             CircularProgressIndicator(
-                              color: AppColorSchemes.gold,
+                              color: Color(0xFF8B5CF6),
                               strokeWidth: 3,
                             ),
-                            SizedBox(height: 12),
+                            SizedBox(height: 14),
                             Text(
                               'Verifying Salon QR...',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
@@ -383,30 +338,151 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             ),
           ),
 
-          // ── 4. Instructions Below Frame ────────────────────────────────
-          Align(
-            alignment: const Alignment(0.0, 0.38),
-            child: Container(
+          // ── 4. Top Clean Floating Header ───────────────────────────────
+          SafeArea(
+            child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Circular Back Button
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Color(0xFF111827),
+                        size: 18,
+                      ),
+                    ),
+                  ),
+
+                  // Centered Title & Subtitle
+                  const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Scan QR Code',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Scan salon counter QR to check-in',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Action Controls (Torch & Camera Flip)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Torch Toggle Button
+                      GestureDetector(
+                        onTap: () {
+                          _scannerController.toggleTorch();
+                          setState(() => _isTorchOn = !_isTorchOn);
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: _isTorchOn
+                                ? const Color(0xFF6D28D9)
+                                : Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: _isTorchOn
+                                  ? const Color(0xFFA78BFA)
+                                  : Colors.white30,
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(
+                            _isTorchOn
+                                ? Icons.flash_on_rounded
+                                : Icons.flash_off_rounded,
+                            color: Colors.white,
+                            size: 19,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Camera Flip Button
+                      GestureDetector(
+                        onTap: () => _scannerController.switchCamera(),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white30,
+                              width: 1,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.flip_camera_ios_rounded,
+                            color: Colors.white,
+                            size: 19,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── 5. Helper Instruction Badge Below Frame ────────────────────
+          Align(
+            alignment: const Alignment(0.0, 0.42),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.6),
+                color: Colors.black.withValues(alpha: 0.55),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white24),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.qr_code_scanner_rounded,
-                    color: AppColorSchemes.gold,
-                    size: 18,
+                    color: Color(0xFFA78BFA),
+                    size: 17,
                   ),
                   SizedBox(width: 8),
                   Text(
-                    'Align the QR code inside the frame',
+                    'Align QR code inside the frame',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 12,
+                      fontSize: 12.5,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -415,47 +491,47 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             ),
           ),
 
-          // ── 5. Bottom Rounded Information Card ─────────────────────────
+          // ── 6. Bottom Information Card (Matches Home/Bookings Theme) ──
           Positioned(
             bottom: 24,
-            left: 16,
-            right: 16,
+            left: 20,
+            right: 20,
             child: Container(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: AppColorSchemes.gold.withValues(alpha: 0.4),
-                ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFF1F3F5), width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
               child: Row(
                 children: [
+                  // Gradient Icon Container (Orange -> Pink -> Purple)
                   Container(
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [
-                          AppColorSchemes.navy,
-                          AppColorSchemes.navyLight,
+                          Color(0xFFFF5A1F), // Vibrant Orange
+                          Color(0xFFE91E63), // Hot Pink
+                          Color(0xFF6D28D9), // Purple
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(
-                      Icons.storefront_rounded,
-                      color: AppColorSchemes.gold,
-                      size: 24,
+                      Icons.qr_code_2_rounded,
+                      color: Colors.white,
+                      size: 26,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -465,18 +541,19 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
-                          'Quick Store Check-in',
+                          'Quick Salon Check-In',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: AppColorSchemes.charcoal,
+                            color: Color(0xFF111827),
+                            letterSpacing: -0.2,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
-                          'Scan an official SalonQueue counter QR code to join the live queue.',
+                          'Scan the official QR code at the salon reception to view services & join the live queue.',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 11.5,
                             color: Colors.grey.shade600,
                             height: 1.3,
                           ),
@@ -494,9 +571,9 @@ class _QrScannerScreenState extends State<QrScannerScreen>
   }
 
   List<Widget> _buildCornerMarkers() {
-    const markerLength = 26.0;
+    const markerLength = 28.0;
     const markerThickness = 4.0;
-    const cornerColor = AppColorSchemes.gold;
+    const cornerColor = Color(0xFF8B5CF6); // Vibrant Purple accent
     const borderRadius = 24.0;
 
     return [
@@ -581,13 +658,13 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: const Color(0xFF6D28D9).withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.no_photography_rounded,
                 size: 54,
-                color: AppColorSchemes.gold,
+                color: Color(0xFFA78BFA),
               ),
             ),
             const SizedBox(height: 20),
@@ -618,15 +695,16 @@ class _QrScannerScreenState extends State<QrScannerScreen>
               icon: const Icon(Icons.camera_alt_rounded, size: 18),
               label: const Text('Allow Camera Access'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorSchemes.gold,
+                backgroundColor: const Color(0xFF6D28D9),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 12,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                elevation: 0,
               ),
             ),
           ],
