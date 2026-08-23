@@ -14,6 +14,12 @@ class CustomerHistoryScreen extends StatefulWidget {
 
   const CustomerHistoryScreen({super.key, this.onBack});
 
+  static void clearCache() {
+    _CustomerHistoryScreenState._cachedTickets.clear();
+    _CustomerHistoryScreenState._cachedSalonMap.clear();
+    _CustomerHistoryScreenState._lastFetchTime = null;
+  }
+
   @override
   State<CustomerHistoryScreen> createState() => _CustomerHistoryScreenState();
 }
@@ -21,6 +27,11 @@ class CustomerHistoryScreen extends StatefulWidget {
 class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
   final QueueRepository _queueRepo = QueueRepository();
   final SalonRepository _salonRepo = SalonRepository();
+
+  // Static persistent cache for instant frame-1 display
+  static List<QueueTicket> _cachedTickets = [];
+  static final Map<String, Salon> _cachedSalonMap = {};
+  static DateTime? _lastFetchTime;
 
   int _selectedTabIndex = 0; // 0 = Upcoming, 1 = Completed
   List<QueueTicket> _allTickets = [];
@@ -30,10 +41,25 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
   @override
   void initState() {
     super.initState();
+    // 1. Instantly display cached data if available (0ms delay)
+    if (_cachedTickets.isNotEmpty) {
+      _allTickets = List.from(_cachedTickets);
+      _salonMap.addAll(_cachedSalonMap);
+      _isLoading = false;
+    }
     _loadHistory();
   }
 
-  Future<void> _loadHistory() async {
+  Future<void> _loadHistory({bool force = false}) async {
+    // Avoid redundant rapid network fetches if data was fetched recently (< 15 seconds)
+    if (!force && _allTickets.isNotEmpty && _lastFetchTime != null) {
+      final elapsed = DateTime.now().difference(_lastFetchTime!);
+      if (elapsed.inSeconds < 15) {
+        if (_isLoading && mounted) setState(() => _isLoading = false);
+        return;
+      }
+    }
+
     if (_allTickets.isEmpty) {
       setState(() => _isLoading = true);
     }
@@ -43,15 +69,16 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
 
     try {
       final list = await _queueRepo.fetchCustomerHistory(userId);
+      _cachedTickets = list;
+      _lastFetchTime = DateTime.now();
 
-      // Fetch salon details for unique salon IDs
+      // Check synchronous cache first for all salon IDs (0ms)
       final salonIds = list.map((t) => t.salonId).toSet();
-      for (final sId in salonIds) {
-        if (!_salonMap.containsKey(sId)) {
-          final salon = await _salonRepo.fetchSalonById(sId);
-          if (salon != null) {
-            _salonMap[sId] = salon;
-          }
+      final cachedSalons = _salonRepo.getCachedSalons();
+      for (final s in cachedSalons) {
+        if (salonIds.contains(s.id)) {
+          _salonMap[s.id] = s;
+          _cachedSalonMap[s.id] = s;
         }
       }
 
@@ -60,6 +87,26 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
         _allTickets = list;
         _isLoading = false;
       });
+
+      // Concurrently resolve any remaining missing salons in the background without blocking UI
+      final missingSalonIds =
+          salonIds.where((id) => !_salonMap.containsKey(id)).toList();
+      if (missingSalonIds.isNotEmpty) {
+        Future.wait(
+          missingSalonIds.map((id) => _salonRepo.fetchSalonById(id)),
+        ).then((salons) {
+          if (!mounted) return;
+          bool hasNew = false;
+          for (final s in salons) {
+            if (s != null) {
+              _salonMap[s.id] = s;
+              _cachedSalonMap[s.id] = s;
+              hasNew = true;
+            }
+          }
+          if (hasNew) setState(() {});
+        }).catchError((_) {});
+      }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -123,17 +170,13 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
 
             const SizedBox(height: 12),
 
-            // ── 3. Cards List / Empty State ────────────────────────────────
+            // ── 3. Cards List / Empty State / Skeleton Loader ──────────────
             Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF6D28D9),
-                      ),
-                    )
+              child: _isLoading && _allTickets.isEmpty
+                  ? _buildSkeletonBookingsList()
                   : RefreshIndicator(
                       color: const Color(0xFF6D28D9),
-                      onRefresh: _loadHistory,
+                      onRefresh: () => _loadHistory(force: true),
                       child: currentList.isEmpty
                           ? _buildEmptyState()
                           : ListView.builder(
@@ -152,6 +195,105 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Lightweight skeleton loader for instant Bookings page structure on cold start
+  Widget _buildSkeletonBookingsList() {
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 24),
+      itemCount: 3,
+      itemBuilder: (context, idx) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFF1F3F5), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 86,
+                height: 86,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          width: 110,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE5E7EB),
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                        ),
+                        Container(
+                          width: 60,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 80,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          width: 90,
+                          height: 11,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                        ),
+                        Container(
+                          width: 50,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -430,6 +572,10 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen> {
         return Image.network(
           imagePath,
           fit: BoxFit.cover,
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded || frame != null) return child;
+            return _buildFallbackSalonImage();
+          },
           errorBuilder: (context, error, stackTrace) =>
               _buildFallbackSalonImage(),
         );

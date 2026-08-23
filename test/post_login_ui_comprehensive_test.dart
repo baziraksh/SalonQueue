@@ -88,7 +88,9 @@ void main() {
 
       // Promotional Banner & Sections
       expect(find.text('Skip the Wait'), findsOneWidget);
-      expect(find.text('Book Now'), findsOneWidget);
+      expect(find.text('Book Your'), findsOneWidget);
+      expect(find.text('Slot Now'), findsOneWidget);
+      expect(find.text('Book Now'), findsNothing);
       expect(find.text('Nearby Salons'), findsOneWidget);
       expect(find.text('Popular Services'), findsOneWidget);
 
@@ -478,41 +480,41 @@ void main() {
     );
   });
 
-  group('8. PROMOTIONAL BOOK NOW & ZERO FAKE SALONS AUDIT TESTS', () {
-    testWidgets('Book Now button renders clearly and has tap feedback', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1080, 1920);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+  group('8. PROMOTIONAL BANNER & ZERO FAKE SALONS AUDIT TESTS', () {
+    testWidgets(
+      'Promotional banner renders balanced text & chair without Book Now button',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 1920);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
 
-      final auth = await _buildAuthService(
-        const AppUser(
-          id: 'cust-find-1',
-          email: 'cust@example.com',
-          fullName: 'Akash Kumar',
-          role: AppRole.customer,
-        ),
-      );
+        final auth = await _buildAuthService(
+          const AppUser(
+            id: 'cust-find-1',
+            email: 'cust@example.com',
+            fullName: 'Akash Kumar',
+            role: AppRole.customer,
+          ),
+        );
 
-      await tester.pumpWidget(
-        AuthScope(
-          service: auth,
-          child: const MaterialApp(home: CustomerEntryScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          AuthScope(
+            service: auth,
+            child: const MaterialApp(home: CustomerEntryScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Book Now button is present
-      final bookNowButton = find.widgetWithText(ElevatedButton, 'Book Now');
-      expect(bookNowButton, findsOneWidget);
+        // Banner text is present
+        expect(find.text('Skip the Wait'), findsOneWidget);
+        expect(find.text('Book Your'), findsOneWidget);
+        expect(find.text('Slot Now'), findsOneWidget);
 
-      // Tapping Book Now navigates to Salon Details
-      await tester.tap(bookNowButton);
-      await tester.pumpAndSettle();
-
-      expect(find.byType(SalonDetailsScreen), findsOneWidget);
-    });
+        // Book Now button is removed
+        final bookNowButton = find.widgetWithText(ElevatedButton, 'Book Now');
+        expect(bookNowButton, findsNothing);
+      },
+    );
 
     test(
       'Salon.fromJson does not fabricate fake ratings, reviews or cities',

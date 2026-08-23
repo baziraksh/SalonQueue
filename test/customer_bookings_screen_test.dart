@@ -12,6 +12,7 @@ void main() {
   setUp(() {
     SalonRepository.clearCache();
     QueueRepository.clearLocalCache();
+    CustomerHistoryScreen.clearCache();
     SalonRepository.enableDiskPersistence = false;
   });
 
@@ -83,6 +84,46 @@ void main() {
         // Verify the booking card appears
         expect(find.text('Upcoming'), findsAtLeast(1));
         expect(find.text('View'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Bookings screen hydrates instantly from cache on subsequent opens',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final authService = AuthService(null);
+        final queueRepo = QueueRepository(client: null);
+
+        await queueRepo.joinQueue(
+          salonId: 'salon-instant-1',
+          customerId: '',
+          customerName: 'Instant Cache Test Salon',
+          selectedServices: [],
+        );
+
+        // First open to populate cache
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: const MaterialApp(home: CustomerHistoryScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Upcoming'), findsAtLeast(1));
+
+        // Re-mount CustomerHistoryScreen; it should show tickets immediately on frame 1 without pumpAndSettle
+        await tester.pumpWidget(
+          AuthScope(
+            service: authService,
+            child: const MaterialApp(home: CustomerHistoryScreen()),
+          ),
+        );
+        await tester.pump(); // Just 1 frame!
+
+        expect(find.text('Upcoming'), findsAtLeast(1));
       },
     );
   });

@@ -1066,104 +1066,62 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Left Content
-          Positioned(
-            left: 18,
-            top: 14,
-            bottom: 14,
-            right: 140,
+          // Left Content (Vertically balanced text, no Book Now button)
+          const Positioned(
+            left: 20,
+            top: 22,
+            bottom: 20,
+            right: 135,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Skip the Wait',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        height: 1.15,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    Text(
-                      'Book Your',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        height: 1.15,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    Text(
-                      'Slot Now',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        height: 1.15,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                  ],
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_salons.isNotEmpty) {
-                      Navigator.of(context)
-                          .push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  SalonDetailsScreen(salon: _salons.first),
-                            ),
-                          )
-                          .then((_) => _loadData());
-                    } else {
-                      _openSearchScreen();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF111827),
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
-                    minimumSize: const Size(0, 32),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                Text(
+                  'Skip the Wait',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.18,
+                    letterSpacing: -0.3,
                   ),
-                  child: const Text(
-                    'Book Now',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF111827),
-                    ),
+                ),
+                Text(
+                  'Book Your',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.18,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                Text(
+                  'Slot Now',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.18,
+                    letterSpacing: -0.3,
                   ),
                 ),
               ],
             ),
           ),
 
-          // Right Salon Chair Visual (Exact match to Image 1)
+          // Right Salon Chair Visual (Slightly smaller, slightly shifted left, fully contained)
           Positioned(
-            right: 6,
-            bottom: 2,
-            top: 2,
-            width: 140,
+            right: 18,
+            bottom: 10,
+            top: 10,
+            width: 118,
             child: Image.asset(
               'assets/images/salon_chair.png',
               fit: BoxFit.contain,
-              alignment: Alignment.bottomRight,
+              alignment: Alignment.centerRight,
               errorBuilder: (context, error, stackTrace) => const Center(
-                child: Icon(Icons.chair_rounded, size: 70, color: Colors.white),
+                child: Icon(Icons.chair_rounded, size: 60, color: Colors.white),
               ),
             ),
           ),
