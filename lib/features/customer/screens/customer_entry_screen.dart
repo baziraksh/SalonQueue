@@ -1066,12 +1066,12 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Left Content (Vertically balanced text, no Book Now button)
+          // Left Content (Larger punchy text, well-spaced, no empty gap)
           const Positioned(
             left: 20,
-            top: 22,
-            bottom: 20,
-            right: 135,
+            top: 16,
+            bottom: 16,
+            right: 136,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1079,49 +1079,51 @@ class _CustomerEntryScreenState extends State<CustomerEntryScreen> {
                 Text(
                   'Skip the Wait',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 21.5,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
-                    height: 1.18,
-                    letterSpacing: -0.3,
+                    height: 1.15,
+                    letterSpacing: -0.4,
                   ),
                 ),
+                SizedBox(height: 2),
                 Text(
                   'Book Your',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 21.5,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
-                    height: 1.18,
-                    letterSpacing: -0.3,
+                    height: 1.15,
+                    letterSpacing: -0.4,
                   ),
                 ),
+                SizedBox(height: 2),
                 Text(
                   'Slot Now',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 21.5,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
-                    height: 1.18,
-                    letterSpacing: -0.3,
+                    height: 1.15,
+                    letterSpacing: -0.4,
                   ),
                 ),
               ],
             ),
           ),
 
-          // Right Salon Chair Visual (Slightly smaller, slightly shifted left, fully contained)
+          // Right Salon Chair Visual (Larger, perfectly filling the right half)
           Positioned(
-            right: 18,
-            bottom: 10,
-            top: 10,
-            width: 118,
+            right: 14,
+            bottom: 8,
+            top: 8,
+            width: 130,
             child: Image.asset(
               'assets/images/salon_chair.png',
               fit: BoxFit.contain,
               alignment: Alignment.centerRight,
               errorBuilder: (context, error, stackTrace) => const Center(
-                child: Icon(Icons.chair_rounded, size: 60, color: Colors.white),
+                child: Icon(Icons.chair_rounded, size: 65, color: Colors.white),
               ),
             ),
           ),
