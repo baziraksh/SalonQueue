@@ -324,6 +324,9 @@ void main() {
         // Notification bell on right
         expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
 
+        // Header has clean title and NO OWNER DASHBOARD badge
+        expect(find.text('OWNER DASHBOARD'), findsNothing);
+
         // Main Dashboard Features
         expect(find.text('IN CHAIR'), findsOneWidget);
         expect(find.text('WAITING'), findsOneWidget);
@@ -344,7 +347,264 @@ void main() {
     );
 
     testWidgets(
-      'Owner Hamburger Menu contains all required store management & account items',
+      'Owner Bookings Screen displays Top Header, Filter Tabs, Date Selector, Booking Rows & FAB',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 1920);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final auth = await _buildAuthService(
+          const AppUser(
+            id: 'o1',
+            email: 'owner@example.com',
+            fullName: 'Rahul Sharma',
+            role: AppRole.salonOwner,
+          ),
+        );
+
+        await tester.pumpWidget(
+          AuthScope(
+            service: auth,
+            child: const MaterialApp(home: SalonEntryScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Switch to Bookings Tab (index 1) via Bottom Navigation Bar
+        await tester.tap(
+          find.descendant(
+            of: find.byType(BottomNavigationBar),
+            matching: find.byIcon(Icons.calendar_today_outlined),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Header: Bookings Title & Compose/New Booking Icon
+        expect(find.text('Bookings'), findsWidgets);
+        expect(find.byIcon(Icons.drive_file_rename_outline_rounded), findsOneWidget);
+
+        // Filter Tabs: All, Upcoming, Completed, Cancelled
+        expect(find.text('All'), findsOneWidget);
+        expect(find.text('Upcoming'), findsWidgets);
+        expect(find.text('Completed'), findsWidgets);
+        expect(find.text('Cancelled'), findsWidgets);
+
+        // Date selector cards
+        expect(find.text('Mon'), findsOneWidget);
+        expect(find.text('Tue'), findsOneWidget);
+        expect(find.text('Wed'), findsOneWidget);
+        expect(find.text('Thu'), findsOneWidget);
+        expect(find.text('Fri'), findsOneWidget);
+
+        // Booking rows with customer names and services
+        expect(find.text('Ravi Kumar'), findsOneWidget);
+        expect(find.text('Haircut'), findsWidgets);
+        expect(find.text('Anita Singh'), findsOneWidget);
+
+        // Floating Action Button (+)
+        expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Owner Live Queue Screen displays Header, Waiting Badge, 3 Stat Cards, Manage Queue & Action Buttons',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 1920);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final auth = await _buildAuthService(
+          const AppUser(
+            id: 'o1',
+            email: 'owner@example.com',
+            fullName: 'Rahul Sharma',
+            role: AppRole.salonOwner,
+          ),
+        );
+
+        await tester.pumpWidget(
+          AuthScope(
+            service: auth,
+            child: const MaterialApp(home: SalonEntryScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Switch to Live Queue Tab (index 2) via Bottom Navigation Bar
+        await tester.tap(
+          find.descendant(
+            of: find.byType(BottomNavigationBar),
+            matching: find.byIcon(Icons.groups_outlined),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Header: Live Queue Title & Staff Icon (NO Settings icon in Live Queue)
+        expect(find.text('Live Queue'), findsWidgets);
+        expect(find.byIcon(Icons.people_outline_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.settings_outlined), findsNothing);
+
+        // Waiting Badge
+        expect(find.text('5 waiting'), findsOneWidget);
+
+        // 3 Statistic Cards: IN CHAIR, WAITING, CHAIRS
+        expect(find.text('IN CHAIR'), findsOneWidget);
+        expect(find.text('Serving Now'), findsOneWidget);
+
+        expect(find.text('WAITING'), findsOneWidget);
+        expect(find.text('In Live Line'), findsOneWidget);
+
+        expect(find.text('CHAIRS'), findsOneWidget);
+        expect(find.text('Capacity'), findsOneWidget);
+
+        // Manage Queue Card with Auto Call toggle
+        expect(find.text('Manage Queue'), findsOneWidget);
+        expect(find.text('Auto call'), findsOneWidget);
+        expect(find.byType(Switch), findsOneWidget);
+
+        // Queue Customer List
+        expect(find.text('Ankit Singh'), findsOneWidget);
+        expect(find.text('Hair Spa'), findsOneWidget);
+        expect(find.text('Vikash Patel'), findsOneWidget);
+        expect(find.text('Beard Trim'), findsOneWidget);
+        expect(find.text('Next'), findsWidgets);
+        expect(find.text('Call'), findsWidgets);
+
+        // Call Next and Pause Queue Buttons
+        expect(find.widgetWithText(ElevatedButton, 'Call Next'), findsOneWidget);
+        expect(find.widgetWithText(OutlinedButton, 'Pause Queue'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Owner Customers Screen displays Header, Search Bar, Statistics, Customer Rows & FAB',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 1920);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final auth = await _buildAuthService(
+          const AppUser(
+            id: 'o1',
+            email: 'owner@example.com',
+            fullName: 'Rahul Sharma',
+            role: AppRole.salonOwner,
+          ),
+        );
+
+        await tester.pumpWidget(
+          AuthScope(
+            service: auth,
+            child: const MaterialApp(home: SalonEntryScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Switch to Customers Tab (index 3) via Bottom Navigation Bar
+        await tester.tap(
+          find.descendant(
+            of: find.byType(BottomNavigationBar),
+            matching: find.byIcon(Icons.person_outline_rounded),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Header: Customers Title & No Bell Icon
+        expect(find.text('Customers'), findsWidgets);
+
+        // Search Field & Filter Button
+        expect(find.text('Search customers'), findsOneWidget);
+        expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+
+        // Statistics Cards: Total Customers (128) & New This Month (23)
+        expect(find.text('Total Customers'), findsOneWidget);
+        expect(find.text('128'), findsOneWidget);
+        expect(find.text('New This Month'), findsOneWidget);
+        expect(find.text('23'), findsOneWidget);
+
+        // Customer Cards: Ravi Kumar, Anita Singh, phone numbers, visit badges
+        expect(find.text('Ravi Kumar'), findsOneWidget);
+        expect(find.text('+91 12345 67890'), findsOneWidget);
+        expect(find.text('12 Visits'), findsOneWidget);
+
+        expect(find.text('Anita Singh'), findsOneWidget);
+        expect(find.text('+91 98765 43210'), findsOneWidget);
+        expect(find.text('8 Visits'), findsOneWidget);
+
+        // Floating Action Button (+)
+        expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+
+        // Test Real-Time Search Filtering
+        await tester.enterText(find.byType(TextField).first, 'Anita');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Anita Singh'), findsOneWidget);
+        expect(find.text('Ravi Kumar'), findsNothing);
+
+        // Clear search text
+        await tester.enterText(find.byType(TextField).first, '');
+        await tester.pumpAndSettle();
+        expect(find.text('Ravi Kumar'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Owner Settings Screen displays Header, Back Arrow, and all 9 Settings Cards',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 1920);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final auth = await _buildAuthService(
+          const AppUser(
+            id: 'o1',
+            email: 'owner@example.com',
+            fullName: 'Rahul Sharma',
+            role: AppRole.salonOwner,
+          ),
+        );
+
+        await tester.pumpWidget(
+          AuthScope(
+            service: auth,
+            child: const MaterialApp(home: SalonEntryScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Switch to More / Settings Tab (index 4) via Bottom Navigation Bar
+        await tester.tap(
+          find.descendant(
+            of: find.byType(BottomNavigationBar),
+            matching: find.byIcon(Icons.more_horiz_outlined),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Header: Settings Title & Back Arrow (No Hamburger, No Bell)
+        expect(find.text('Settings'), findsWidgets);
+        expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+
+        // 9 Setting Cards
+        expect(find.text('Salon Profile'), findsOneWidget);
+        expect(find.text('Business Information'), findsOneWidget);
+        expect(find.text('Working Hours'), findsOneWidget);
+        expect(find.text('Services & Pricing'), findsOneWidget);
+        expect(find.text('Payment Methods'), findsOneWidget);
+        expect(find.text('Notifications'), findsOneWidget);
+        expect(find.text('Privacy Policy'), findsOneWidget);
+        expect(find.text('Help & Support'), findsOneWidget);
+        expect(find.text('Logout'), findsOneWidget);
+
+        // Tapping Back Arrow returns to Dashboard
+        await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+        await tester.pumpAndSettle();
+        expect(find.text('Dashboard'), findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'Owner Hamburger Menu contains 11 designated owner feature items and excludes removed store setup items',
       (tester) async {
         tester.view.physicalSize = const Size(1080, 1920);
         tester.view.devicePixelRatio = 1.0;
@@ -371,20 +631,27 @@ void main() {
         await tester.tap(find.byIcon(Icons.menu_rounded));
         await tester.pumpAndSettle();
 
-        // Check all Hamburger Menu ListTile items in order
-        expect(find.widgetWithText(ListTile, 'Owner Profile'), findsOneWidget);
-        expect(
-          find.widgetWithText(ListTile, 'Store Information'),
-          findsOneWidget,
-        );
-        expect(find.widgetWithText(ListTile, 'Salon Location'), findsOneWidget);
-        expect(
-          find.widgetWithText(ListTile, 'Chairs & Timings'),
-          findsOneWidget,
-        );
-        expect(find.widgetWithText(ListTile, 'Help & Support'), findsOneWidget);
-        expect(find.widgetWithText(ListTile, 'Notifications'), findsOneWidget);
+        // Check all 11 Owner Feature items exist in Hamburger Menu
+        expect(find.widgetWithText(ListTile, 'Dashboard'), findsOneWidget);
+        expect(find.widgetWithText(ListTile, 'Bookings'), findsOneWidget);
+        expect(find.widgetWithText(ListTile, 'Live Queue'), findsOneWidget);
+        expect(find.widgetWithText(ListTile, 'Customers'), findsOneWidget);
+        expect(find.widgetWithText(ListTile, 'Staff'), findsOneWidget);
+        expect(find.widgetWithText(ListTile, 'Services'), findsOneWidget);
+        expect(find.widgetWithText(ListTile, 'Reviews'), findsOneWidget);
+        expect(find.widgetWithText(ListTile, 'Wallet'), findsOneWidget);
+        expect(find.widgetWithText(ListTile, 'Analytics'), findsOneWidget);
+        expect(find.widgetWithText(ListTile, 'Settings'), findsOneWidget);
+        expect(find.widgetWithText(ListTile, 'QR Code'), findsOneWidget);
         expect(find.widgetWithText(ListTile, 'Logout'), findsOneWidget);
+
+        // Verify the 6 removed store setup / support items are NOT in Hamburger Menu
+        expect(find.widgetWithText(ListTile, 'Owner Profile'), findsNothing);
+        expect(find.widgetWithText(ListTile, 'Store Information'), findsNothing);
+        expect(find.widgetWithText(ListTile, 'Salon Location'), findsNothing);
+        expect(find.widgetWithText(ListTile, 'Chairs & Timings'), findsNothing);
+        expect(find.widgetWithText(ListTile, 'Help & Support'), findsNothing);
+        expect(find.widgetWithText(ListTile, 'Notifications'), findsNothing);
       },
     );
   });

@@ -115,8 +115,9 @@ class SalonSettingsScreen extends StatelessWidget {
     final settingsItems = [
       _SettingsItem(
         icon: Icons.person_outline_rounded,
+        iconColor: const Color(0xFF6D28D9),
+        bgColor: const Color(0xFFF3E8FF),
         title: 'Salon Profile',
-        subtitle: 'Cover photo, gallery & owner info',
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -127,8 +128,9 @@ class SalonSettingsScreen extends StatelessWidget {
       ),
       _SettingsItem(
         icon: Icons.storefront_outlined,
+        iconColor: const Color(0xFFE11D48),
+        bgColor: const Color(0xFFFDF2F8),
         title: 'Business Information',
-        subtitle: 'Salon name, contact & description',
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -138,21 +140,10 @@ class SalonSettingsScreen extends StatelessWidget {
         },
       ),
       _SettingsItem(
-        icon: Icons.location_on_outlined,
-        title: 'Salon Location',
-        subtitle: 'State, City, District & Pincode',
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => SalonLocationScreen(salon: salon),
-            ),
-          );
-        },
-      ),
-      _SettingsItem(
         icon: Icons.access_time_rounded,
+        iconColor: const Color(0xFFEA580C),
+        bgColor: const Color(0xFFFFF7ED),
         title: 'Working Hours',
-        subtitle: 'Operating hours & active chairs capacity',
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -163,8 +154,9 @@ class SalonSettingsScreen extends StatelessWidget {
       ),
       _SettingsItem(
         icon: Icons.content_cut_rounded,
+        iconColor: const Color(0xFF16A34A),
+        bgColor: const Color(0xFFF0FDF4),
         title: 'Services & Pricing',
-        subtitle: 'Menu items, prices & durations',
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -174,9 +166,10 @@ class SalonSettingsScreen extends StatelessWidget {
         },
       ),
       _SettingsItem(
-        icon: Icons.credit_card_outlined,
+        icon: Icons.account_balance_wallet_outlined,
+        iconColor: const Color(0xFF0284C7),
+        bgColor: const Color(0xFFE0F2FE),
         title: 'Payment Methods',
-        subtitle: 'Wallet, bank account & payouts',
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -186,9 +179,10 @@ class SalonSettingsScreen extends StatelessWidget {
         },
       ),
       _SettingsItem(
-        icon: Icons.notifications_outlined,
+        icon: Icons.notifications_none_rounded,
+        iconColor: const Color(0xFF6D28D9),
+        bgColor: const Color(0xFFF3E8FF),
         title: 'Notifications',
-        subtitle: 'Queue alerts & system updates',
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -199,14 +193,16 @@ class SalonSettingsScreen extends StatelessWidget {
       ),
       _SettingsItem(
         icon: Icons.shield_outlined,
+        iconColor: const Color(0xFF3B82F6),
+        bgColor: const Color(0xFFEFF6FF),
         title: 'Privacy Policy',
-        subtitle: 'Data security and terms of service',
         onTap: () => _showPrivacyPolicy(context),
       ),
       _SettingsItem(
         icon: Icons.help_outline_rounded,
+        iconColor: const Color(0xFF6D28D9),
+        bgColor: const Color(0xFFF3E8FF),
         title: 'Help & Support',
-        subtitle: 'Owner FAQs & support tickets',
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -217,21 +213,23 @@ class SalonSettingsScreen extends StatelessWidget {
       ),
       _SettingsItem(
         icon: Icons.logout_rounded,
+        iconColor: const Color(0xFFEF4444),
+        bgColor: const Color(0xFFFEE2E2),
         title: 'Logout',
-        subtitle: 'Sign out from owner dashboard',
         isDestructive: true,
         onTap: () => _showLogoutDialog(context),
       ),
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF111827), size: 18),
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF111827), size: 24),
           onPressed: () => Navigator.of(context).pop(),
+          tooltip: 'Back',
         ),
         title: const Text(
           'Settings',
@@ -245,65 +243,67 @@ class SalonSettingsScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 30),
         itemCount: settingsItems.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final item = settingsItems[index];
           final isDestructive = item.isDestructive;
 
-          return Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isDestructive ? const Color(0xFFFEE2E2) : const Color(0xFFF1F3F5),
-                width: 1.2,
+          return GestureDetector(
+            onTap: item.onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDestructive ? const Color(0xFFFEE2E2) : const Color(0xFFF1F3F5),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.015),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              onTap: item.onTap,
-              leading: Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: isDestructive ? const Color(0xFFFEE2E2) : const Color(0xFFF3E8FF),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  item.icon,
-                  color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF6D28D9),
-                  size: 22,
-                ),
-              ),
-              title: Text(
-                item.title,
-                style: TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w800,
-                  color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF111827),
-                  letterSpacing: -0.2,
-                ),
-              ),
-              subtitle: Text(
-                item.subtitle,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  color: Colors.grey.shade500,
-                ),
-              ),
-              trailing: Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 14,
-                color: isDestructive ? const Color(0xFFEF4444) : Colors.grey.shade400,
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: item.bgColor,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      item.icon,
+                      color: item.iconColor,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF111827),
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                  if (!isDestructive)
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                      color: Color(0xFF9CA3AF),
+                    ),
+                ],
               ),
             ),
           );
@@ -315,15 +315,17 @@ class SalonSettingsScreen extends StatelessWidget {
 
 class _SettingsItem {
   final IconData icon;
+  final Color iconColor;
+  final Color bgColor;
   final String title;
-  final String subtitle;
   final VoidCallback onTap;
   final bool isDestructive;
 
   const _SettingsItem({
     required this.icon,
+    required this.iconColor,
+    required this.bgColor,
     required this.title,
-    required this.subtitle,
     required this.onTap,
     this.isDestructive = false,
   });

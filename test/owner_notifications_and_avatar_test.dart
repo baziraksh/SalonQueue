@@ -169,8 +169,9 @@ void main() {
         // Top-Left Hamburger Menu
         expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
 
-        // Center title and dashboard indicator
-        expect(find.text('OWNER DASHBOARD'), findsOneWidget);
+        // Center title is clean (no OWNER DASHBOARD badge)
+        expect(find.text('Dashboard'), findsWidgets);
+        expect(find.text('OWNER DASHBOARD'), findsNothing);
 
         // Top-Right Notification Bell
         expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);

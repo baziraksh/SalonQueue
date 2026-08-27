@@ -102,6 +102,34 @@ class SalonRepository {
     return null;
   }
 
+  /// Synchronously retrieves the cached salon for an owner for instant frame-1 UI display
+  Salon? getCachedOwnerSalon(String ownerId) {
+    if (ownerId.isEmpty) return null;
+    if (_ownerSalonsCache.containsKey(ownerId)) {
+      return _ownerSalonsCache[ownerId];
+    }
+    for (final s in _ownerSalonsCache.values) {
+      if (s.ownerId == ownerId || s.id == ownerId) {
+        return s;
+      }
+    }
+    if (_diskFallbackStorage.containsKey('owner_salon_$ownerId')) {
+      try {
+        final raw = _diskFallbackStorage['owner_salon_$ownerId']!;
+        final map = jsonDecode(raw) as Map<String, dynamic>;
+        final s = Salon.fromJson(map);
+        _ownerSalonsCache[ownerId] = s;
+        return s;
+      } catch (_) {}
+    }
+    for (final s in fallbackSalons) {
+      if (s.ownerId == ownerId || s.id == ownerId) {
+        return s;
+      }
+    }
+    return null;
+  }
+
   /// Updates an owner's salon in memory without mutating other accounts
   void _updateOwnerSalonInMemory(
     String salonId,

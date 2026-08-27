@@ -1,22 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../features/auth/models/app_user.dart';
-import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/auth/services/auth_scope.dart';
 import '../../features/auth/services/auth_service.dart';
-import '../../features/customer/screens/customer_entry_screen.dart';
-import '../../features/salon/screens/salon_entry_screen.dart';
 import '../routing/app_router.dart';
-import 'welcome_screen.dart';
 
-/// Instant Startup & Authentication Router for Salon Queue.
-///
-/// Immediately determines authentication state on frame 1 without any splash/flash
-/// animation, gradient delay, or artificial timer:
-/// - Authenticated Customer -> Opens Customer Home directly
-/// - Authenticated Salon Owner -> Opens Owner Dashboard directly
-/// - Password Recovery -> Opens Reset Password directly
-/// - Unauthenticated -> Opens Welcome / Login directly
+/// App Launch & Startup Splash Screen.
+/// Solid deep magenta/pink background (#C2186A) with centered salon-chair app logo.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -52,17 +43,15 @@ class _SplashScreenState extends State<SplashScreen> {
     final user = auth?.currentUser;
     final isAuth = auth?.isAuthenticated ?? false;
 
+    _navigated = true;
     if (auth?.recoveryPending ?? false) {
-      _navigated = true;
       AppRouter.navigateToResetPassword(context);
     } else if (isAuth && user != null) {
-      _navigated = true;
       debugPrint(
         '[SplashScreen] Directing authenticated user: id=${user.id}, role=${user.role}',
       );
       AppRouter.navigateToRoleHome(context, role: user.role);
     } else {
-      _navigated = true;
       debugPrint(
         '[SplashScreen] No valid session. Navigating to Welcome screen.',
       );
@@ -72,33 +61,54 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    AuthService? auth;
-    try {
-      auth = AuthScope.of(context, listen: true);
-    } on StateError {
-      auth = null;
-    }
+    const splashColor = Color(0xFFC2186A);
 
-    // Direct synchronous frame-1 rendering for instant startup without flash
-    if (auth != null) {
-      if (auth.recoveryPending) {
-        return const ResetPasswordScreen();
-      }
-      if (auth.isAuthenticated && auth.currentUser != null) {
-        if (auth.currentUser!.role == AppRole.salonOwner) {
-          return const SalonEntryScreen();
-        } else {
-          return const CustomerEntryScreen();
-        }
-      }
-      if (auth.initialized) {
-        return const WelcomeScreen();
-      }
-    }
-
-    return const Scaffold(
-      backgroundColor: Color(0xFFFAF9F6),
-      body: SizedBox.shrink(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: splashColor,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: splashColor,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: splashColor,
+        body: Center(
+          child: Image.asset(
+            'assets/images/app_logo.png',
+            width: 140,
+            height: 140,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+            semanticLabel: 'Salon Queue App Logo',
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFFF5E00),
+                      Color(0xFFD81B60),
+                      Color(0xFF8E24AA),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.chair_alt_rounded,
+                    size: 72,
+                    color: Colors.white,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }
