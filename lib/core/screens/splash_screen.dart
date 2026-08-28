@@ -8,8 +8,8 @@ import '../routing/app_router.dart';
 /// App Launch & Startup Splash Screen.
 /// Displays a full-screen vertical radiant gradient background
 /// (top: orange -> upper: pink -> middle: magenta -> lower: purple -> bottom: deep violet)
-/// with a standalone white salon chair that smoothly animates from small to its
-/// final centered size, then routes seamlessly to the destination screen.
+/// with a standalone white salon chair centered on the screen,
+/// then routes seamlessly to the destination screen.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -17,40 +17,13 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scaleAnimation;
+class _SplashScreenState extends State<SplashScreen> {
   bool _navigated = false;
 
   @override
   void initState() {
     super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 750),
-    );
-
-    _scaleAnimation = Tween<double>(
-      begin: 0.22,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOutCubic,
-      ),
-    );
-
-    _controller.forward();
-
     WidgetsBinding.instance.addPostFrameCallback((_) => _evaluateAuthAndRoute());
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   Future<void> _evaluateAuthAndRoute() async {
@@ -63,16 +36,9 @@ class _SplashScreenState extends State<SplashScreen>
       auth = null;
     }
 
-    // Wait for parallel animation and auth initialization to settle naturally
-    final authInitFuture = auth != null && !auth.initialized
-        ? auth.waitForInitialization(timeout: const Duration(seconds: 4))
-        : Future<void>.value();
-
-    final animationFuture = _controller.isCompleted
-        ? Future<void>.value()
-        : _controller.forward();
-
-    await Future.wait([authInitFuture, animationFuture]);
+    if (auth != null && !auth.initialized) {
+      await auth.waitForInitialization(timeout: const Duration(seconds: 4));
+    }
 
     if (!mounted || _navigated) return;
 
@@ -99,7 +65,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final shortestSide = mediaQuery.size.shortestSide;
-    // Responsive size matching Screenshot 2: ~44% of shorter screen dimension
+    // Responsive size matching the reference design: ~44% of shorter screen dimension
     final targetSize = (shortestSide * 0.44).clamp(160.0, 260.0);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -129,24 +95,21 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
           child: Center(
-            child: ScaleTransition(
-              scale: _scaleAnimation,
-              child: SizedBox(
-                width: targetSize,
-                height: targetSize,
-                child: Image.asset(
-                  'assets/images/splash_chair_white.png',
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
-                  semanticLabel: 'Salon Queue Splash Chair',
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(
-                      Icons.chair_alt_rounded,
-                      size: targetSize * 0.75,
-                      color: Colors.white,
-                    );
-                  },
-                ),
+            child: SizedBox(
+              width: targetSize,
+              height: targetSize,
+              child: Image.asset(
+                'assets/images/splash_chair_white.png',
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+                semanticLabel: 'Salon Queue Splash Chair',
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.chair_alt_rounded,
+                    size: targetSize * 0.75,
+                    color: Colors.white,
+                  );
+                },
               ),
             ),
           ),
