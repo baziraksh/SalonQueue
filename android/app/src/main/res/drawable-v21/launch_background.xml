@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Full-screen radiant gradient background without small icon -->
+<!-- Full-screen vertical radiant gradient background matching Flutter splash -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
             <gradient
-                android:angle="315"
+                android:angle="270"
                 android:startColor="#FF5E00"
                 android:centerColor="#D81B60"
                 android:endColor="#4A148C"
