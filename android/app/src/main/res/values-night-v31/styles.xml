@@ -3,7 +3,7 @@
     <!-- Theme applied to the Android Window while the process is starting on Android 12+ (API 31+) in dark mode -->
     <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@drawable/launch_background</item>
-        <item name="android:windowSplashScreenBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_gradient_start</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_transparent_icon</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
         <item name="android:windowSplashScreenAnimationDuration">0</item>
