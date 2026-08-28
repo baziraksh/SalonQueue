@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase_auth;
 
 import '../../../core/config/app_config.dart';
+import '../../../core/config/supabase_config.dart';
 import '../../../core/errors/app_exceptions.dart';
 import '../../notifications/data/notification_repository.dart';
 import '../../queue/data/queue_repository.dart';
@@ -24,7 +25,7 @@ class AuthService extends ChangeNotifier {
 
   /// Nullable: when Supabase is not configured (tests / local dev),
   /// the service stays permanently unauthenticated.
-  final AuthRepository? _repository;
+  AuthRepository? _repository;
   StreamSubscription<supabase_auth.AuthState>? _subscription;
 
   // ── State ────────────────────────────────────────────────────────────────
@@ -77,6 +78,29 @@ class AuthService extends ChangeNotifier {
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
+
+  /// Asynchronously initializes Supabase if not yet initialized, then initializes auth state
+  Future<void> initializeAsync() async {
+    if (_repository == null) {
+      if (AppConfig.isSupabaseConfigured && !SupabaseConfig.isInitialized) {
+        final ok = await SupabaseConfig.initialize();
+        if (ok) {
+          unawaited(SupabaseConfig.checkConnectivity());
+          _repository = AuthRepository(
+            client: supabase_auth.Supabase.instance.client,
+          );
+          initialize();
+          return;
+        }
+      }
+      _status = AuthStatus.unauthenticated;
+      _initialized = true;
+      if (!_initCompleter.isCompleted) _initCompleter.complete();
+      notifyListeners();
+      return;
+    }
+    initialize();
+  }
 
   /// Call once after Supabase is initialized.
   void initialize() {

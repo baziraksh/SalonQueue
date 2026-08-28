@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_magenta">#C2186A</color>
+    <color name="splash_gradient_start">#FF5E00</color>
+    <color name="splash_gradient_center">#D81B60</color>
+    <color name="splash_gradient_end">#4A148C</color>
 </resources>

@@ -19,9 +19,7 @@ import 'owner_reviews_screen.dart';
 import 'owner_staff_screen.dart';
 import 'owner_wallet_screen.dart';
 import 'salon_analytics_screen.dart';
-import 'salon_location_screen.dart';
 import 'salon_qr_screen.dart';
-import 'salon_settings_screen.dart';
 import 'store_info_screen.dart';
 import '../../support/screens/support_center_screen.dart';
 
@@ -48,7 +46,6 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
   StreamSubscription<List<QueueTicket>>? _queueSub;
   StreamSubscription<List<AppNotification>>? _notifSub;
   int _unreadNotifsCount = 0;
-  bool _isLoading = false;
 
   // Earnings filter state
   String _selectedEarningsPeriod = 'This Week';
@@ -185,11 +182,7 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
       setState(() {
         _salon = salon;
         _tickets = queue;
-        _isLoading = false;
       });
-    } else {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
     }
   }
 
@@ -1465,8 +1458,7 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                     itemBuilder: (context, idx) {
                       final b = filteredBookings[idx];
                       final status = b['status'] as String;
-                      final isConfirmed = status.toLowerCase() == 'confirmed';
-                      final isUpcoming = status.toLowerCase() == 'upcoming';
+                      final isConfirmed = status.toLowerCase() == 'confirmed' || status.toLowerCase() == 'upcoming';
                       final isCompleted = status.toLowerCase() == 'completed';
                       final isCancelled = status.toLowerCase() == 'cancelled';
                       final QueueTicket? realTicket = b['ticket'] as QueueTicket?;
@@ -2008,7 +2000,7 @@ class _SalonEntryScreenState extends State<SalonEntryScreen> {
                             scale: 0.8,
                             child: Switch(
                               value: _autoCallEnabled,
-                              activeColor: const Color(0xFF6D28D9),
+                              activeThumbColor: const Color(0xFF6D28D9),
                               activeTrackColor: const Color(0xFFDDD6FE),
                               onChanged: (val) {
                                 setState(() => _autoCallEnabled = val);

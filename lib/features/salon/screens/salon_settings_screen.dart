@@ -8,7 +8,6 @@ import 'chairs_timings_screen.dart';
 import 'manage_services_screen.dart';
 import 'owner_profile_screen.dart';
 import 'owner_wallet_screen.dart';
-import 'salon_location_screen.dart';
 import 'store_info_screen.dart';
 
 /// Screen displaying the Salon Owner settings menu matching the reference design system.
