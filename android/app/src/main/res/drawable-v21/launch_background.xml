@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Full-screen vertical radiant gradient background without native chair layer -->
+<!-- Full-screen vertical radiant gradient background matching reference design -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
             <gradient
                 android:angle="270"
-                android:startColor="#FF5E00"
-                android:centerColor="#D81B60"
-                android:endColor="#4A148C"
+                android:startColor="#FF5A08"
+                android:centerColor="#E2205F"
+                android:endColor="#7A1FA2"
                 android:type="linear" />
         </shape>
     </item>

@@ -7,8 +7,8 @@ import '../routing/app_router.dart';
 
 /// App Launch & Startup Splash Screen.
 /// Displays a full-screen vertical radiant gradient background
-/// (top: orange -> upper: pink -> middle: magenta -> lower: purple -> bottom: deep violet)
-/// with a standalone white salon chair centered on the screen,
+/// matching the exact reference image design (Orange -> Pink -> Magenta -> Purple)
+/// with the centered standalone white salon chair,
 /// then routes seamlessly to the destination screen.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -65,8 +65,8 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final shortestSide = mediaQuery.size.shortestSide;
-    // Responsive size matching the reference design: ~44% of shorter screen dimension
-    final targetSize = (shortestSide * 0.44).clamp(160.0, 260.0);
+    // Exactly 37.5% of shortest screen dimension matching the reference image
+    final targetSize = (shortestSide * 0.38).clamp(140.0, 240.0);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -85,13 +85,15 @@ class _SplashScreenState extends State<SplashScreen> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Color(0xFFFF5E00), // Vibrant Orange / Coral (Top)
-                Color(0xFFFF2D55), // Bright Coral-Rose
-                Color(0xFFD81B60), // Magenta / Rose Red (Center)
-                Color(0xFF8E24AA), // Deep Purple-Magenta
-                Color(0xFF4A148C), // Royal Deep Violet (Bottom)
+                Color(0xFFFF5A08), // Top: Vivid Orange
+                Color(0xFFFE3547), // Upper: Coral Red
+                Color(0xFFEE255B), // Upper-Middle: Rose Pink
+                Color(0xFFE2205F), // Center: Magenta-Pink
+                Color(0xFFD51B65), // Lower-Middle: Deep Magenta
+                Color(0xFFA72190), // Lower: Purple
+                Color(0xFF7A1FA2), // Bottom: Royal Purple
               ],
-              stops: [0.0, 0.22, 0.50, 0.78, 1.0],
+              stops: [0.0, 0.20, 0.40, 0.50, 0.60, 0.80, 1.0],
             ),
           ),
           child: Center(
