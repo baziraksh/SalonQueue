@@ -6,17 +6,10 @@ import '../../features/auth/services/auth_service.dart';
 import '../routing/app_router.dart';
 
 /// App Launch & Startup Splash Screen.
-/// Step 1: Displays the solid pink/magenta background (#E2205F)
-/// with the centered standalone white salon chair on app click.
-/// Step 2: Transitions seamlessly to WelcomeScreen (I am a Customer / I am a Salon Owner)
-/// or authenticated role home.
+/// Displays the exact solid pink background (#E2205F) with centered white chair (Phase 1)
+/// and routes immediately to the WelcomeScreen / Role Home without any secondary delay.
 class SplashScreen extends StatefulWidget {
-  final Duration? displayDuration;
-
-  const SplashScreen({
-    super.key,
-    this.displayDuration,
-  });
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -41,23 +34,9 @@ class _SplashScreenState extends State<SplashScreen> {
       auth = null;
     }
 
-    final isTestEnvironment =
-        WidgetsBinding.instance.runtimeType.toString().contains('Test');
-
-    final effectiveDelay = widget.displayDuration ??
-        (isTestEnvironment
-            ? Duration.zero
-            : const Duration(milliseconds: 1500));
-
-    final delayFuture = effectiveDelay > Duration.zero
-        ? Future.delayed(effectiveDelay)
-        : Future<void>.value();
-
-    final authInitFuture = auth != null && !auth.initialized
-        ? auth.waitForInitialization(timeout: const Duration(seconds: 4))
-        : Future<void>.value();
-
-    await Future.wait([delayFuture, authInitFuture]);
+    if (auth != null && !auth.initialized) {
+      await auth.waitForInitialization(timeout: const Duration(seconds: 4));
+    }
 
     if (!mounted || _navigated) return;
 
@@ -84,7 +63,6 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final shortestSide = mediaQuery.size.shortestSide;
-    // Exactly 37.5% of shortest screen dimension
     final targetSize = (shortestSide * 0.38).clamp(140.0, 240.0);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
