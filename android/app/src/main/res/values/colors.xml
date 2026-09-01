@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_gradient_start">#FF5A08</color>
+    <color name="splash_background">#E2205F</color>
+    <color name="splash_gradient_start">#E2205F</color>
     <color name="splash_gradient_center">#E2205F</color>
-    <color name="splash_gradient_end">#7A1FA2</color>
+    <color name="splash_gradient_end">#E2205F</color>
 </resources>

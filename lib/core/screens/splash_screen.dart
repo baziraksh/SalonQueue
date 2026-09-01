@@ -6,10 +6,10 @@ import '../../features/auth/services/auth_service.dart';
 import '../routing/app_router.dart';
 
 /// App Launch & Startup Splash Screen.
-/// Step 1: Displays the exact full-screen vertical radiant gradient background
+/// Step 1: Displays the solid pink/magenta background (#E2205F)
 /// with the centered standalone white salon chair on app click.
-/// Step 2: After the splash display and auth evaluation, transitions to the
-/// WelcomeScreen (I am a Customer / I am a Salon Owner) or authenticated role home.
+/// Step 2: Transitions seamlessly to WelcomeScreen (I am a Customer / I am a Salon Owner)
+/// or authenticated role home.
 class SplashScreen extends StatefulWidget {
   final Duration? displayDuration;
 
@@ -84,7 +84,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final shortestSide = mediaQuery.size.shortestSide;
-    // Exactly 37.5% of shortest screen dimension matching the reference image
+    // Exactly 37.5% of shortest screen dimension
     final targetSize = (shortestSide * 0.38).clamp(140.0, 240.0);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -96,25 +96,11 @@ class _SplashScreenState extends State<SplashScreen> {
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
+        backgroundColor: const Color(0xFFE2205F),
         body: Container(
           width: double.infinity,
           height: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFF5A08), // Top: Vivid Orange
-                Color(0xFFFE3547), // Upper: Coral Red
-                Color(0xFFEE255B), // Upper-Middle: Rose Pink
-                Color(0xFFE2205F), // Center: Magenta-Pink
-                Color(0xFFD51B65), // Lower-Middle: Deep Magenta
-                Color(0xFFA72190), // Lower: Purple
-                Color(0xFF7A1FA2), // Bottom: Royal Purple
-              ],
-              stops: [0.0, 0.20, 0.40, 0.50, 0.60, 0.80, 1.0],
-            ),
-          ),
+          color: const Color(0xFFE2205F),
           child: Center(
             child: SizedBox(
               width: targetSize,

@@ -1,15 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Full-screen vertical radiant gradient background with centered white chair -->
+<!-- Solid pink/magenta background with centered white salon chair -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
-        <shape android:shape="rectangle">
-            <gradient
-                android:angle="270"
-                android:startColor="#FF5A08"
-                android:centerColor="#E2205F"
-                android:endColor="#7A1FA2"
-                android:type="linear" />
-        </shape>
+        <color android:color="#E2205F" />
     </item>
     <item
         android:width="160dp"
