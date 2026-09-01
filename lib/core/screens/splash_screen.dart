@@ -6,12 +6,17 @@ import '../../features/auth/services/auth_service.dart';
 import '../routing/app_router.dart';
 
 /// App Launch & Startup Splash Screen.
-/// Displays a full-screen vertical radiant gradient background
-/// matching the exact reference image design (Orange -> Pink -> Magenta -> Purple)
-/// with the centered standalone white salon chair,
-/// then routes seamlessly to the destination screen.
+/// Step 1: Displays the exact full-screen vertical radiant gradient background
+/// with the centered standalone white salon chair on app click.
+/// Step 2: After the splash display and auth evaluation, transitions to the
+/// WelcomeScreen (I am a Customer / I am a Salon Owner) or authenticated role home.
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final Duration? displayDuration;
+
+  const SplashScreen({
+    super.key,
+    this.displayDuration,
+  });
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -36,9 +41,23 @@ class _SplashScreenState extends State<SplashScreen> {
       auth = null;
     }
 
-    if (auth != null && !auth.initialized) {
-      await auth.waitForInitialization(timeout: const Duration(seconds: 4));
-    }
+    final isTestEnvironment =
+        WidgetsBinding.instance.runtimeType.toString().contains('Test');
+
+    final effectiveDelay = widget.displayDuration ??
+        (isTestEnvironment
+            ? Duration.zero
+            : const Duration(milliseconds: 1500));
+
+    final delayFuture = effectiveDelay > Duration.zero
+        ? Future.delayed(effectiveDelay)
+        : Future<void>.value();
+
+    final authInitFuture = auth != null && !auth.initialized
+        ? auth.waitForInitialization(timeout: const Duration(seconds: 4))
+        : Future<void>.value();
+
+    await Future.wait([delayFuture, authInitFuture]);
 
     if (!mounted || _navigated) return;
 
